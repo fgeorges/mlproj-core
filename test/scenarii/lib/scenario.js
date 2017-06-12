@@ -2,7 +2,9 @@
 
 (function() {
 
-    const node = require('../../../src/node');
+    const fs    = require('fs');
+    const path  = require('path');
+    const space = require('../../../src/space');
 
     // utility functions to create expected HTTP calls
 
@@ -158,11 +160,11 @@
     };
 
     // the main processing
-    function test(runner, path, cmd, calls) {
+    function test(runner, file, cmd, calls) {
         // set the expected calls on the runner object
         runner.calls = calls;
         // the platform instance
-        var platform = new node.Node(false /* dry */, false /* verbose */);
+        var platform = new space.Platform(false /* dry */, false /* verbose */);
         // override the http functions
         platform.get = function(api, url, error, success) {
             assertCall(runner, 'get', api, url, error, success);
@@ -173,6 +175,25 @@
         platform.put = function(api, url, data, error, success) {
             assertCall(runner, 'put', api, url, error, success, data);
         };
+        // various functions on the platform object to load the project file
+        platform.resolve = function(href, base) {
+            return path.resolve(base, href);
+        };
+        platform.dirname = function(href) {
+            return path.dirname(href);
+        }
+        platform.read = function(path) {
+            return fs.readFileSync(path, 'utf8');
+        }
+        platform.bold = function(s) {
+            return s;
+        };
+        platform.green = function(s) {
+            return s;
+        };
+        platform.yellow = function(s) {
+            return s;
+        };
         // TODO: Ignore the output for now, but redirect it to a file...
         platform.log = function(msg) {
         };
@@ -181,7 +202,8 @@
         platform.warn = function(msg) {
         };
         // launch processing
-        platform.project(undefined, path, [], {}, project => {
+        let base = process.cwd();
+        platform.project(undefined, file, base, [], {}, project => {
             project.execute({}, cmd);
         });
     }

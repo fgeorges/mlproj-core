@@ -13,8 +13,7 @@
             this.dry     = dry;
             this.verbose = verbose;
         }
-        project(env, path, params, force, callback) {
-            var base = this.cwd();
+        project(env, path, base, params, force, callback) {
             if ( env && path ) {
                 throw new Error('Both `environ` and `path` set: ' + env + ', ' + path);
             }
@@ -91,7 +90,11 @@
             return proj;
         }
         json(path, validate) {
-            throw new Error('Platform.json is abstract');
+            var json = JSON.parse(this.read(path));
+            if ( validate ) {
+                return this.validateJson(json);
+            }
+            return json;
         }
         xml(path, callback) {
             throw new Error('Platform.xml is abstract');

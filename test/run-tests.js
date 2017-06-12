@@ -52,7 +52,5 @@ proc.chdir('./test/');
 
 run([
     { msg: 'Run test scenarii', cwd: './scenarii/' },
-    { script: './run-scenario.js' },
-    { msg: 'Run unit tests', cwd: './unit/' },
-    { script: './tui/parse-options.js' }
+    { script: './run-scenario.js' }
 ]);
