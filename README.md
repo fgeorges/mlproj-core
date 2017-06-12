@@ -1,4 +1,4 @@
-# mlproj-web
+# mlproj-core
 
 This repository contains the core implementation
 of [mlproj](https://github.com/fgeorges/mlproj), that is everything
