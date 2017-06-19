@@ -67,7 +67,9 @@
             throw new Error('Platform.resolve is abstract');
         }
         dirname(href) {
-            throw new Error('Platform.dirname is abstract');
+            var steps = href.split('/');
+            steps.pop();
+            return steps.join('/') + '/';
         }
         read(path) {
             throw new Error('Platform.read is abstract');
