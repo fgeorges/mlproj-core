@@ -96,8 +96,8 @@
             }
             return json;
         }
-        xml(path, callback) {
-            throw new Error('Platform.xml is abstract');
+        projectXml(path, callback) {
+            throw new Error('Platform.projectXml is abstract');
         }
         write(path, content) {
             throw new Error('Platform.write is abstract');
@@ -214,15 +214,11 @@
 
         load(params, force, callback) {
             var path = this.platform.resolve('xproject/project.xml', this.base);
-            this.platform.xml(path, (xml) => {
-                var p = xml.project;
-                if ( ! p || ! p['$'] || ! p['$'].abbrev ) {
-                    throw new Error('Bad project.xml, no abbrev: ' + path);
-                }
-                this.name    = p['$'].name;
-                this.abbrev  = p['$'].abbrev;
-                this.version = p['$'].version;
-                this.title   = p.title && p.title[0];
+            this.platform.projectXml(path, p => {
+                this.name    = p.name;
+                this.abbrev  = p.abbrev;
+                this.version = p.version;
+                this.title   = p.title;
                 this.srcdir  = this.platform.resolve('src/', this.base) + '/';
                 super.load(params, force, { srcdir: this.srcdir, code: this.abbrev });
                 callback();
