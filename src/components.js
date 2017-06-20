@@ -40,13 +40,13 @@
         show(platform) {
             throw new Error('Component.show is abstract');
         }
-        setup(actions, callback) {
+        setup(actions) {
             throw new Error('Component.setup is abstract');
         }
-        create(actions, callback) {
+        create(actions) {
             throw new Error('Component.create is abstract');
         }
-        remove(actions, callback) {
+        remove(actions) {
             throw new Error('Component.remove is abstract');
         }
     }
@@ -120,7 +120,7 @@
             Object.keys(this.props).forEach(p => this.props[p].show(pf));
         }
 
-        setup(actions, callback)
+        setup(actions)
         {
             logCheck(actions, 0, 'the database', this.name);
             new act.DatabaseProps(this).execute(
@@ -141,17 +141,17 @@
                             var names = items.map(o => o.nameref);
                             // if DB does not exist yet
                             if ( ! body ) {
-                                this.create(actions, callback, names);
+                                this.create(actions, names);
                             }
                             // if DB already exists
                             else {
-                                this.update(actions, callback, body, names);
+                                this.update(actions, body, names);
                             }
                         });
                 });
         }
 
-        create(actions, callback, forests)
+        create(actions, forests)
         {
             logAdd(actions, 0, 'create', 'database', this.name);
             // the base database object
@@ -171,10 +171,9 @@
             logCheck(actions, 1, 'forests');
             // check the forests
             Object.keys(this.forests).forEach(f => this.forests[f].create(actions, forests));
-            callback();
         }
 
-        update(actions, callback, body, forests)
+        update(actions, body, forests)
         {
             // check databases
             this.updateDb(actions, this.schema,   body, 'schema-database',   'Schemas');
@@ -203,8 +202,6 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].update(actions, body, this, logAdd);
             });
-
-            callback();
         }
 
         updateDb(actions, db, body, prop, dflt)
@@ -310,7 +307,7 @@
             });
         }
 
-        setup(actions, callback)
+        setup(actions)
         {
             logCheck(actions, 0, 'the ' + this.props['server-type'].value + ' server', this.name);
             new act.ServerProps(this).execute(
@@ -322,16 +319,16 @@
                 body => {
                     // if AS does not exist yet
                     if ( ! body ) {
-                        this.create(actions, callback);
+                        this.create(actions);
                     }
                     // if AS already exists
                     else {
-                        this.update(actions, callback, body);
+                        this.update(actions, body);
                     }
                 });
         }
 
-        create(actions, callback)
+        create(actions)
         {
             logAdd(actions, 0, 'create', 'server', this.name);
             var obj = {
@@ -343,10 +340,9 @@
                 this.props[p].create(obj);
             });
             actions.add(new act.ServerCreate(this, obj));
-            callback();
         }
 
-        update(actions, callback, actual)
+        update(actions, actual)
         {
             // the content and modules databases
             if ( this.content.name !== actual['content-database'] ) {
@@ -366,8 +362,6 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].update(actions, actual, this, logAdd);
             });
-
-            callback();
         }
     }
 

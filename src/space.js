@@ -35,9 +35,8 @@
             var prj = env
                 ? new XProject(this, env, base)
                 : new DummyProject(this, path, base);
-            prj.load(params, force, () => {
-                callback(prj);
-            });
+            prj.load(params, force);
+            return prj;
         }
         config(name) {
             throw new Error('Platform.config is abstract');
@@ -98,7 +97,7 @@
             }
             return json;
         }
-        projectXml(path, callback) {
+        projectXml(path) {
             throw new Error('Platform.projectXml is abstract');
         }
         write(path, content) {
@@ -214,17 +213,15 @@
             this.base    = base;
         }
 
-        load(params, force, callback) {
+        load(params, force) {
             var path = this.platform.resolve('xproject/project.xml', this.base);
-            this.platform.projectXml(path, p => {
-                this.name    = p.name;
-                this.abbrev  = p.abbrev;
-                this.version = p.version;
-                this.title   = p.title;
-                this.srcdir  = this.platform.resolve('src/', this.base) + '/';
-                super.load(params, force, { srcdir: this.srcdir, code: this.abbrev });
-                callback();
-            });
+            var p    = this.platform.projectXml(path);
+            this.name    = p.name;
+            this.abbrev  = p.abbrev;
+            this.version = p.version;
+            this.title   = p.title;
+            this.srcdir  = this.platform.resolve('src/', this.base) + '/';
+            super.load(params, force, { srcdir: this.srcdir, code: this.abbrev });
         }
     }
 
@@ -250,9 +247,8 @@
             super(platform, platform.resolve(path, base));
         }
 
-        load(params, force, callback) {
+        load(params, force) {
             super.load(params, force, {});
-            callback();
         }
     }
 

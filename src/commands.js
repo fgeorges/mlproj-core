@@ -164,22 +164,16 @@
             // the action list
             this.actions = new act.ActionList(pf);
             var impl = comps => {
-                if ( comps.length ) {
-                    comps[0].setup(this.actions, () => impl(comps.slice(1)));
+                for ( let c of comps ) {
+                    c.setup(this.actions);
                 }
-                else {
-                    doit();
-                }
-            };
-            var doit = () => {
                 pf.log('\n--- ' + pf.bold('Progress') + ' ---'
                        + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                this.actions.execute(summary);
-            };
-            var summary = () => {
-                pf.log('\n--- ' + pf.bold('Summary') + ' ---'
-                       + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                this.actions.summary();
+                this.actions.execute(() => {
+                    pf.log('\n--- ' + pf.bold('Summary') + ' ---'
+                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
+                    this.actions.summary();
+                });
             };
             var dbs  = space.databases();
             var srvs = space.servers();
@@ -379,7 +373,7 @@
 `;
     }
 
-    // helper function for the command `new`, to create xproject/ml/base.json
+    // helper function for the command `new`, to create xproject/mlenvs/base.json
     function NEW_BASE_ENV(vars)
     {
         return `{
@@ -406,7 +400,7 @@
 `;
     }
 
-    // helper function for the command `new`, to create xproject/ml/default.json
+    // helper function for the command `new`, to create xproject/mlenvs/default.json
     function NEW_DEFAULT_ENV(vars)
     {
         return `{
@@ -418,7 +412,7 @@
 `;
     }
 
-    // helper function for the command `new`, to create xproject/ml/dev.json
+    // helper function for the command `new`, to create xproject/mlenvs/dev.json
     function NEW_DEV_ENV(vars)
     {
         return `{
@@ -435,7 +429,7 @@
 `;
     }
 
-    // helper function for the command `new`, to create xproject/ml/prod.json
+    // helper function for the command `new`, to create xproject/mlenvs/prod.json
     function NEW_PROD_ENV(vars)
     {
         return `{

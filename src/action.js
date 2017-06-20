@@ -23,7 +23,7 @@
             platform.log(indent + ' ' + this.msg);
         }
 
-        execute(platform, error, success, dry)
+        execute(platform)
         {
             if ( platform.verbose ) {
                 platform.warn('[' + platform.bold('verbose') + '] '
@@ -33,12 +33,11 @@
                     platform.warn(this.data);
                 }
             }
-            if ( dry ) {
+            if ( platform.dry ) {
                 platform.warn(platform.yellow('→') + ' ' + this.msg);
-                success();
             }
             else {
-                this.send(platform, this.api, this.url, this.data, error, success);
+                return this.send(platform, this.api, this.url, this.data);
             }
         }
     }
@@ -54,12 +53,12 @@
             super(api, url, 'GET', msg);
         }
 
-        send(platform, api, url, data, error, success) {
+        send(platform, api, url, data) {
             platform.warn(platform.yellow('→') + ' ' + this.msg);
             if ( data ) {
                 throw new Error('Data in a GET: ' + url + ', ' + data);
             }
-            platform.get(api, url, error, success);
+            return platform.get(api, url);
         }
     }
 
@@ -72,9 +71,9 @@
             super(api, url, 'POST', msg, data);
         }
 
-        send(platform, api, url, data, error, success) {
+        send(platform, api, url, data) {
             platform.warn(platform.yellow('→') + ' ' + this.msg);
-            platform.post(api, url, data, error, success, this.type);
+            return platform.post(api, url, data, this.type);
         }
     }
 
@@ -87,9 +86,9 @@
             super(api, url, 'POST', msg, data);
         }
 
-        send(platform, api, url, data, error, success) {
+        send(platform, api, url, data) {
             platform.warn(platform.yellow('→') + ' ' + this.msg);
-            platform.put(api, url, data, error, success, this.type);
+            return platform.put(api, url, data, this.type);
         }
     }
 
@@ -132,12 +131,6 @@
     {
         constructor() {
             super('/forests', 'Retrieve forests');
-        }
-
-        send(platform, api, url, data, error, success) {
-            super.send(platform, api, url, data, error, body => {
-                success(body);
-            });
         }
     }
 
@@ -344,24 +337,19 @@
             this.todo.push(a);
         }
 
-        execute(callback)
+        execute()
         {
-            if ( this.todo.length ) {
-                var action = this.todo.shift();
-                action.execute(this.platform, msg => {
-                    this.error = { action: action, message: msg };
-                    // stop processing
-                    callback();
-                }, () => {
-                    this.done.push(action);
-                    // TODO: Keep the idea of an event log?
-                    // events.push('Database created: ' + db.name);
-                    this.execute(callback);
-                },
-                this.platform.dry);
+            try {
+                for ( let action of this.todo ) {
+                    action.execute(this.platform);
+                }
             }
-            else {
-                callback();
+            catch (err) {
+                this.error = {
+                    action  : action,
+                    message : err.message,
+                    error   : err
+                };
             }
         }
 
