@@ -123,32 +123,18 @@
         setup(actions)
         {
             logCheck(actions, 0, 'the database', this.name);
-            new act.DatabaseProps(this).execute(
-                actions.platform,
-                msg => {
-                    // TODO: Integrate more nicely in the reporting...
-                    throw new Error('Error during GET DB ' + this.name + ': ' + msg);
-                },
-                body => {
-                    new act.ForestList().execute(
-                        actions.platform,
-                        msg => {
-                            // TODO: Integrate more nicely in the reporting...
-                            throw new Error('Error during GET forests: ' + msg);
-                        },
-                        forests => {
-                            var items = forests['forest-default-list']['list-items']['list-item'];
-                            var names = items.map(o => o.nameref);
-                            // if DB does not exist yet
-                            if ( ! body ) {
-                                this.create(actions, names);
-                            }
-                            // if DB already exists
-                            else {
-                                this.update(actions, body, names);
-                            }
-                        });
-                });
+            const body    = new act.DatabaseProps(this).execute(actions.platform);
+            const forests = new act.ForestList().execute(actions.platform);
+            const items   = forests['forest-default-list']['list-items']['list-item'];
+            const names   = items.map(o => o.nameref);
+            // if DB does not exist yet
+            if ( ! body ) {
+                this.create(actions, names);
+            }
+            // if DB already exists
+            else {
+                this.update(actions, body, names);
+            }
         }
 
         create(actions, forests)
@@ -310,22 +296,15 @@
         setup(actions)
         {
             logCheck(actions, 0, 'the ' + this.props['server-type'].value + ' server', this.name);
-            new act.ServerProps(this).execute(
-                actions.platform,
-                msg => {
-                    // TODO: Integrate more nicely in the reporting...
-                    throw new Error('Error during GET AS ' + this.name + ': ' + msg);
-                },
-                body => {
-                    // if AS does not exist yet
-                    if ( ! body ) {
-                        this.create(actions);
-                    }
-                    // if AS already exists
-                    else {
-                        this.update(actions, body);
-                    }
-                });
+            const body = new act.ServerProps(this).execute(actions.platform);
+            // if AS does not exist yet
+            if ( ! body ) {
+                this.create(actions);
+            }
+            // if AS already exists
+            else {
+                this.update(actions, body);
+            }
         }
 
         create(actions)

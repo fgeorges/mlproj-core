@@ -169,11 +169,10 @@
                 }
                 pf.log('\n--- ' + pf.bold('Progress') + ' ---'
                        + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                this.actions.execute(() => {
-                    pf.log('\n--- ' + pf.bold('Summary') + ' ---'
-                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                    this.actions.summary();
-                });
+                this.actions.execute();
+                pf.log('\n--- ' + pf.bold('Summary') + ' ---'
+                       + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
+                this.actions.summary();
             };
             var dbs  = space.databases();
             var srvs = space.servers();

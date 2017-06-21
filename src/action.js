@@ -339,9 +339,11 @@
 
         execute()
         {
+            var action;
             try {
-                for ( let action of this.todo ) {
+                while ( action = this.todo.shift() ) {
                     action.execute(this.platform);
+                    this.done.push(action);
                 }
             }
             catch (err) {
