@@ -945,6 +945,7 @@
 
     module.exports = {
         Platform : Platform,
+        Display  : Display,
         Space    : Space
     };
 }
