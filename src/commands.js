@@ -67,7 +67,6 @@
                     c.show(this.display);
                 });
             };
-            pf.log('');
             this.project.show(this.display);
             this.project.space.show(
                 this.display,
