@@ -7,6 +7,7 @@
 
     module.exports = {
         Platform      : space.Platform,
+        Display       : space.Display,
         NewCommand    : cmd.NewCommand,
         ShowCommand   : cmd.ShowCommand,
         SetupCommand  : cmd.SetupCommand,

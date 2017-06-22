@@ -134,6 +134,27 @@
     }
 
     /*~
+     * Utility interface to abstract a display.
+     *
+     * In order to accomodate different sorts of displays, like terminal or
+     * web-based, it does not provide low-level routines (e.g. "print line") but
+     * rather high-level display functions (e.g. "display a server description",
+     * or "display action progress info").
+     */
+    class Display
+    {
+        database(name, id, schema, security, triggers, forests, props) {
+            throw new Error('Display.database is abstract');
+        }
+        server(name, id, group, content, modules, props) {
+            throw new Error('Display.server is abstract');
+        }
+        property(prop) {
+            throw new Error('Display.property is abstract');
+        }
+    }
+
+    /*~
      * A base, abstract project.
      */
     class Project
@@ -158,11 +179,6 @@
                     }
                 }
             });
-        }
-
-        execute(args, cmd) {
-            var cmd = new cmd(this);
-            cmd.execute(args.local);
         }
 
         // Precedence:

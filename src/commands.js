@@ -11,8 +11,12 @@
      */
     class Command
     {
-        constructor(project) {
-            this.project = project;
+        constructor(globalArgs, cmdArgs, platform, display, project) {
+            this.globalArgs = globalArgs;
+            this.cmdArgs    = cmdArgs;
+            this.platform   = platform;
+            this.display    = display;
+            this.project    = project;
         }
         execute() {
             throw new Error('Command.execute is abstract');
@@ -24,37 +28,27 @@
      */
     class NewCommand extends Command
     {
-        constructor(platform, args) {
-            super();
-            this.platform = platform;
-            this.dir      = args.dir;
-            this.abbrev   = args.abbrev;
-            this.title    = args.title;
-            this.name     = args.name;
-            this.version  = args.version;
-            this.port     = args.port;
-        }
-
         execute() {
-            var pf = this.platform;
+            var pf   = this.platform;
+            var vars = this.cmdArgs;
 
             // create `src/`
             // TODO: Create `test/` as well, when supported.
-            var srcdir = pf.resolve('src', this.dir);
+            var srcdir = pf.resolve('src', vars.dir);
             pf.mkdir(srcdir);
 
             // create `xproject/` and `xproject/project.xml`
-            var xpdir = pf.resolve('xproject', this.dir);
+            var xpdir = pf.resolve('xproject', vars.dir);
             pf.mkdir(xpdir);
-            pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(this));
+            pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(vars));
 
             // create `xproject/mlenvs/` and `xproject/mlenvs/{base,default,dev,prod}.json`
             var mldir = pf.resolve('mlenvs', xpdir);
             pf.mkdir(mldir);
-            pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(this));
-            pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(this));
-            pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(this));
-            pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(this));
+            pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(vars));
+            pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars));
+            pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars));
+            pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars));
 
             return xpdir;
         }
@@ -66,12 +60,11 @@
     class ShowCommand extends Command
     {
         execute() {
-            var pf    = this.project.platform;
+            var pf    = this.platform;
             var space = this.project.space;
             var components = comps => {
                 comps.forEach(c => {
-                    c.show(pf);
-                    pf.log('');
+                    c.show(this.display);
                 });
             };
             pf.log('');
@@ -158,7 +151,7 @@
     {
         execute()
         {
-            var pf    = this.project.platform;
+            var pf    = this.platform;
             var space = this.project.space;
             pf.log('--- ' + pf.bold('Prepare') + ' ---');
             // the action list
@@ -189,9 +182,9 @@
             return false;
         }
 
-        execute(args) {
+        execute() {
             // "global" variables
-            var pf    = this.project.platform;
+            var pf    = this.platform;
             var space = this.project.space;
             this.actions = new act.ActionList(pf);
 
@@ -294,8 +287,8 @@
             }
 
             // do it: the actual execute() implem
-            let db   = target(args, this.isDeploy());
-            let what = content(args, this.isDeploy());
+            let db   = target( this.cmdArgs, this.isDeploy());
+            let what = content(this.cmdArgs, this.isDeploy());
             let dir  = what.dir;
             let doc  = what.doc;
             if ( what.src ) {

@@ -105,19 +105,16 @@
             });
         }
 
-        show(pf)
+        show(display)
         {
-            pf.log(pf.bold('Database') + ': ' + pf.bold(pf.yellow(this.name)));
-            this.id       && pf.line(1, 'id',          this.id);
-            this.schema   && pf.line(1, 'schema DB',   this.schema.name);
-            this.security && pf.line(1, 'security DB', this.security.name);
-            this.triggers && pf.line(1, 'triggers DB', this.triggers.name);
-            var forests = Object.keys(this.forests);
-            if ( forests.length ) {
-                pf.line(1, 'forests:');
-                forests.sort().forEach(f => pf.line(2, f));
-            }
-            Object.keys(this.props).forEach(p => this.props[p].show(pf));
+            display.database(
+                this.name,
+                this.id,
+                this.schema,
+                this.security,
+                this.triggers,
+                this.forests,
+                this.props);
         }
 
         setup(actions)
@@ -278,19 +275,15 @@
             }
         }
 
-        show(pf)
+        show(display)
         {
-            pf.log(pf.bold('Server') + ': ' + pf.bold(pf.yellow(this.name)));
-            pf.line(1, 'group', this.group);
-            this.id      && pf.line(1, 'id',         this.id);
-            this.content && pf.line(1, 'content DB', this.content.name);
-            this.modules && pf.line(1, 'modules DB', this.modules.name);
-            // explicit list of properties, to guarantee the order they are displayed
-            [ 'type', 'port', 'root', 'rewriter', 'handler' ].forEach(p => {
-                if ( this.props[p] !== undefined ) {
-                    this.props[p].show(pf);
-                }
-            });
+            display.server(
+                this.name,
+                this.id,
+                this.group,
+                this.content,
+                this.modules,
+                this.props);
         }
 
         setup(actions)
