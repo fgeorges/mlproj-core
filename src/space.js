@@ -259,7 +259,7 @@
             const configs = this.configs().map(c => {
                 return { name: c, value: this.config(c) };
             });
-            display.project(p.space.param('@code'), configs,
+            display.project(this.space.param('@code'), configs,
                             this.title, this.name, this.version);
         }
     }
@@ -294,7 +294,7 @@
             const configs = this.configs().map(c => {
                 return { name: c, value: this.config(c) };
             });
-            display.project(p.space.param('@code'), configs);
+            display.project(this.space.param('@code'), configs);
         }
     }
 
