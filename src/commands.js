@@ -69,56 +69,11 @@
             };
             pf.log('');
             this.project.show(this.display);
-            this.showEnviron(pf);
+            this.project.space.show(
+                this.display,
+                this.project.environ || this.project.path);
             components(space.databases());
             components(space.servers());
-        }
-
-        showEnviron(pf) {
-            var space = this.project.space;
-            const imports = (space, level) => {
-                space._imports.forEach(i => {
-                    pf.line(level, '-> ' + i.href);
-                    imports(i.space, level + 1);
-                });
-            };
-            var mods;
-            try {
-                mods = space.modulesDb().name;
-            }
-            catch (e) {
-                if ( /no server/i.test(e.message) ) {
-                    // nothing
-                }
-                else if ( /more than 1/i.test(e.message) ) {
-                    mods = '(more than 1 server)';
-                }
-                else if ( /no modules/i.test(e.message) ) {
-                    mods = '(filesystem)';
-                }
-                else {
-                    throw e;
-                }
-            }
-            pf.log(pf.bold('Environment') + ': '
-                   + pf.bold(pf.yellow(this.project.environ || this.project.path)));
-            [ 'title', 'desc', 'host', 'user' ].forEach(p => {
-                var v = space.param('@' + p);
-                v && pf.line(1, p, v);
-            });
-            space.param('@password') && pf.line(1, 'password', '*****');
-            pf.line(1, 'sources dir', space.param('@srcdir'));
-            mods && pf.line(1, 'modules DB', mods);
-            var params = space.params();
-            if ( params.length ) {
-                pf.line(1, 'parameters:');
-                params.forEach(p => pf.line(2, p, space.param(p)));
-            }
-            if ( space._imports.length ) {
-                pf.line(1, 'import graph:');
-                imports(space, 2);
-            }
-            pf.log('');
         }
     }
 

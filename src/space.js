@@ -155,6 +155,9 @@
         project(code, configs, title, name, version) {
             throw new Error('Display.project is abstract');
         }
+        environ(envipath, title, desc, host, user, password, srcdir, mods, params, imports) {
+            throw new Error('Display.environ is abstract');
+        }
         check(indent, msg, arg) {
             throw new Error('Display.check is abstract');
         }
@@ -329,6 +332,48 @@
                 href  : href,
                 space : space
             });
+        }
+
+        show(display, envipath)
+        {
+            const addImports = (space, level) => {
+                space._imports.forEach(i => {
+                    imports.push({ level: level, href: i.href });
+                    addImports(i.space, level + 1);
+                });
+            };
+            const imports = [];
+            addImports(this, 1);
+            var mods;
+            try {
+                mods = this.modulesDb().name;
+            }
+            catch (e) {
+                if ( /no server/i.test(e.message) ) {
+                    // nothing
+                }
+                else if ( /more than 1/i.test(e.message) ) {
+                    mods = '(more than 1 server)';
+                }
+                else if ( /no modules/i.test(e.message) ) {
+                    mods = '(filesystem)';
+                }
+                else {
+                    throw e;
+                }
+            }
+            // TODO: Handle imports...!!!
+            display.environ(
+                envipath,
+                this.param('@title'),
+                this.param('@desc'),
+                this.param('@host'),
+                this.param('@user'),
+                this.param('@password'),
+                this.param('@srcdir'),
+                mods,
+                this.params(),map(p => { name: p, value: this.param(p) }),
+                imports);
         }
 
         api(name)
