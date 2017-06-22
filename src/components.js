@@ -5,49 +5,16 @@
     const act   = require('./action');
     const props = require('./properties');
 
-    function logCheck(actions, indent, msg, arg) {
-        var p = actions.platform;
-        var s = '';
-        while ( indent-- ) {
-            s += '   ';
-        }
-        p.log(s + '• ' + p.yellow('checking') + ' ' + msg + (arg ? ': \t' + arg : ''));
-    }
-
-    function logAdd(actions, indent, verb, msg, arg) {
-        var p = actions.platform;
-        var s = '';
-        while ( indent-- ) {
-            s += '   ';
-        }
-        p.log(s + '  need to ' + p.green(verb) + ' ' + msg + (arg ? ': \t' + arg : ''));
-    }
-
-    function logRemove(actions, indent, verb, msg, arg) {
-        var p = actions.platform;
-        var s = '';
-        while ( indent-- ) {
-            s += '   ';
-        }
-        p.log(s + '  need to ' + p.red(verb) + ' ' + msg + (arg ? ': \t' + arg : ''));
-    }
-
     /*~
      * Interface of a component.
      */
     class Component
     {
-        show(platform) {
+        show(display) {
             throw new Error('Component.show is abstract');
         }
-        setup(actions) {
+        setup(actions, display) {
             throw new Error('Component.setup is abstract');
-        }
-        create(actions) {
-            throw new Error('Component.create is abstract');
-        }
-        remove(actions) {
-            throw new Error('Component.remove is abstract');
         }
     }
 
@@ -117,26 +84,26 @@
                 this.props);
         }
 
-        setup(actions)
+        setup(actions, display)
         {
-            logCheck(actions, 0, 'the database', this.name);
+            display.check(0, 'the database', this.name);
             const body    = new act.DatabaseProps(this).execute(actions.platform);
             const forests = new act.ForestList().execute(actions.platform);
             const items   = forests['forest-default-list']['list-items']['list-item'];
             const names   = items.map(o => o.nameref);
             // if DB does not exist yet
             if ( ! body ) {
-                this.create(actions, names);
+                this.create(actions, display, names);
             }
             // if DB already exists
             else {
-                this.update(actions, body, names);
+                this.update(actions, display, body, names);
             }
         }
 
-        create(actions, forests)
+        create(actions, display, forests)
         {
-            logAdd(actions, 0, 'create', 'database', this.name);
+            display.add(0, 'create', 'database', this.name);
             // the base database object
             var obj = {
                 "database-name": this.name
@@ -151,43 +118,45 @@
             });
             // enqueue the "create db" action
             actions.add(new act.DatabaseCreate(this, obj));
-            logCheck(actions, 1, 'forests');
+            display.check(1, 'forests');
             // check the forests
-            Object.keys(this.forests).forEach(f => this.forests[f].create(actions, forests));
+            Object.keys(this.forests).forEach(f => {
+                this.forests[f].create(actions, display, forests);
+            });
         }
 
-        update(actions, body, forests)
+        update(actions, display, body, forests)
         {
             // check databases
-            this.updateDb(actions, this.schema,   body, 'schema-database',   'Schemas');
-            this.updateDb(actions, this.security, body, 'security-database', 'Security');
-            this.updateDb(actions, this.triggers, body, 'triggers-database', null);
+            this.updateDb(actions, display, this.schema,   body, 'schema-database',   'Schemas');
+            this.updateDb(actions, display, this.security, body, 'security-database', 'Security');
+            this.updateDb(actions, display, this.triggers, body, 'triggers-database', null);
 
             // check forests
-            logCheck(actions, 1, 'forests');
+            display.check(1, 'forests');
             var actual  = body.forest || [];
             var desired = Object.keys(this.forests);
             // forests to remove: those in `actual` but not in `desired`
             actual
                 .filter(name => ! desired.includes(name))
                 .forEach(name => {
-                    new Forest(this, name).remove(actions);
+                    new Forest(this, name).remove(actions, display);
                 });
             // forests to add: those in `desired` but not in `actual`
             desired
                 .filter(name => ! actual.includes(name))
                 .forEach(name => {
-                    this.forests[name].create(actions, forests);
+                    this.forests[name].create(actions, display, forests);
                 });
 
             // check properties
-            logCheck(actions, 1, 'properties');
+            display.check(1, 'properties');
             Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, body, this, logAdd);
+                this.props[p].update(actions, display, body, this);
             });
         }
 
-        updateDb(actions, db, body, prop, dflt)
+        updateDb(actions, display, db, body, prop, dflt)
         {
             var actual = body[prop];
             var newName;
@@ -211,7 +180,7 @@
 
             // enqueue the action if necessary
             if ( newName !== undefined ) {
-                logAdd(actions, 0, 'update', prop);
+                display.add(0, 'update', prop);
                 actions.add(new act.DatabaseUpdate(this, prop, newName));
             }
         }
@@ -229,22 +198,22 @@
             this.name = name;
         }
 
-        create(actions, forests)
+        create(actions, display, forests)
         {
             // if already exists, attach it instead of creating it
             if ( forests.includes(this.name) ) {
-                logAdd(actions, 1, 'attach', 'forest', this.name);
+                display.add(1, 'attach', 'forest', this.name);
                 actions.add(new act.ForestAttach(this));
             }
             else {
-                logAdd(actions, 1, 'create', 'forest', this.name);
+                display.add(1, 'create', 'forest', this.name);
                 actions.add(new act.ForestCreate(this));
             }
         }
 
-        remove(actions)
+        remove(actions, display)
         {
-            logRemove(actions, 1, 'detach', 'forest', this.name);
+            display.remove(1, 'detach', 'forest', this.name);
             // just detach it, not delete it for real
             actions.add(new act.ForestDetach(this));
         }
@@ -286,23 +255,23 @@
                 this.props);
         }
 
-        setup(actions)
+        setup(actions, display)
         {
-            logCheck(actions, 0, 'the ' + this.props['server-type'].value + ' server', this.name);
+            display.check(0, 'the ' + this.props['server-type'].value + ' server', this.name);
             const body = new act.ServerProps(this).execute(actions.platform);
             // if AS does not exist yet
             if ( ! body ) {
-                this.create(actions);
+                this.create(actions, display);
             }
             // if AS already exists
             else {
-                this.update(actions, body);
+                this.update(actions, display, body);
             }
         }
 
-        create(actions)
+        create(actions, display)
         {
-            logAdd(actions, 0, 'create', 'server', this.name);
+            display.add(0, 'create', 'server', this.name);
             var obj = {
                 "server-name":      this.name,
                 "content-database": this.content.name
@@ -314,25 +283,25 @@
             actions.add(new act.ServerCreate(this, obj));
         }
 
-        update(actions, actual)
+        update(actions, display, actual)
         {
             // the content and modules databases
             if ( this.content.name !== actual['content-database'] ) {
-                logAdd(actions, 0, 'update', 'content-database');
+                display.add(0, 'update', 'content-database');
                 actions.add(new act.ServerUpdate(this, 'content-database', this.content.name));
             }
             if ( ( ! this.modules && actual['modules-database'] )
                  || ( this.modules && ! actual['modules-database'] )
                  || ( this.modules && this.modules.name !== actual['modules-database'] ) ) {
                 var mods = this.modules ? this.modules.name : null;
-                logAdd(actions, 0, 'update', 'modules-database');
+                display.add(0, 'update', 'modules-database');
                 actions.add(new act.ServerUpdate(this, 'modules-database', mods));
             }
 
             // check properties
-            logCheck(actions, 1, 'properties');
+            display.check(1, 'properties');
             Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, actual, this, logAdd);
+                this.props[p].update(actions, display, actual, this);
             });
         }
     }

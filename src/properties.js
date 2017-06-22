@@ -305,13 +305,13 @@
             return val;
         }
 
-        update(actions, body, comp, logger) {
+        update(actions, display, body, comp) {
             var val = this.rawValue();
             if ( ! this.prop.compare(val, body[this.prop.name]) ) {
                 if ( this.frozen ) {
                     throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name);
                 }
-                logger(actions, 1, 'update', this.prop.label);
+                display.add(1, 'update', this.prop.label);
                 if ( 'database' === this._type ) {
                     actions.add(new act.DatabaseUpdate(comp, this.prop.name, val));
                 }

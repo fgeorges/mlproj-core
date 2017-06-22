@@ -155,6 +155,15 @@
         project(code, configs, title, name, version) {
             throw new Error('Display.project is abstract');
         }
+        check(indent, msg, arg) {
+            throw new Error('Display.check is abstract');
+        }
+        add(indent, verb, msg, arg) {
+            throw new Error('Display.add is abstract');
+        }
+        remove(indent, verb, msg, arg) {
+            throw new Error('Display.remove is abstract');
+        }
     }
 
     /*~

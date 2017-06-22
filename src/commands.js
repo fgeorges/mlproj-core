@@ -136,7 +136,7 @@
             this.actions = new act.ActionList(pf);
             var impl = comps => {
                 for ( let c of comps ) {
-                    c.setup(this.actions);
+                    c.setup(this.actions, this.display);
                 }
                 pf.log('\n--- ' + pf.bold('Progress') + ' ---'
                        + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
