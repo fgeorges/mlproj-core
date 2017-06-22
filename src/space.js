@@ -152,6 +152,9 @@
         property(prop) {
             throw new Error('Display.property is abstract');
         }
+        project(code, configs, title, name, version) {
+            throw new Error('Display.project is abstract');
+        }
     }
 
     /*~
@@ -239,6 +242,12 @@
             this.srcdir  = this.platform.resolve('src/', this.base) + '/';
             super.load(params, force, { srcdir: this.srcdir, code: this.abbrev });
         }
+
+        show(display) {
+            const configs = this.configs().map(c => { name: c, value: this.config(c) });
+            display.project(p.space.param('@code'), configs,
+                            this.title, this.name, this.version);
+        }
     }
 
     XProject.projectFile = (pf, base) => {
@@ -265,6 +274,11 @@
 
         load(params, force) {
             super.load(params, force, {});
+        }
+
+        show(display) {
+            const configs = this.configs().map(c => { name: c, value: this.config(c) });
+            display.project(p.space.param('@code'), configs);
         }
     }
 
