@@ -375,7 +375,7 @@
                 this.param('@password'),
                 this.param('@srcdir'),
                 mods,
-                this.params(),map(p => {
+                this.params().map(p => {
                     return { name: p, value: this.param(p) };
                 }),
                 imports);
