@@ -149,9 +149,6 @@
         server(name, id, group, content, modules, props) {
             throw new Error('Display.server is abstract');
         }
-        property(prop) {
-            throw new Error('Display.property is abstract');
-        }
         project(code, configs, title, name, version) {
             throw new Error('Display.project is abstract');
         }
