@@ -80,7 +80,7 @@
                 this.schema,
                 this.security,
                 this.triggers,
-                this.forests,
+                Object.keys(this.forests).sort(),
                 this.props);
         }
 
