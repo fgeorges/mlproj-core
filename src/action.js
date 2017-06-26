@@ -238,6 +238,16 @@
                   { [name]: value },
                   'Update ' + name + ':  \t' + srv.name);
         }
+
+        send(platform, api, url, data) {
+            var res = super.send(platform, api, url, data);
+            if ( res ) {
+                // TODO: Do NOT use console.log() directly here...!
+                // Use the display instead...
+                console.log('MarkLogic is restarting, waiting for it to be back up...');
+                platform.restart(res);
+            }
+        }
     }
 
     /*~~~~~ Client API actions. */

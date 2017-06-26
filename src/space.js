@@ -124,6 +124,9 @@
         put(api, url, data, error, success) {
             throw new Error('Platform.put is abstract');
         }
+        restart(last) {
+            throw new Error('Platform.restart is abstract');
+        }
         // return an array of strings, with the path of all files in the dir
         // if filter is passed, it must return true for a path to be returned
         // ignored is called for each seuch ingnored path
@@ -399,6 +402,13 @@
                 current = {
                     root : 'manage/v2',
                     port : 8002,
+                    ssl  : false
+                };
+            }
+            else if ( name === 'admin' ) {
+                current = {
+                    root : 'admin/v1',
+                    port : 8001,
                     ssl  : false
                 };
             }
