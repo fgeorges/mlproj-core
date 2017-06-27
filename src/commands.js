@@ -29,7 +29,7 @@
                 this.doExecute();
             }
             catch (err) {
-                this.display.error(err);
+                this.display.error(err, this.platform.verbose);
             }
         }
     }
