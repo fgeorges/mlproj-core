@@ -3,6 +3,7 @@
 (function() {
 
     const cmp = require('./components');
+    const err = require('./error');
 
     /*~
      * Utility interface to abstract platform-dependent functionalities.
@@ -39,31 +40,31 @@
             return prj;
         }
         config(name) {
-            throw new Error('Platform.config is abstract');
+            err.abstractFun('Platform.config');
         }
         configs() {
-            throw new Error('Platform.configs is abstract');
+            err.abstractFun('Platform.configs');
         }
         cwd() {
-            throw new Error('Platform.cwd is abstract');
+            err.abstractFun('Platform.cwd');
         }
         mkdir(path) {
-            throw new Error('Platform.mkdir is abstract');
+            err.abstractFun('Platform.mkdir');
         }
         debug(msg) {
-            throw new Error('Platform.debug is abstract');
+            err.abstractFun('Platform.debug');
         }
         log(msg) {
-            throw new Error('Platform.log is abstract');
+            err.abstractFun('Platform.log');
         }
         info(msg) {
-            throw new Error('Platform.info is abstract');
+            err.abstractFun('Platform.info');
         }
         warn(msg) {
-            throw new Error('Platform.warn is abstract');
+            err.abstractFun('Platform.warn');
         }
         resolve(href, base) {
-            throw new Error('Platform.resolve is abstract');
+            err.abstractFun('Platform.resolve');
         }
         dirname(href) {
             var steps = href.split('/');
@@ -71,7 +72,7 @@
             return steps.join('/') + '/';
         }
         read(path) {
-            throw new Error('Platform.read is abstract');
+            err.abstractFun('Platform.read');
         }
         // validate a few rules for all JSON files, return the mlproj sub-object
         validateJson(json) {
@@ -98,22 +99,22 @@
             return json;
         }
         projectXml(path) {
-            throw new Error('Platform.projectXml is abstract');
+            err.abstractFun('Platform.projectXml');
         }
         write(path, content) {
-            throw new Error('Platform.write is abstract');
+            err.abstractFun('Platform.write');
         }
         green(s) {
-            throw new Error('Platform.green is abstract');
+            err.abstractFun('Platform.green');
         }
         yellow(s) {
-            throw new Error('Platform.yellow is abstract');
+            err.abstractFun('Platform.yellow');
         }
         red(s) {
-            throw new Error('Platform.red is abstract');
+            err.abstractFun('Platform.red');
         }
         bold(s) {
-            throw new Error('Platform.bold is abstract');
+            err.abstractFun('Platform.bold');
         }
         url(api, url) {
             if ( ! this.space ) {
@@ -129,23 +130,23 @@
             return scheme + '://' + host + ':' + decl.port + root + url;
         }
         get(api, url, error, success) {
-            throw new Error('Platform.get is abstract');
+            err.abstractFun('Platform.get');
         }
         post(api, url, data, error, success) {
-            throw new Error('Platform.post is abstract');
+            err.abstractFun('Platform.post');
         }
         put(api, url, data, error, success) {
-            throw new Error('Platform.put is abstract');
+            err.abstractFun('Platform.put');
         }
         restart(last) {
-            throw new Error('Platform.restart is abstract');
+            err.abstractFun('Platform.restart');
         }
         // return an array of strings, with the path of all files in the dir
         // if filter is passed, it must return true for a path to be returned
         // ignored is called for each seuch ingnored path
         // both take file path, then dir as parameters
         allFiles(dir, filter, ignored) {
-            throw new Error('Platform.allFiles is abstract');
+            err.abstractFun('Platform.allFiles');
         }
     }
 
@@ -160,25 +161,25 @@
     class Display
     {
         database(name, id, schema, security, triggers, forests, props) {
-            throw new Error('Display.database is abstract');
+            err.abstractFun('Display.database');
         }
         server(name, id, group, content, modules, props) {
-            throw new Error('Display.server is abstract');
+            err.abstractFun('Display.server');
         }
         project(code, configs, title, name, version) {
-            throw new Error('Display.project is abstract');
+            err.abstractFun('Display.project');
         }
         environ(envipath, title, desc, host, user, password, srcdir, mods, params, imports) {
-            throw new Error('Display.environ is abstract');
+            err.abstractFun('Display.environ');
         }
         check(indent, msg, arg) {
-            throw new Error('Display.check is abstract');
+            err.abstractFun('Display.check');
         }
         add(indent, verb, msg, arg) {
-            throw new Error('Display.add is abstract');
+            err.abstractFun('Display.add');
         }
         remove(indent, verb, msg, arg) {
-            throw new Error('Display.remove is abstract');
+            err.abstractFun('Display.remove');
         }
     }
 

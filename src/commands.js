@@ -4,6 +4,7 @@
 
     const act = require('./action');
     const cmp = require('./components');
+    const err = require('./error');
     const s   = require('./space');
 
     /*~
@@ -154,8 +155,7 @@
                         ? as.modules
                         : as.content;
                     if ( ! db ) {
-                        throw new Error('Server has no ' + (isDeploy ? 'modules' : 'content')
-                                        + ' database: ' + as.name);
+                        err.serverNoDb(as.name, isDeploy ? 'modules' : 'content');
                     }
                 }
                 // resolve from defined databases
