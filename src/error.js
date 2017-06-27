@@ -11,11 +11,14 @@
     }
 
     function abstractFun(name) {
-        throw new MlprojError('abstract-fun', 'Function ' + name + ' is abstract');
+        var err = new MlprojError('abstract-fun', 'Function ' + name + ' is abstract');
+        err.fun = name;
+        throw err;
     }
 
     function serverNoDb(name, type) {
-        throw new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
+        var err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
+        err.server = name;
     }
 
     module.exports = {
