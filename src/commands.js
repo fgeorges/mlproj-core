@@ -19,8 +19,18 @@
             this.display    = display;
             this.project    = project;
         }
+
+        doExecute() {
+            err.abstractFun('Command.execute');
+        }
+
         execute() {
-            throw new Error('Command.execute is abstract');
+            try {
+                this.doExecute();
+            }
+            catch (err) {
+                this.display.error(err);
+            }
         }
     }
 

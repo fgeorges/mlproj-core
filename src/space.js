@@ -181,6 +181,9 @@
         remove(indent, verb, msg, arg) {
             err.abstractFun('Display.remove');
         }
+        error(e) {
+            err.abstractFun('Display.error');
+        }
     }
 
     /*~
