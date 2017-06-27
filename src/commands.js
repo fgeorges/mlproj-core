@@ -39,7 +39,7 @@
      */
     class NewCommand extends Command
     {
-        execute() {
+        doExecute() {
             var pf   = this.platform;
             var vars = this.cmdArgs;
 
@@ -70,7 +70,7 @@
      */
     class ShowCommand extends Command
     {
-        execute() {
+        doExecute() {
             var pf    = this.platform;
             var space = this.project.space;
             var components = comps => {
@@ -92,7 +92,7 @@
      */
     class SetupCommand extends Command
     {
-        execute()
+        doExecute()
         {
             var pf    = this.platform;
             var space = this.project.space;
@@ -125,7 +125,7 @@
             return false;
         }
 
-        execute() {
+        doExecute() {
             // "global" variables
             var pf    = this.platform;
             var space = this.project.space;
