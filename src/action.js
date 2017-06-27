@@ -2,29 +2,60 @@
 
 (function() {
 
-    /*~~~~~ A HTTP action. */
+    const err = require('./error');
+
+    /*~~~~~ Base actions. */
 
     /*~
-     * A single one action.
+     * A single one, abstract action.
      */
     class Action
     {
-        constructor(api, url, verb, msg, data)
-        {
-            this.api  = api;
-            this.url  = url;
-            this.verb = verb;
-            this.msg  = msg;
-            this.data = data;
+        constructor(msg) {
+            this.msg = msg;
         }
 
-        display(platform, indent)
-        {
+        display(platform, indent) {
             platform.log(indent + ' ' + this.msg);
         }
 
-        execute(platform)
-        {
+        execute(platform) {
+            err.abstractFun('Action.execute');
+        }
+    }
+
+    /*~
+     * A single one function action.
+     */
+    class FunAction extends Action
+    {
+        constructor(msg, fun) {
+            super(msg);
+            this.fun = fun;
+        }
+
+        execute(platform) {
+            if ( platform.verbose ) {
+                platform.warn('Execute: ' + this.msg);
+            }
+            return this.fun(platform);
+        }
+    }
+
+    /*~
+     * A single one HTTP action.
+     */
+    class HttpAction extends Action
+    {
+        constructor(api, url, verb, msg, data) {
+            super(msg);
+            this.api  = api;
+            this.url  = url;
+            this.verb = verb;
+            this.data = data;
+        }
+
+        execute(platform) {
             if ( platform.verbose ) {
                 platform.warn('[' + platform.bold('verbose') + '] '
                               + this.verb + ' to ' + this.url);
@@ -47,7 +78,7 @@
     /*~
      * A GET action.
      */
-    class Get extends Action
+    class Get extends HttpAction
     {
         constructor(api, url, msg) {
             super(api, url, 'GET', msg);
@@ -65,7 +96,7 @@
     /*~
      * A POST action.
      */
-    class Post extends Action
+    class Post extends HttpAction
     {
         constructor(api, url, data, msg) {
             super(api, url, 'POST', msg, data);
@@ -80,7 +111,7 @@
     /*~
      * A PUT action.
      */
-    class Put extends Action
+    class Put extends HttpAction
     {
         constructor(api, url, data, msg) {
             super(api, url, 'POST', msg, data);
@@ -388,6 +419,8 @@
     }
 
     module.exports = {
+        ActionList     : ActionList,
+        FunAction      : FunAction,
         ForestList     : ForestList,
         ForestCreate   : ForestCreate,
         ForestAttach   : ForestAttach,
@@ -398,8 +431,7 @@
         ServerProps    : ServerProps,
         ServerCreate   : ServerCreate,
         ServerUpdate   : ServerUpdate,
-        DocInsert      : DocInsert,
-        ActionList     : ActionList
+        DocInsert      : DocInsert
     }
 }
 )();

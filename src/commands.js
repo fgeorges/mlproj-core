@@ -20,13 +20,35 @@
             this.project    = project;
         }
 
-        doExecute() {
-            err.abstractFun('Command.execute');
+        withSummary() {
+            err.abstractFun('Command.withSummary');
         }
 
-        execute() {
+        doPrepare() {
+            err.abstractFun('Command.doPrepare');
+        }
+
+        prepare() {
+            if ( this.withSummary() ) {
+                this.platform.log('--- ' + this.platform.bold('Prepare') + ' ---');
+            }
+            return this.doPrepare();
+        }
+
+        execute(actions) {
             try {
-                this.doExecute();
+                if ( this.withSummary() ) {
+                    var pf = this.platform;
+                    pf.log('\n--- ' + pf.bold('Progress') + ' ---'
+                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
+                    actions.execute();
+                    pf.log('\n--- ' + pf.bold('Summary') + ' ---'
+                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
+                    actions.summary();
+                }
+                else {
+                    actions.execute();
+                }
             }
             catch (err) {
                 this.display.error(err, this.platform.verbose);
@@ -39,29 +61,36 @@
      */
     class NewCommand extends Command
     {
-        doExecute() {
-            var pf   = this.platform;
-            var vars = this.cmdArgs;
+        withSummary() {
+            return false;
+        }
 
-            // create `src/`
-            // TODO: Create `test/` as well, when supported.
-            var srcdir = pf.resolve('src', vars.dir);
-            pf.mkdir(srcdir);
+        doPrepare() {
+            var actions = new act.ActionList(pf);
+            actions.add(new act.FunAction('Create a new project', pf => {
+                var vars = this.cmdArgs;
 
-            // create `xproject/` and `xproject/project.xml`
-            var xpdir = pf.resolve('xproject', vars.dir);
-            pf.mkdir(xpdir);
-            pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(vars));
+                // create `src/`
+                // TODO: Create `test/` as well, when supported.
+                var srcdir = pf.resolve('src', vars.dir);
+                pf.mkdir(srcdir);
 
-            // create `xproject/mlenvs/` and `xproject/mlenvs/{base,default,dev,prod}.json`
-            var mldir = pf.resolve('mlenvs', xpdir);
-            pf.mkdir(mldir);
-            pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(vars));
-            pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars));
-            pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars));
-            pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars));
+                // create `xproject/` and `xproject/project.xml`
+                var xpdir = pf.resolve('xproject', vars.dir);
+                pf.mkdir(xpdir);
+                pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(vars));
 
-            return xpdir;
+                // create `xproject/mlenvs/` and `xproject/mlenvs/{base,default,dev,prod}.json`
+                var mldir = pf.resolve('mlenvs', xpdir);
+                pf.mkdir(mldir);
+                pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(vars));
+                pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars));
+                pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars));
+                pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars));
+
+                return xpdir;
+            }));
+            return actions;
         }
     }
 
@@ -70,20 +99,27 @@
      */
     class ShowCommand extends Command
     {
-        doExecute() {
-            var pf    = this.platform;
-            var space = this.project.space;
-            var components = comps => {
-                comps.forEach(c => {
-                    c.show(this.display);
-                });
-            };
-            this.project.show(this.display);
-            this.project.space.show(
-                this.display,
-                this.project.environ || this.project.path);
-            components(space.databases());
-            components(space.servers());
+        withSummary() {
+            return false;
+        }
+
+        doPrepare() {
+            var actions = new act.ActionList(this.platform);
+            actions.add(new act.FunAction('Display the environ details', pf => {
+                var space = this.project.space;
+                var components = comps => {
+                    comps.forEach(c => {
+                        c.show(this.display);
+                    });
+                };
+                this.project.show(this.display);
+                this.project.space.show(
+                    this.display,
+                    this.project.environ || this.project.path);
+                components(space.databases());
+                components(space.servers());
+            }));
+            return actions;
         }
     }
 
@@ -92,27 +128,20 @@
      */
     class SetupCommand extends Command
     {
-        doExecute()
-        {
-            var pf    = this.platform;
-            var space = this.project.space;
-            pf.log('--- ' + pf.bold('Prepare') + ' ---');
+        withSummary() {
+            return true;
+        }
+
+        doPrepare() {
             // the action list
-            this.actions = new act.ActionList(pf);
-            var impl = comps => {
-                for ( let c of comps ) {
-                    c.setup(this.actions, this.display);
-                }
-                pf.log('\n--- ' + pf.bold('Progress') + ' ---'
-                       + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                this.actions.execute();
-                pf.log('\n--- ' + pf.bold('Summary') + ' ---'
-                       + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                this.actions.summary();
-            };
-            var dbs  = space.databases();
-            var srvs = space.servers();
-            impl(dbs.concat(srvs));
+            var actions = new act.ActionList(this.platform);
+            // add all components
+            var dbs  = this.project.space.databases();
+            var srvs = this.project.space.servers();
+            for ( let comp of dbs.concat(srvs) ) {
+                comp.setup(actions, this.display);
+            }
+            return actions;
         }
     }
 
@@ -125,11 +154,15 @@
             return false;
         }
 
-        doExecute() {
+        withSummary() {
+            return true;
+        }
+
+        doPrepare() {
             // "global" variables
-            var pf    = this.platform;
-            var space = this.project.space;
-            this.actions = new act.ActionList(pf);
+            var pf      = this.platform;
+            var space   = this.project.space;
+            var actions = new act.ActionList(pf);
 
             // utility: resolve the target db from args
             var target = function(args, isDeploy) {
@@ -272,14 +305,14 @@
                 });
             }
 
+            // add them each to the actions list
             paths.forEach(p => {
                 // TODO: read() uses utf-8, cannot handle binary
-                this.actions.add(
+                actions.add(
                     new act.DocInsert(db, p.uri, pf.read(p.path)));
             });
-            this.actions.execute(() => {
-                this.actions.summary(true);
-            });
+
+            return actions;
         }
     }
 
