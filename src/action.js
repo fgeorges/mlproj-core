@@ -33,7 +33,7 @@
                     platform.warn(this.data);
                 }
             }
-            if ( platform.dry ) {
+            if ( platform.dry && this.verb !== 'GET' ) {
                 platform.warn(platform.yellow('→') + ' ' + this.msg);
             }
             else {

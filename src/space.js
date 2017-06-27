@@ -115,6 +115,19 @@
         bold(s) {
             throw new Error('Platform.bold is abstract');
         }
+        url(api, url) {
+            if ( ! this.space ) {
+                throw new Error('No space set on the platform for host');
+            }
+            var host = this.space.param('@host');
+            if ( ! host ) {
+                throw new Error('No host in space');
+            }
+            var decl   = this.space.api(api);
+            var scheme = decl.ssl ? 'https' : 'http';
+            var root   = decl.root.length ? '/' + decl.root : decl.root;
+            return scheme + '://' + host + ':' + decl.port + root + url;
+        }
         get(api, url, error, success) {
             throw new Error('Platform.get is abstract');
         }
