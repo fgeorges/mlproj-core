@@ -22,6 +22,10 @@
         execute(platform) {
             err.abstractFun('Action.execute');
         }
+
+        toValues() {
+            err.abstractFun('Action.toValues');
+        }
     }
 
     /*~
@@ -55,6 +59,27 @@
             this.data = data;
         }
 
+        toValues() {
+            var res = {
+                type : this.constructor.name,
+                msg  : this.msg,
+                api  : this.api,
+                url  : this.url,
+                verb : this.verb
+            };
+            if ( this.data && typeof this.data === 'string' ) {
+                res.data = this.data;
+            }
+            else if ( this.data ) {
+                res.data = JSON.stringify(this.data);
+            }
+            return res;
+        }
+
+        getData(platform) {
+            return this.data;
+        }
+
         execute(platform) {
             if ( platform.verbose ) {
                 platform.warn('[' + platform.bold('verbose') + '] '
@@ -68,7 +93,7 @@
                 platform.warn(platform.yellow('→') + ' ' + this.msg);
             }
             else {
-                return this.send(platform, this.api, this.url, this.data);
+                return this.send(platform, this.api, this.url, this.getData(platform));
             }
         }
     }
@@ -357,6 +382,10 @@
                   'Insert document: \t' + uri);
             // TODO: Should we use something else?  XDBC/XCC is bad (is not!) documented...
             this.type = 'text/plain';
+        }
+
+        getData(platform) {
+            return platform.read(this.data);
         }
     }
 

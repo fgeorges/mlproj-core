@@ -309,7 +309,7 @@
             paths.forEach(p => {
                 // TODO: read() uses utf-8, cannot handle binary
                 actions.add(
-                    new act.DocInsert(db, p.uri, pf.read(p.path)));
+                    new act.DocInsert(db, p.uri, p.path));
             });
 
             return actions;
