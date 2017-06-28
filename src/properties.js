@@ -289,7 +289,23 @@
         }
 
         create(obj) {
-            obj[this.prop.name] = this.value;
+            var val = this.value;
+            if ( Array.isArray(this.value) ) {
+                val = this.value.map(v => {
+                    var obj = {};
+                    Object.keys(v).forEach(p => {
+                        v[p].create(obj);
+                    });
+                    return obj;
+                });
+            }
+            else if ( typeof this.value === 'object' ) {
+                var val = {};
+                Object.keys(this.value).forEach(p => {
+                    this.value[p].create(val);
+                });
+            }
+            obj[this.prop.name] = val;
         }
 
         rawValue() {
