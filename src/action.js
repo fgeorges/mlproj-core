@@ -26,6 +26,10 @@
         toValues() {
             err.abstractFun('Action.toValues');
         }
+
+        fromValues(values) {
+            err.abstractFun('Action.fromValues');
+        }
     }
 
     /*~
@@ -72,8 +76,22 @@
             }
             else if ( this.data ) {
                 res.data = JSON.stringify(this.data);
+                res.json = true;
             }
             return res;
+        }
+
+        fromValues(values) {
+            this.msg  = values.msg;
+            this.api  = values.api;
+            this.url  = values.url;
+            this.verb = values.verb;
+            if ( values.json ) {
+                this.data = JSON.parse(values.data);
+            }
+            else {
+                this.data = values.data;
+            }
         }
 
         getData(platform) {
@@ -139,7 +157,7 @@
     class Put extends HttpAction
     {
         constructor(api, url, data, msg) {
-            super(api, url, 'POST', msg, data);
+            super(api, url, 'PUT', msg, data);
         }
 
         send(platform, api, url, data) {
@@ -196,9 +214,11 @@
     class ForestCreate extends ManagePost
     {
         constructor(forest) {
+            var name = forest && forest.name;
+            var db   = forest && forest.db && forest.db.name;
             super('/forests',
-                  { "forest-name": forest.name, "database": forest.db.name },
-                  'Create forest:  \t\t' + forest.name);
+                  { "forest-name": name, "database": db },
+                  'Create forest:  \t\t' + name);
         }
     }
 
@@ -208,9 +228,11 @@
     class ForestAttach extends ManagePost
     {
         constructor(forest) {
-            super('/forests/' + forest.name + '?state=attach&database=' + forest.db.name,
+            var name = forest && forest.name;
+            var db   = forest && forest.db && forest.db.name;
+            super('/forests/' + name + '?state=attach&database=' + db,
                   null,
-                  'Attach forest:  \t\t' + forest.name);
+                  'Attach forest:  \t\t' + name);
         }
     }
 
@@ -220,9 +242,10 @@
     class ForestDetach extends ManagePost
     {
         constructor(forest) {
-            super('/forests/' + forest.name + '?state=detach',
+            var name = forest && forest.name;
+            super('/forests/' + name + '?state=detach',
                   null,
-                  'Detach forest:  \t\t' + forest.name);
+                  'Detach forest:  \t\t' + name);
         }
     }
 
@@ -232,8 +255,9 @@
     class DatabaseProps extends ManageGet
     {
         constructor(db) {
-            super('/databases/' + db.name + '/properties',
-                  'Retrieve database props: \t' + db.name);
+            var name = db && db.name;
+            super('/databases/' + name + '/properties',
+                  'Retrieve database props: \t' + name);
         }
     }
 
@@ -243,9 +267,10 @@
     class DatabaseCreate extends ManagePost
     {
         constructor(db, body) {
+            var name = db && db.name;
             super('/databases',
                   body,
-                  'Create database: \t\t' + db.name);
+                  'Create database: \t\t' + name);
         }
     }
 
@@ -255,9 +280,11 @@
     class DatabaseUpdate extends ManagePut
     {
         constructor(db, name, value) {
-            super('/databases/' + db.name + '/properties',
-                  { [name]: value },
-                  'Update ' + name + ':  \t' + db.name);
+            var dbname = db && db.name;
+            var body   = name && { [name]: value };
+            super('/databases/' + dbname + '/properties',
+                  body,
+                  'Update ' + name + ':  \t' + dbname);
         }
     }
 
@@ -267,8 +294,10 @@
     class ServerProps extends ManageGet
     {
         constructor(srv) {
-            super('/servers/' + srv.name + '/properties?group-id=' + srv.group,
-                  'Retrieve server props: \t' + srv.name);
+            var group = srv && srv.group;
+            var name  = srv && srv.name;
+            super('/servers/' + name + '/properties?group-id=' + group,
+                  'Retrieve server props: \t' + name);
         }
     }
 
@@ -278,9 +307,11 @@
     class ServerCreate extends ManagePost
     {
         constructor(srv, body) {
-            super('/servers?group-id=' + srv.group,
+            var group = srv && srv.group;
+            var name  = srv && srv.name;
+            super('/servers?group-id=' + group,
                   body,
-                  'Create server: \t\t' + srv.name);
+                  'Create server: \t\t' + name);
         }
     }
 
@@ -290,9 +321,12 @@
     class ServerUpdate extends ManagePut
     {
         constructor(srv, name, value) {
-            super('/servers/' + srv.name + '/properties?group-id=' + srv.group,
-                  { [name]: value },
-                  'Update ' + name + ':  \t' + srv.name);
+            var group   = srv && srv.group;
+            var srvname = srv && srv.name;
+            var body    = name && { [name]: value };
+            super('/servers/' + srvname + '/properties?group-id=' + group,
+                  body,
+                  'Update ' + name + ':  \t' + srvname);
         }
 
         send(platform, api, url, data) {
@@ -375,9 +409,10 @@
     class DocInsert extends XdbcPut
     {
         constructor(db, uri, doc) {
+            var name = db && db.name;
             // TODO: Add "perm" parameters.
             // TODO: Add "format" parameter (xml, text, binary)
-            super('/insert?uri=' + uri + '&dbname=' + db.name,
+            super('/insert?uri=' + uri + '&dbname=' + name,
                   doc,
                   'Insert document: \t' + uri);
             // TODO: Should we use something else?  XDBC/XCC is bad (is not!) documented...

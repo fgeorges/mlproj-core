@@ -2,9 +2,10 @@
 
 (function() {
 
-    const cmd   = require('./src/commands');
-    const err   = require('./src/error');
-    const space = require('./src/space');
+    const action = require('./src/action');
+    const cmd    = require('./src/commands');
+    const err    = require('./src/error');
+    const space  = require('./src/space');
 
     module.exports = {
         Platform      : space.Platform,
@@ -14,7 +15,8 @@
         SetupCommand  : cmd.SetupCommand,
         LoadCommand   : cmd.LoadCommand,
         DeployCommand : cmd.DeployCommand,
-        MlprojError   : err.MlprojError
+        MlprojError   : err.MlprojError,
+        actions       : action
     }
 }
 )();
