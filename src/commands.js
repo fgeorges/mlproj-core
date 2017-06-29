@@ -62,13 +62,14 @@
     class NewCommand extends Command
     {
         withSummary() {
-            return false;
+            return true;
         }
 
         doPrepare() {
+            var pf      = this.platform;
             var actions = new act.ActionList(pf);
-            actions.add(new act.FunAction('Create a new project', pf => {
-                var vars = this.cmdArgs;
+            var action  = new act.FunAction('Create a new project', pf => {
+                var vars = this.cmdArgs();
 
                 // create `src/`
                 // TODO: Create `test/` as well, when supported.
@@ -88,8 +89,14 @@
                 pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars));
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars));
 
-                return xpdir;
-            }));
+                this.abbrev = vars.abbrev;
+                this.xpdir  = xpdir;
+            });
+            action.display = (platform, indent) => {
+                platform.log(platform.green('✓') + ' Project created: \t' + this.abbrev);
+                platform.log(platform.green('→') + ' Check/edit files in:\t' + this.xpdir);
+            };
+            actions.add(action);
             return actions;
         }
     }
