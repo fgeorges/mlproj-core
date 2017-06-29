@@ -293,7 +293,7 @@
             if ( ( ! this.modules && actual['modules-database'] )
                  || ( this.modules && ! actual['modules-database'] )
                  || ( this.modules && this.modules.name !== actual['modules-database'] ) ) {
-                var mods = this.modules ? this.modules.name : null;
+                var mods = this.modules ? this.modules.name : 0;
                 display.add(0, 'update', 'modules-database');
                 actions.add(new act.ServerUpdate(this, 'modules-database', mods));
             }
