@@ -19,6 +19,7 @@
     function serverNoDb(name, type) {
         var err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
         err.server = name;
+        throw err;
     }
 
     module.exports = {
