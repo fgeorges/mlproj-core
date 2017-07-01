@@ -72,6 +72,8 @@
                 var vars  = this.cmdArgs();
                 var force = vars.force;
 
+                this.abbrev = vars.abbrev;
+
                 // create `src/`
                 // TODO: Create `test/` as well, when supported.
                 var srcdir = pf.resolve('src', vars.dir);
@@ -90,12 +92,19 @@
                 pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars),     force);
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
-                this.abbrev = vars.abbrev;
                 this.xpdir  = xpdir;
             });
-            action.display = (platform, indent) => {
-                platform.log(platform.green('✓') + ' Project created: \t' + this.abbrev);
-                platform.log(platform.green('→') + ' Check/edit files in:\t' + this.xpdir);
+            action.display = (pf, status) => {
+                if ( status === 'done' ) {
+                    pf.log(pf.green('✓') + ' Project created: \t' + this.abbrev);
+                    pf.log(pf.green('→') + ' Check/edit files in:\t' + this.xpdir);
+                }
+                else if ( status === 'todo' ) {
+                    pf.log(pf.yellow('✗') + ' Project creation: \t' + this.abbrev);
+                }
+                else {
+                    pf.log(pf.red('✗') + ' Project creation: \t' + this.abbrev);
+                }
             };
             actions.add(action);
             return actions;

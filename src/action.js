@@ -15,8 +15,13 @@
             this.msg = msg;
         }
 
-        display(platform, indent) {
-            platform.log(indent + ' ' + this.msg);
+        display(platform, status) {
+            var start = status === 'done'
+                ? platform.green('✓')      // success
+                : status === 'todo'
+                ? platform.yellow('✗')     // not done
+                : platform.red('✗');       // error
+            platform.log(start + ' ' + this.msg);
         }
 
         execute(platform) {
@@ -465,16 +470,16 @@
             var pf = this.platform;
             if ( ! skipdone && this.done.length ) {
                 pf.log(pf.green('Done') + ':');
-                this.done.forEach(a => a.display(pf, pf.green('✓')));
+                this.done.forEach(a => a.display(pf, 'done'));
             }
             if ( this.error ) {
                 pf.log(pf.red('Error') + ':');
-                this.error.action.display(pf, pf.red('✗'));
+                this.error.action.display(pf, 'error');
                 pf.log(this.error.message);
             }
             if ( this.todo.length ) {
                 pf.log(pf.yellow('Not done') + ':');
-                this.todo.forEach(a => a.display(pf, pf.yellow('✗')));
+                this.todo.forEach(a => a.display(pf, 'todo'));
             }
             if ( ! this.done.length && ! this.error && ! this.todo.length ) {
                 pf.log('Nothing to do.');
