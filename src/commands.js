@@ -69,25 +69,26 @@
             var pf      = this.platform;
             var actions = new act.ActionList(pf);
             var action  = new act.FunAction('Create a new project', pf => {
-                var vars = this.cmdArgs();
+                var vars  = this.cmdArgs();
+                var force = vars.force;
 
                 // create `src/`
                 // TODO: Create `test/` as well, when supported.
                 var srcdir = pf.resolve('src', vars.dir);
-                pf.mkdir(srcdir);
+                pf.mkdir(srcdir, force);
 
                 // create `xproject/` and `xproject/project.xml`
                 var xpdir = pf.resolve('xproject', vars.dir);
-                pf.mkdir(xpdir);
-                pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(vars));
+                pf.mkdir(xpdir, force);
+                pf.write(pf.resolve('project.xml', xpdir), NEW_PROJECT_XML(vars), force);
 
                 // create `xproject/mlenvs/` and `xproject/mlenvs/{base,default,dev,prod}.json`
                 var mldir = pf.resolve('mlenvs', xpdir);
-                pf.mkdir(mldir);
-                pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(vars));
-                pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars));
-                pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars));
-                pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars));
+                pf.mkdir(mldir, force);
+                pf.write(pf.resolve('base.json',    mldir), NEW_BASE_ENV(vars),    force);
+                pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars), force);
+                pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars),     force);
+                pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
                 this.abbrev = vars.abbrev;
                 this.xpdir  = xpdir;

@@ -48,7 +48,7 @@
         cwd() {
             err.abstractFun('Platform.cwd');
         }
-        mkdir(path) {
+        mkdir(path, force) {
             err.abstractFun('Platform.mkdir');
         }
         debug(msg) {
@@ -101,7 +101,7 @@
         projectXml(path) {
             err.abstractFun('Platform.projectXml');
         }
-        write(path, content) {
+        write(path, content, force) {
             err.abstractFun('Platform.write');
         }
         green(s) {
