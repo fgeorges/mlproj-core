@@ -271,7 +271,7 @@
                 }
                 // if two explicit at same time
                 if ( (src && dir) || (src && doc) || (dir && doc) ) {
-                    throw new Error('Content options @src, @dir and @doc ar mutually exclusive');
+                    throw new Error('Content options @src, @dir and @doc are mutually exclusive');
                 }
                 return src ? { src: src }
                      : dir ? { dir: dir }
@@ -306,13 +306,14 @@
                 });
             }
             else {
-                pf.allFiles(dir).forEach(p => {
+                const path = pf.resolve(dir);
+                pf.allFiles(path).forEach(p => {
                     let uri;
-                    if ( dir === '.' || dir === './' ) {
+                    if ( path === '.' || path === './' ) {
                         uri = '/' + p;
                     }
                     else {
-                        let len = dir.endsWith('/') ? dir.length - 1 : dir.length;
+                        let len = path.endsWith('/') ? path.length - 1 : path.length;
                         uri = p.slice(len);
                     }
                     paths.push({
