@@ -237,9 +237,6 @@
             // use @srcdir if no modules DB and no root
             if ( ! this.modules && ! this.props.root ) {
                 var dir = space.param('@srcdir');
-                if ( ! dir ) {
-                    throw new Error('No @srcdir for the root of the server: ' + this.name);
-                }
                 this.props.root = new props.Result(props.server.props.root, dir);
             }
         }
