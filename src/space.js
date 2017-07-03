@@ -10,6 +10,9 @@
      */
     class Platform
     {
+        // TODO:
+        // `dry` should not be here, rather on TUI, WRT what to do with actions
+        // `verbose` should not be here, rather on Display
         constructor(dry, verbose) {
             this.dry     = dry;
             this.verbose = verbose;

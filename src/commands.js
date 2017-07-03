@@ -36,9 +36,11 @@
         }
 
         execute(actions) {
+            var pf = this.platform;
             try {
                 if ( this.withSummary() ) {
-                    var pf = this.platform;
+                    // TODO: Use somethign like Display.progress() or Display.summary(),
+                    // instead of Platform.log().
                     pf.log('\n--- ' + pf.bold('Progress') + ' ---'
                            + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
                     actions.execute();
@@ -48,6 +50,13 @@
                 }
                 else {
                     actions.execute();
+                    if ( actions.error ) {
+                        // TODO: Use somethign like Display.error() instead of Platform.log().
+                        pf.log('\n--- ' + pf.bold('Error') + ' ---'
+                               + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
+                        actions.error.action.display(pf, 'error');
+                        pf.log(actions.error.message);
+                    }
                 }
             }
             catch (err) {
