@@ -43,31 +43,31 @@
             return prj;
         }
         config(name) {
-            err.abstractFun('Platform.config');
+            throw err.abstractFun('Platform.config');
         }
         configs() {
-            err.abstractFun('Platform.configs');
+            throw err.abstractFun('Platform.configs');
         }
         cwd() {
-            err.abstractFun('Platform.cwd');
+            throw err.abstractFun('Platform.cwd');
         }
         mkdir(path, force) {
-            err.abstractFun('Platform.mkdir');
+            throw err.abstractFun('Platform.mkdir');
         }
         debug(msg) {
-            err.abstractFun('Platform.debug');
+            throw err.abstractFun('Platform.debug');
         }
         log(msg) {
-            err.abstractFun('Platform.log');
+            throw err.abstractFun('Platform.log');
         }
         info(msg) {
-            err.abstractFun('Platform.info');
+            throw err.abstractFun('Platform.info');
         }
         warn(msg) {
-            err.abstractFun('Platform.warn');
+            throw err.abstractFun('Platform.warn');
         }
         resolve(href, base) {
-            err.abstractFun('Platform.resolve');
+            throw err.abstractFun('Platform.resolve');
         }
         dirname(href) {
             var steps = href.split('/');
@@ -75,7 +75,7 @@
             return steps.join('/') + '/';
         }
         read(path) {
-            err.abstractFun('Platform.read');
+            throw err.abstractFun('Platform.read');
         }
         // validate a few rules for all JSON files, return the mlproj sub-object
         validateJson(json) {
@@ -102,22 +102,22 @@
             return json;
         }
         projectXml(path) {
-            err.abstractFun('Platform.projectXml');
+            throw err.abstractFun('Platform.projectXml');
         }
         write(path, content, force) {
-            err.abstractFun('Platform.write');
+            throw err.abstractFun('Platform.write');
         }
         green(s) {
-            err.abstractFun('Platform.green');
+            throw err.abstractFun('Platform.green');
         }
         yellow(s) {
-            err.abstractFun('Platform.yellow');
+            throw err.abstractFun('Platform.yellow');
         }
         red(s) {
-            err.abstractFun('Platform.red');
+            throw err.abstractFun('Platform.red');
         }
         bold(s) {
-            err.abstractFun('Platform.bold');
+            throw err.abstractFun('Platform.bold');
         }
         url(api, url) {
             if ( ! this.space ) {
@@ -133,22 +133,22 @@
             return scheme + '://' + host + ':' + decl.port + root + url;
         }
         get(api, url, error, success) {
-            err.abstractFun('Platform.get');
+            throw err.abstractFun('Platform.get');
         }
         post(api, url, data, error, success) {
-            err.abstractFun('Platform.post');
+            throw err.abstractFun('Platform.post');
         }
         put(api, url, data, error, success) {
-            err.abstractFun('Platform.put');
+            throw err.abstractFun('Platform.put');
         }
         restart(last) {
-            err.abstractFun('Platform.restart');
+            throw err.abstractFun('Platform.restart');
         }
         isDirectory(path) {
-            err.abstractFun('Platform.isDirectory');
+            throw err.abstractFun('Platform.isDirectory');
         }
         dirChildren(path) {
-            err.abstractFun('Platform.dirChildren');
+            throw err.abstractFun('Platform.dirChildren');
         }
         // return an array of strings, with the path of all files in the dir
         // if filter is passed, it must return true for a path to be returned
@@ -237,28 +237,28 @@
     class Display
     {
         database(name, id, schema, security, triggers, forests, props) {
-            err.abstractFun('Display.database');
+            throw err.abstractFun('Display.database');
         }
         server(name, id, group, content, modules, props) {
-            err.abstractFun('Display.server');
+            throw err.abstractFun('Display.server');
         }
         project(code, configs, title, name, version) {
-            err.abstractFun('Display.project');
+            throw err.abstractFun('Display.project');
         }
         environ(envipath, title, desc, host, user, password, srcdir, mods, params, imports) {
-            err.abstractFun('Display.environ');
+            throw err.abstractFun('Display.environ');
         }
         check(indent, msg, arg) {
-            err.abstractFun('Display.check');
+            throw err.abstractFun('Display.check');
         }
         add(indent, verb, msg, arg) {
-            err.abstractFun('Display.add');
+            throw err.abstractFun('Display.add');
         }
         remove(indent, verb, msg, arg) {
-            err.abstractFun('Display.remove');
+            throw err.abstractFun('Display.remove');
         }
         error(e, verbose) {
-            err.abstractFun('Display.error');
+            throw err.abstractFun('Display.error');
         }
     }
 

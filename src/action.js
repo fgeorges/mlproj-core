@@ -25,15 +25,15 @@
         }
 
         execute(platform) {
-            err.abstractFun('Action.execute');
+            throw err.abstractFun('Action.execute');
         }
 
         toValues() {
-            err.abstractFun('Action.toValues');
+            throw err.abstractFun('Action.toValues');
         }
 
         fromValues(values) {
-            err.abstractFun('Action.fromValues');
+            throw err.abstractFun('Action.fromValues');
         }
     }
 
@@ -425,7 +425,17 @@
         }
 
         getData(platform) {
-            return platform.read(this.data);
+            try {
+                return platform.read(this.data);
+            }
+            catch (e) {
+                if ( e.code === 'ENOENT' ) {
+                    throw err.noSuchFile(this.data);
+                }
+                else {
+                    throw e;
+                }
+            }
         }
     }
 

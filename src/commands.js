@@ -224,7 +224,7 @@
                         ? as.modules
                         : as.content;
                     if ( ! db ) {
-                        err.serverNoDb(as.name, isDeploy ? 'modules' : 'content');
+                        throw err.serverNoDb(as.name, isDeploy ? 'modules' : 'content');
                     }
                 }
                 // resolve from defined databases

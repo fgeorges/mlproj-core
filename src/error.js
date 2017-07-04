@@ -13,17 +13,24 @@
     function abstractFun(name) {
         var err = new MlprojError('abstract-fun', 'Function ' + name + ' is abstract');
         err.fun = name;
-        throw err;
+        return err;
+    }
+
+    function noSuchFile(path) {
+        var err = new MlprojError('no-such-file', 'No such file or directory: ' + path);
+        err.path = path;
+        return err;
     }
 
     function serverNoDb(name, type) {
         var err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
         err.server = name;
-        throw err;
+        return err;
     }
 
     module.exports = {
         abstractFun : abstractFun,
+        noSuchFile  : noSuchFile,
         serverNoDb  : serverNoDb
     };
 }

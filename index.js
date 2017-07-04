@@ -15,7 +15,7 @@
         SetupCommand  : cmd.SetupCommand,
         LoadCommand   : cmd.LoadCommand,
         DeployCommand : cmd.DeployCommand,
-        MlprojError   : err.MlprojError,
+        error         : err,
         actions       : action
     }
 }
