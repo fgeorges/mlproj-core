@@ -429,7 +429,7 @@
                 return platform.read(this.data);
             }
             catch (e) {
-                if ( e.code === 'ENOENT' ) {
+                if ( e.name === 'no-such-file' ) {
                     throw err.noSuchFile(this.data);
                 }
                 else {

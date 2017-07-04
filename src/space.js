@@ -28,7 +28,7 @@
                     env = 'default';
                 }
                 catch (err) {
-                    if ( err.code === 'ENOENT' ) {
+                    if ( err.name === 'no-such-file' ) {
                         throw new Error('Default env does not exist (and no --environ or --file)');
                     }
                     else {
@@ -363,8 +363,8 @@
             return pf.json(path, true);
         }
         catch (err) {
-            // ignore ENOENT, file does not exist
-            if ( err.code !== 'ENOENT' ) {
+            // file does not exist, ignore
+            if ( err.name !== 'no-such-file' ) {
                 throw err;
             }
         }
