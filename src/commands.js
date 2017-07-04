@@ -233,6 +233,7 @@
 
             let paths = [];
             if ( doc ) {
+                this.display.check(0, 'the file', doc);
                 let idx = doc.indexOf('/');
                 if ( idx < 0 ) {
                     throw new Error('Path in `load doc` must contain at least 1 parent dir');
@@ -245,6 +246,7 @@
             }
             else {
                 const path = pf.resolve(dir);
+                this.display.check(0, 'the directory', path);
                 pf.allFiles(path).forEach(p => {
                     let uri;
                     if ( path === '.' || path === './' ) {
