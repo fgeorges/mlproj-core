@@ -20,48 +20,8 @@
             this.project    = project;
         }
 
-        withSummary() {
-            err.abstractFun('Command.withSummary');
-        }
-
-        doPrepare() {
-            err.abstractFun('Command.doPrepare');
-        }
-
         prepare() {
-            if ( this.withSummary() ) {
-                this.platform.log('--- ' + this.platform.bold('Prepare') + ' ---');
-            }
-            return this.doPrepare();
-        }
-
-        execute(actions) {
-            var pf = this.platform;
-            try {
-                if ( this.withSummary() ) {
-                    // TODO: Use somethign like Display.progress() or Display.summary(),
-                    // instead of Platform.log().
-                    pf.log('\n--- ' + pf.bold('Progress') + ' ---'
-                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                    actions.execute();
-                    pf.log('\n--- ' + pf.bold('Summary') + ' ---'
-                           + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                    actions.summary();
-                }
-                else {
-                    actions.execute();
-                    if ( actions.error ) {
-                        // TODO: Use somethign like Display.error() instead of Platform.log().
-                        pf.log('\n--- ' + pf.bold('Error') + ' ---'
-                               + (pf.dry ? ' (' + pf.red('dry run, not for real') + ')' : ''));
-                        actions.error.action.display(pf, 'error');
-                        pf.log(actions.error.message);
-                    }
-                }
-            }
-            catch (err) {
-                this.display.error(err, this.platform.verbose);
-            }
+            throw err.abstractFun('Command.prepare');
         }
     }
 
@@ -70,18 +30,12 @@
      */
     class NewCommand extends Command
     {
-        withSummary() {
-            return true;
-        }
-
-        doPrepare() {
+        prepare() {
             var pf      = this.platform;
             var actions = new act.ActionList(pf);
-            var action  = new act.FunAction('Create a new project', pf => {
-                var vars  = this.cmdArgs();
+            actions.add(new act.FunAction('Create a new project', pf => {
+                var vars  = this.cmdArgs;
                 var force = vars.force;
-
-                this.abbrev = vars.abbrev;
 
                 // create `src/`
                 // TODO: Create `test/` as well, when supported.
@@ -102,20 +56,7 @@
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
                 this.xpdir  = xpdir;
-            });
-            action.display = (pf, status) => {
-                if ( status === 'done' ) {
-                    pf.log(pf.green('✓') + ' Project created: \t' + this.abbrev);
-                    pf.log(pf.green('→') + ' Check/edit files in:\t' + this.xpdir);
-                }
-                else if ( status === 'todo' ) {
-                    pf.log(pf.yellow('✗') + ' Project creation: \t' + this.abbrev);
-                }
-                else {
-                    pf.log(pf.red('✗') + ' Project creation: \t' + this.abbrev);
-                }
-            };
-            actions.add(action);
+            }));
             return actions;
         }
     }
@@ -125,11 +66,7 @@
      */
     class ShowCommand extends Command
     {
-        withSummary() {
-            return false;
-        }
-
-        doPrepare() {
+        prepare() {
             var actions = new act.ActionList(this.platform);
             actions.add(new act.FunAction('Display the environ details', pf => {
                 var space = this.project.space;
@@ -154,11 +91,7 @@
      */
     class SetupCommand extends Command
     {
-        withSummary() {
-            return true;
-        }
-
-        doPrepare() {
+        prepare() {
             // the action list
             var actions = new act.ActionList(this.platform);
             // add all components
@@ -180,11 +113,7 @@
             return false;
         }
 
-        withSummary() {
-            return true;
-        }
-
-        doPrepare() {
+        prepare() {
             // "global" variables
             var pf      = this.platform;
             var space   = this.project.space;

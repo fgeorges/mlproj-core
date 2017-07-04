@@ -474,27 +474,6 @@
                 };
             }
         }
-
-        summary(skipdone)
-        {
-            var pf = this.platform;
-            if ( ! skipdone && this.done.length ) {
-                pf.log(pf.green('Done') + ':');
-                this.done.forEach(a => a.display(pf, 'done'));
-            }
-            if ( this.error ) {
-                pf.log(pf.red('Error') + ':');
-                this.error.action.display(pf, 'error');
-                pf.log(this.error.message);
-            }
-            if ( this.todo.length ) {
-                pf.log(pf.yellow('Not done') + ':');
-                this.todo.forEach(a => a.display(pf, 'todo'));
-            }
-            if ( ! this.done.length && ! this.error && ! this.todo.length ) {
-                pf.log('Nothing to do.');
-            }
-        }
     }
 
     module.exports = {
