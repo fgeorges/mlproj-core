@@ -225,12 +225,23 @@
                 // TODO: For now, the srcdir with name "src" is simulated with
                 // the value of the param "@srcdir".  Must eventually support
                 // multiple named srcdirs...
-                if ( what.src !== 'src' ) {
-                    throw new Error('Multiple srcdirs not supported yet, only "src": ' + src);
+                if ( what.src === 'src' ) {
+                    dir = space.param('@srcdir');
                 }
-                dir = space.param('@srcdir');
+                else if ( what.src === 'data' ) {
+                    dir = 'data';
+                }
+                else {
+                    throw new Error('Multiple srcdirs not supported yet, only "src" and "data": ' + src);
+                }
             }
 
+            this.populateActions(actions, db, doc, dir);
+            return actions;
+        }
+
+        populateActions(actions, db, doc, dir) {
+            var pf    = this.platform;
             let paths = [];
             if ( doc ) {
                 this.display.check(0, 'the file', doc);
@@ -248,29 +259,28 @@
                 const path = pf.resolve(dir);
                 this.display.check(0, 'the directory', path);
                 pf.allFiles(path).forEach(p => {
-                    let uri;
-                    if ( path === '.' || path === './' ) {
-                        uri = '/' + p;
-                    }
-                    else {
-                        let len = path.endsWith('/') ? path.length - 1 : path.length;
-                        uri = p.slice(len);
-                    }
                     paths.push({
                         path : p,
-                        uri  : uri
+                        uri  : this.uri(path, p)
                     });
                 });
             }
-
             // add them each to the actions list
             paths.forEach(p => {
                 // TODO: read() uses utf-8, cannot handle binary
                 actions.add(
                     new act.DocInsert(db, p.uri, p.path));
             });
+        }
 
-            return actions;
+        uri(dir, path) {
+            if ( dir === '.' || dir === './' ) {
+                return '/' + path;
+            }
+            else {
+                let len = dir.endsWith('/') ? dir.length - 1 : dir.length;
+                return path.slice(len);
+            }
         }
     }
 

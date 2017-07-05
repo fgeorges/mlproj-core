@@ -478,6 +478,7 @@
 
     module.exports = {
         ActionList     : ActionList,
+        Action         : Action,
         FunAction      : FunAction,
         ForestList     : ForestList,
         ForestCreate   : ForestCreate,
