@@ -3,7 +3,105 @@
 (function() {
 
     const act = require('./action');
+    const err = require('./error');
 
+    /*~
+     * The base, abstract config item.
+     */
+    class ConfigItem
+    {
+        type(type) {
+            throw err.abstractFun('ConfigItem.type');
+        }
+
+        handle(result, value, key) {
+            throw err.abstractFun('ConfigItem.handle');
+        }
+    }
+
+    /*~
+     * What is returned as the result of `parse()`.
+     */
+    class Result
+    {
+        constructor(prop, value, type, frozen) {
+            this.prop   = prop;
+            this.value  = value;
+            this._type  = type;
+            this.frozen = frozen;
+        }
+
+        show(pf, level) {
+            if ( ! level ) {
+                level = 1;
+            }
+            if ( Array.isArray(this.value) ) {
+                this.value.forEach(v => {
+                    pf.line(level, this.prop.label);
+                    Object.keys(v).forEach(n => v[n].show(pf, level + 1));
+                });
+            }
+            else {
+                pf.line(level, this.prop.label, this.value);
+            }
+        }
+
+        create(obj) {
+            var val = this.value;
+            if ( Array.isArray(this.value) ) {
+                val = this.value.map(v => {
+                    var obj = {};
+                    Object.keys(v).forEach(p => {
+                        v[p].create(obj);
+                    });
+                    return obj;
+                });
+            }
+            else if ( typeof this.value === 'object' ) {
+                var val = {};
+                Object.keys(this.value).forEach(p => {
+                    this.value[p].create(val);
+                });
+            }
+            obj[this.prop.name] = val;
+        }
+
+        rawValue() {
+            var val = this.value;
+            if ( Array.isArray(this.value) ) {
+                val = [];
+                this.value.forEach(item => {
+                    var obj = {};
+                    Object.keys(item).forEach(p => obj[p] = item[p].rawValue());
+                    val.push(obj);
+                });
+            }
+            return val;
+        }
+
+        update(actions, display, body, comp) {
+            var val = this.rawValue();
+            if ( ! this.prop.compare(val, body[this.prop.name]) ) {
+                if ( this.frozen ) {
+                    throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name);
+                }
+                display.add(1, 'update', this.prop.label);
+                if ( 'database' === this._type ) {
+                    actions.add(new act.DatabaseUpdate(comp, this.prop.name, val));
+                }
+                else if ( 'server' === this._type ) {
+                    actions.add(new act.ServerUpdate(comp, this.prop.name, val));
+                }
+                else {
+                    throw new Error('Unsupported component type: ' + this._type);
+                }
+            }
+        }
+    }
+
+    /*~
+     * The config item for objects, including the overall config file.
+     */
     class ConfigObject
     {
         constructor(type) {
@@ -104,7 +202,14 @@
         }
     }
 
-    class Ignore
+    /*~
+     * A config property to ignore.
+     *
+     * This is for pieces of the config files taken care of specially, in the
+     * code.  For instance `compose`, which defines how to compose several
+     * components, based on their "inheritence".
+     */
+    class Ignore extends ConfigItem
     {
         handle() {
             // ignore
@@ -115,7 +220,12 @@
         }
     }
 
-    class Database
+    /*~
+     * A database.
+     *
+     * For now, it is not used, it is handled in the code, so use `Ignore`.
+     */
+    class Database extends ConfigItem
     {
         constructor(name) {
             this.name = name;
@@ -130,7 +240,14 @@
         }
     }
 
-    class MultiArray
+    /*~
+     * An array of objects, each of a different type in a defined set.
+     *
+     * This is used for range indexes, which are all in one single array.  But
+     * each can be of one of 3 types: element range, attribute range or path
+     * range.
+     */
+    class MultiArray extends ConfigItem
     {
         constructor() {
             this.items = [];
@@ -169,7 +286,10 @@
         }
     }
 
-    class ObjectArray
+    /*~
+     * An array of objects.  Supoprts `Multiplexer`.
+     */
+    class ObjectArray extends ConfigItem
     {
         constructor(name, label, prop) {
             this.name  = name;
@@ -247,8 +367,16 @@
         }
     }
 
-    // used as a marker on one of the ConfigObject of an ObjectArray
-    class Multiplexer
+    /*~
+     * In an `ObjectArray`, marks a config item to demultiply its enclosing object.
+     *
+     * This is used for `name` in range indexes, for instance.  In that case,
+     * the name of one range index is a string.  But with the Multiplexer, it
+     * can be an array of strings instead, which will result in creating an
+     * array of the object containing it, having all the some values, except
+     * each has a different name.
+     */
+    class Multiplexer extends ConfigItem
     {
         constructor(prop) {
             this.prop = prop;
@@ -264,84 +392,10 @@
         }
     }
 
-    class Result
-    {
-        constructor(prop, value, type, frozen) {
-            this.prop   = prop;
-            this.value  = value;
-            this._type  = type;
-            this.frozen = frozen;
-        }
-
-        show(pf, level) {
-            if ( ! level ) {
-                level = 1;
-            }
-            if ( Array.isArray(this.value) ) {
-                this.value.forEach(v => {
-                    pf.line(level, this.prop.label);
-                    Object.keys(v).forEach(n => v[n].show(pf, level + 1));
-                });
-            }
-            else {
-                pf.line(level, this.prop.label, this.value);
-            }
-        }
-
-        create(obj) {
-            var val = this.value;
-            if ( Array.isArray(this.value) ) {
-                val = this.value.map(v => {
-                    var obj = {};
-                    Object.keys(v).forEach(p => {
-                        v[p].create(obj);
-                    });
-                    return obj;
-                });
-            }
-            else if ( typeof this.value === 'object' ) {
-                var val = {};
-                Object.keys(this.value).forEach(p => {
-                    this.value[p].create(val);
-                });
-            }
-            obj[this.prop.name] = val;
-        }
-
-        rawValue() {
-            var val = this.value;
-            if ( Array.isArray(this.value) ) {
-                val = [];
-                this.value.forEach(item => {
-                    var obj = {};
-                    Object.keys(item).forEach(p => obj[p] = item[p].rawValue());
-                    val.push(obj);
-                });
-            }
-            return val;
-        }
-
-        update(actions, display, body, comp) {
-            var val = this.rawValue();
-            if ( ! this.prop.compare(val, body[this.prop.name]) ) {
-                if ( this.frozen ) {
-                    throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name);
-                }
-                display.add(1, 'update', this.prop.label);
-                if ( 'database' === this._type ) {
-                    actions.add(new act.DatabaseUpdate(comp, this.prop.name, val));
-                }
-                else if ( 'server' === this._type ) {
-                    actions.add(new act.ServerUpdate(comp, this.prop.name, val));
-                }
-                else {
-                    throw new Error('Unsupported component type: ' + this._type);
-                }
-            }
-        }
-    }
-
-    class Simple
+    /*~
+     * A simple, atomic config item (base for string, integer, etc.)
+     */
+    class Simple extends ConfigItem
     {
         constructor(name, label) {
             this.name   = name;
@@ -373,6 +427,9 @@
         }
     }
 
+    /*~
+     * A closed enumeration of strings.
+     */
     class Enum extends Simple
     {
         constructor(name, label, values) {
@@ -388,6 +445,9 @@
         }
     }
 
+    /*~
+     * A simple boolean.
+     */
     class Boolean extends Simple
     {
         constructor(name, label) {
@@ -417,6 +477,9 @@
         }
     }
 
+    /*~
+     * A simple integer.  If given as a string, it is parsed.
+     */
     class Integer extends Simple
     {
         constructor(name, label) {
@@ -443,6 +506,9 @@
         }
     }
 
+    /*~
+     * A simple string.
+     */
     class String extends Simple
     {
         constructor(name, label) {
@@ -468,7 +534,9 @@
             });
     }
 
-    // the database properties and config format
+    /*~
+     * The database properties and config format.
+     */
     var database = new ConfigObject('database')
         .add('compose',  false, new Ignore())
         .add('comment',  false, new Ignore())
@@ -511,7 +579,9 @@
              .add('uri',        false, new Boolean('uri-lexicon',        'URI lexicon'))
              .add('collection', false, new Boolean('collection-lexicon', 'collection lexicon')));
 
-    // the server properties and config format
+    /*~
+     * The server properties and config format.
+     */
     var server = new ConfigObject('server')
         .add('compose',  false, new Ignore())
         .add('comment',  false, new Ignore())
@@ -522,11 +592,11 @@
         // .add('modules',  false, new Database('modules-database'))
         .add('content',  true,  new Ignore())
         .add('modules',  false, new Ignore())
-        .add('type',     true,  new     Enum('server-type',   'type', [ 'http' ]).freeze())
-        .add('port',     true,  new  Integer('port',          'port'))
-        .add('root',     false, new   String('root',          'root'))
-        .add('rewriter', false, new   String('url-rewriter',  'url rewriter'))
-        .add('handler',  false, new   String('error-handler', 'error handler'))
+        .add('type',     true,  new    Enum('server-type',   'type', [ 'http' ]).freeze())
+        .add('port',     true,  new Integer('port',          'port'))
+        .add('root',     false, new  String('root',          'root'))
+        .add('rewriter', false, new  String('url-rewriter',  'url rewriter'))
+        .add('handler',  false, new  String('error-handler', 'error handler'))
         .add('output',   false, new ConfigObject()
              .add('byte-order-mark',             false, new   Enum('output-byte-order-mark',             'output byte order mark',             [ 'yes', 'no', 'default' ]))
              .add('cdata-section-localname',     false, new String('output-cdata-section-localname',     'output cdata section localname'))
@@ -550,7 +620,7 @@
              .add('sgml-character-entities',     false, new   Enum('output-sgml-character-entities',     'output sgml character entities',     [ 'none', 'normal', 'math', 'pub' ]))
              .add('standalone',                  false, new   Enum('output-standalone',                  'output standalone',                  [ 'yes', 'no', 'omit' ]))
              .add('undeclare-prefixes',          false, new   Enum('output-undeclare-prefixes',          'output undeclare prefixes',          [ 'yes', 'no', 'default' ]))
-             .add('version',                     false, new String('output-version',                     'output version')))
+             .add('version',                     false, new String('output-version',                     'output version')));
 
     module.exports = {
         database : database,
