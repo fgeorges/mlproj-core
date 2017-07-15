@@ -529,6 +529,29 @@
         }
     }
 
+    /*~
+     * A list of strings, as a string with a delimiter, or as an array of strings.
+     */
+    class StringList extends Simple
+    {
+        constructor(name, label, delim) {
+            super(name, label);
+            this.delim = delim;
+        }
+
+        value(val) {
+            if ( Array.isArray(val) ) {
+                return val;
+            }
+            else if ( 'string' === typeof val ) {
+                return val.split(this.delim);
+            }
+            else {
+                throw new Error('String list value neither a string or an array: ' + type);
+            }
+        }
+    }
+
     // same base for 3 types of range indexes, below
     function rangeBase() {
         return new ConfigObject(/*'db.range'*/)
@@ -631,9 +654,21 @@
              .add('undeclare-prefixes',          false, new   Enum('output-undeclare-prefixes',          'output undeclare prefixes',          [ 'yes', 'no', 'default' ]))
              .add('version',                     false, new String('output-version',                     'output version')));
 
+    /*~
+     * The source properties and config format.
+     */
+    var source = new ConfigObject('source')
+        .add('compose',  false, new Ignore())
+        .add('comment',  false, new Ignore())
+        .add('name',     true,  new Ignore())
+        .add('dir',      true,  new     String('dir',     'directory'))
+        .add('include',  false, new StringList('include', 'include patterns', /\s*,\s*/))
+        .add('exclude',  false, new StringList('exclude', 'exclude patterns', /\s*,\s*/));
+
     module.exports = {
         database : database,
         server   : server,
+        source   : source,
         Result   : Result
     }
 }

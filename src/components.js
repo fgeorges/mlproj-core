@@ -303,10 +303,32 @@
         }
     }
 
+    /*~
+     * A source.
+     */
+    class Source extends Component
+    {
+        constructor(json)
+        {
+            super();
+            this.name  = json.name;
+            // extract the configured properties
+            this.props = props.source.parse(json, this.props);
+        }
+
+        show(display)
+        {
+            display.source(
+                this.name,
+                this.props);
+        }
+    }
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
-        Server      : Server
+        Server      : Server,
+        Source      : Source
     }
 }
 )();

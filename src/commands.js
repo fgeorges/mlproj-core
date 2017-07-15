@@ -81,6 +81,7 @@
                     this.project.environ || this.project.path);
                 components(space.databases());
                 components(space.servers());
+                components(space.sources());
             }));
             return actions;
         }

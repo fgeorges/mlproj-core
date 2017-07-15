@@ -242,6 +242,9 @@
         server(name, id, group, content, modules, props) {
             throw err.abstractFun('Display.server');
         }
+        source(name) {
+            throw err.abstractFun('Display.source');
+        }
         project(code, configs, title, name, version) {
             throw err.abstractFun('Display.project');
         }
@@ -403,6 +406,7 @@
             this._apis      = json.apis      || {};
             this._databases = json.databases || [];
             this._servers   = json.servers   || [];
+            this._sources   = json.sources   || [];
             this._imports   = [];
             this._config    = json.config;
             // extract defined values from `obj` and put them in `this.param`
@@ -609,6 +613,11 @@
             return this._allSrvs;
         }
 
+        sources()
+        {
+            return this._allSrcs;
+        }
+
         modulesDb()
         {
             return this._getDb('modules');
@@ -647,7 +656,9 @@
                 dbNames  : {},
                 srvs     : [],
                 srvIds   : {},
-                srvNames : {}
+                srvNames : {},
+                srcs     : [],
+                srcNames : {}
             };
             this.cacheImpl(ctxt, platform);
 
@@ -899,6 +910,11 @@
                 };
                 return new cmp.Server(srv, this, resolve(srv.content), resolve(srv.modules));
             });
+
+            // instantiate all sources now
+            this._allSrcs = ctxt.srcs.map(src => {
+                return new cmp.Source(src);
+            });
         }
 
         // recursive implementation of cache(), caching databases and servers
@@ -972,6 +988,10 @@
             this._servers.forEach(srv => {
                 impl(srv, ctxt.srvs, ctxt.srvIds, ctxt.srvNames, 'server');
             });
+            // cache sources
+            this._sources.forEach(src => {
+                impl(src, ctxt.srcs, null, ctxt.srcNames, 'source');
+            });
             // recurse on imports
             this._imports.forEach((i) => {
                 ctxt.href = i.href;
@@ -985,9 +1005,8 @@
             this.resolveObject(this._params, true);
             this.resolveArray(this._databases);
             this.resolveArray(this._servers);
-            this._imports.forEach((i) => {
-                i.space.resolve(root);
-            });
+            this.resolveArray(this._sources);
+            this._imports.forEach(i => i.space.resolve(root));
         }
 
         resolveThing(val, forbiden)
