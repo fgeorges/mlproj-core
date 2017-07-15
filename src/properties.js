@@ -10,6 +10,10 @@
      */
     class ConfigItem
     {
+        constructor(multiline) {
+            this.multiline = multiline ? true : false;
+        }
+
         type(type) {
             throw err.abstractFun('ConfigItem.type');
         }
@@ -228,6 +232,7 @@
     class Database extends ConfigItem
     {
         constructor(name) {
+            super();
             this.name = name;
         }
 
@@ -250,6 +255,7 @@
     class MultiArray extends ConfigItem
     {
         constructor() {
+            super(true);
             this.items = [];
         }
 
@@ -292,6 +298,7 @@
     class ObjectArray extends ConfigItem
     {
         constructor(name, label, prop) {
+            super(true);
             this.name  = name;
             this.label = label;
             this.prop  = prop;
@@ -379,6 +386,7 @@
     class Multiplexer extends ConfigItem
     {
         constructor(prop) {
+            super();
             this.prop = prop;
             this.name = prop.name;
         }
@@ -398,6 +406,7 @@
     class Simple extends ConfigItem
     {
         constructor(name, label) {
+            super();
             this.name   = name;
             this.label  = label;
             this.frozen = false;
