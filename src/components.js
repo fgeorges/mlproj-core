@@ -233,7 +233,7 @@
             this.content = content;
             this.modules = modules;
             // extract the configured properties
-            this.props   = props.server.parse(json, this.props);
+            this.props   = props.server.parse(json);
             // use @srcdir if no modules DB and no root
             if ( ! this.modules && ! this.props.root ) {
                 var dir = space.param('@srcdir');
@@ -312,9 +312,9 @@
         {
             super();
             this.dflt  = dflt;
-            this.name  = json.name;
+            this.name  = json && json.name;
             // extract the configured properties
-            this.props = props.source.parse(json, this.props);
+            this.props = json ? props.source.parse(json) : {};
         }
 
         show(display)
@@ -327,14 +327,18 @@
 
         prop(name)
         {
-            const v = this.props[name] || this.dflt.props[name];
+            const v = this.props[name];
+            if ( ! v && this.dflt ) {
+                v = this.dflt.props[name];
+            }
             if ( ! v && name === 'garbage' ) {
                 v = 'TODO: Set the default default garbage value...';
             }
             return v;
         }
 
-        load(actions, db, display) {
+        load(actions, db, display)
+        {
             const pf   = actions.platform;
             const path = pf.resolve(this.prop('dir').value);
             display.check(0, 'the directory', path);
@@ -371,12 +375,40 @@
         }
     }
 
+    /*~
+     * A source set wrapping just a plain doc.
+     */
+    class SourceDoc extends SourceSet
+    {
+        constructor(doc)
+        {
+            super();
+            this.doc = doc;
+        }
+
+        load(actions, db, display)
+        {
+            display.check(0, 'the file', this.doc);
+            actions.add(
+                new act.DocInsert(db, this.uri(null, this.doc), this.doc));
+        }
+
+        uri(dir, path) {
+            let idx = path.indexOf('/');
+            if ( idx < 0 ) {
+                throw new Error('Path in `load doc` must contain at least 1 parent dir');
+            }
+            return path.slice(idx);
+        }
+    }
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
         Server      : Server,
         SourceSet   : SourceSet,
-        SourceDir   : SourceDir
+        SourceDir   : SourceDir,
+        SourceDoc   : SourceDoc
     }
 }
 )();

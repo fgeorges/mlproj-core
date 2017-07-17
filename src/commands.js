@@ -181,13 +181,7 @@
             var content = function(args, isDeploy) {
                 var dir = args.directory;
                 var doc = args.document;
-                var src;
-                if ( args.sourceset ) {
-                    src = space.source(args.sourceset);
-                    if ( ! src ) {
-                        throw new Error('No such source set with name: ' + args.sourceset);
-                    }
-                }
+                var src = args.sourceset;
                 // if no explicit target, try defaults
                 if ( ! src && ! dir && ! doc ) {
                     var arg = args.what || (isDeploy ? 'src' : 'data'); // default value
@@ -195,44 +189,37 @@
                     // if there was a source attached to a directory equal to
                     // "arg"?  Won't change the dir used, but might make a
                     // difference if we use other props on the source...
-                    src = space.source(arg);
-                    if ( ! src ) {
-                        dir = arg;
-                    }
+                    return space.source(arg) || new cmp.SourceDir(arg);
                 }
                 // if two explicit at same time
                 if ( (src && dir) || (src && doc) || (dir && doc) ) {
                     throw new Error('Content options --src, --dir and --doc are mutually exclusive');
                 }
-                return src ? { src: src }
-                     : dir ? { src: new cmp.SourceDir(dir) }
-                     :       { doc: doc };
+                if ( args.sourceset ) {
+                    const res = space.source(args.sourceset);
+                    if ( ! res ) {
+                        throw new Error('No such source set with name: ' + args.sourceset);
+                    }
+                    return res;
+                }
+                else if ( dir ) {
+                    return new cmp.SourceDir(dir);
+                }
+                else {
+                    return new cmp.SourceDoc(doc);
+                }
             }
 
             // do it: the actual execute() implem
-            let db   = target( this.cmdArgs, this.isDeploy());
-            let what = content(this.cmdArgs, this.isDeploy());
-            this.populateActions(actions, db, what.doc, what.src);
+            let db  = target( this.cmdArgs, this.isDeploy());
+            let src = content(this.cmdArgs, this.isDeploy());
+            this.populateActions(actions, db, src);
 
             return actions;
         }
 
-        populateActions(actions, db, doc, src) {
-            // for doc...
-            if ( doc ) {
-                this.display.check(0, 'the file', doc);
-                let idx = doc.indexOf('/');
-                if ( idx < 0 ) {
-                    throw new Error('Path in `load doc` must contain at least 1 parent dir');
-                }
-                let uri = doc.slice(idx);
-                actions.add(
-                    new act.DocInsert(db, uri, doc));
-            }
-            // ...for dir and src
-            else {
-                src.load(actions, db, this.display);
-            }
+        populateActions(actions, db, src) {
+            src.load(actions, db, this.display);
         }
     }
 
