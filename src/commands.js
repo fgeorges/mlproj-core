@@ -318,6 +318,13 @@
         "params": {
             "port": "${ vars.port }"
         },
+        "sources": [{
+            "name": "data",
+            "dir":  "data"
+        }, {
+            "name": "src",
+            "dir":  "src"
+        }],
         "databases": [{
             "id": "content",
             "name": "@{code}-content"
