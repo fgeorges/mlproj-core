@@ -927,8 +927,10 @@
             });
 
             // instantiate all sources now
-            this._allSrcs = ctxt.srcs.map(src => {
-                return new cmp.Source(src);
+            let dfltSrc = ctxt.srcs.find(s => s.name === '@default');
+            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
+            this._allSrcs = ctxt.srcs.filter(s => s.name !== '@default').map(s => {
+                return new cmp.SourceSet(s, dflt);
             });
         }
 

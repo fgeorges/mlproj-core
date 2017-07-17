@@ -304,13 +304,14 @@
     }
 
     /*~
-     * A source.
+     * A named source set.
      */
-    class Source extends Component
+    class SourceSet extends Component
     {
-        constructor(json)
+        constructor(json, dflt)
         {
             super();
+            this.dflt  = dflt;
             this.name  = json.name;
             // extract the configured properties
             this.props = props.source.parse(json, this.props);
@@ -318,14 +319,24 @@
 
         show(display)
         {
+            // TODO: What about this.dflt...?
             display.source(
                 this.name,
                 this.props);
         }
 
+        prop(name)
+        {
+            const v = this.props[name] || this.dflt.props[name];
+            if ( ! v && name === 'garbage' ) {
+                v = 'TODO: Set the default default garbage value...';
+            }
+            return v;
+        }
+
         load(actions, db, display) {
             const pf   = actions.platform;
-            const path = pf.resolve(this.props.dir.value);
+            const path = pf.resolve(this.prop('dir').value);
             display.check(0, 'the directory', path);
 
             //
@@ -349,11 +360,23 @@
         }
     }
 
+    /*~
+     * A source set wrapping just a plain dir.
+     */
+    class SourceDir extends SourceSet
+    {
+        constructor(dir)
+        {
+            super({ dir : dir });
+        }
+    }
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
         Server      : Server,
-        Source      : Source
+        SourceSet   : SourceSet,
+        SourceDir   : SourceDir
     }
 }
 )();

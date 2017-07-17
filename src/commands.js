@@ -205,32 +205,34 @@
                     throw new Error('Content options --src, --dir and --doc are mutually exclusive');
                 }
                 return src ? { src: src }
-                     : dir ? { dir: dir }
+                     : dir ? { src: new cmp.SourceDir(dir) }
                      :       { doc: doc };
             }
 
             // do it: the actual execute() implem
             let db   = target( this.cmdArgs, this.isDeploy());
             let what = content(this.cmdArgs, this.isDeploy());
+            this.populateActions(actions, db, what.doc, what.src);
+
+            return actions;
+        }
+
+        populateActions(actions, db, doc, src) {
             // for doc...
-            if ( what.doc ) {
-                this.display.check(0, 'the file', what.doc);
-                let idx = what.doc.indexOf('/');
+            if ( doc ) {
+                this.display.check(0, 'the file', doc);
+                let idx = doc.indexOf('/');
                 if ( idx < 0 ) {
                     throw new Error('Path in `load doc` must contain at least 1 parent dir');
                 }
-                let uri = what.doc.slice(idx);
+                let uri = doc.slice(idx);
                 actions.add(
-                    new act.DocInsert(db, uri, what.doc));
+                    new act.DocInsert(db, uri, doc));
             }
             // ...for dir and src
             else {
-                if ( what.dir ) {
-                    what.src = new cmp.Source({ dir: what.dir });
-                }
-                what.src.load(actions, db, this.display);
+                src.load(actions, db, this.display);
             }
-            return actions;
         }
     }
 
