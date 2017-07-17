@@ -145,7 +145,7 @@
                     }
                 }
                 // if more than one explicit
-                if ( (as && db) || (as && force) || (db && force) ) {
+                else if ( (as && db) || (as && force) || (db && force) ) {
                     throw new Error('Both target options @db and @as provided');
                 }
                 // resolve from server if set
@@ -179,38 +179,30 @@
             //
             // utility: resolve the content source from args
             var content = function(args, isDeploy) {
-                var src = args.sourceset;
                 var dir = args.directory;
                 var doc = args.document;
+                var src;
+                if ( args.sourceset ) {
+                    src = space.source(args.sourceset);
+                    if ( ! src ) {
+                        throw new Error('No such source set with name: ' + args.sourceset);
+                    }
+                }
                 // if no explicit target, try defaults
                 if ( ! src && ! dir && ! doc ) {
-                    var arg = isDeploy ? 'src' : 'data'; // default value
-                    if ( args.what ) {
-                        arg = args.what;
-                    }
-                    // TODO: For now, if "@srcdir", simulate a srcdir with the
-                    // same value as dir, and "src" as name.  Must eventually
-                    // support multiple named srcdirs...
-                    //
-                    // TODO: In addition to a srcdir by name, what if we look if
-                    // there is a srcdir attached to a directory equal to "arg"?
-                    // Won't change the dir used, but might make a difference if
-                    // we use other props on the srcdir...
-                    //
-                    // src = space.srcdir(arg);
-                    // if ( ! src ) {
-                    //     dir = arg;
-                    // }
-                    if ( arg === 'src' && space.param('@srcdir') ) {
-                        src = 'src';
-                    }
-                    else {
+                    var arg = args.what || (isDeploy ? 'src' : 'data'); // default value
+                    // TODO: In addition to a source by name, what if we looked
+                    // if there was a source attached to a directory equal to
+                    // "arg"?  Won't change the dir used, but might make a
+                    // difference if we use other props on the source...
+                    src = space.source(arg);
+                    if ( ! src ) {
                         dir = arg;
                     }
                 }
                 // if two explicit at same time
                 if ( (src && dir) || (src && doc) || (dir && doc) ) {
-                    throw new Error('Content options @src, @dir and @doc are mutually exclusive');
+                    throw new Error('Content options --src, --dir and --doc are mutually exclusive');
                 }
                 return src ? { src: src }
                      : dir ? { dir: dir }
@@ -220,68 +212,25 @@
             // do it: the actual execute() implem
             let db   = target( this.cmdArgs, this.isDeploy());
             let what = content(this.cmdArgs, this.isDeploy());
-            let dir  = what.dir;
-            let doc  = what.doc;
-            if ( what.src ) {
-                // TODO: For now, the srcdir with name "src" is simulated with
-                // the value of the param "@srcdir".  Must eventually support
-                // multiple named srcdirs...
-                if ( what.src === 'src' ) {
-                    dir = space.param('@srcdir');
-                }
-                else if ( what.src === 'data' ) {
-                    dir = 'data';
-                }
-                else {
-                    throw new Error('Multiple srcdirs not supported yet, only "src" and "data": ' + src);
-                }
-            }
-
-            this.populateActions(actions, db, doc, dir);
-            return actions;
-        }
-
-        populateActions(actions, db, doc, dir) {
-            var pf    = this.platform;
-            let paths = [];
-            if ( doc ) {
-                this.display.check(0, 'the file', doc);
-                let idx = doc.indexOf('/');
+            // for doc...
+            if ( what.doc ) {
+                this.display.check(0, 'the file', what.doc);
+                let idx = what.doc.indexOf('/');
                 if ( idx < 0 ) {
                     throw new Error('Path in `load doc` must contain at least 1 parent dir');
                 }
-                let uri = doc.slice(idx);
-                paths.push({
-                    path : doc,
-                    uri  : uri
-                });
-            }
-            else {
-                const path = pf.resolve(dir);
-                this.display.check(0, 'the directory', path);
-                pf.allFiles(path).forEach(p => {
-                    paths.push({
-                        path : p,
-                        uri  : this.uri(path, p)
-                    });
-                });
-            }
-            // add them each to the actions list
-            paths.forEach(p => {
-                // TODO: read() uses utf-8, cannot handle binary
+                let uri = what.doc.slice(idx);
                 actions.add(
-                    new act.DocInsert(db, p.uri, p.path));
-            });
-        }
-
-        uri(dir, path) {
-            if ( dir === '.' || dir === './' ) {
-                return '/' + path;
+                    new act.DocInsert(db, uri, what.doc));
             }
+            // ...for dir and src
             else {
-                let len = dir.endsWith('/') ? dir.length - 1 : dir.length;
-                return path.slice(len);
+                if ( what.dir ) {
+                    what.src = new cmp.Source({ dir: what.dir });
+                }
+                what.src.load(actions, db, this.display);
             }
+            return actions;
         }
     }
 

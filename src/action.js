@@ -426,6 +426,7 @@
 
         getData(platform) {
             try {
+                // TODO: read() uses utf-8, cannot handle binary
                 return platform.read(this.data);
             }
             catch (e) {

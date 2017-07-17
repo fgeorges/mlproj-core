@@ -587,6 +587,26 @@
             return names;
         }
 
+        sources()
+        {
+            return this._allSrcs;
+        }
+
+        source(name)
+        {
+            let res = this.sources().filter(src => src.name === name);
+            if ( ! res.length ) {
+                return;
+            }
+            else if ( res.length === 1 ) {
+                return res[0];
+            }
+            else {
+                let list = res.map(src => src.name).join(', ');
+                throw new Error('More than one source with name "' + name + '": ' + list);
+            }
+        }
+
         databases()
         {
             return this._allDbs;
@@ -611,11 +631,6 @@
         servers()
         {
             return this._allSrvs;
-        }
-
-        sources()
-        {
-            return this._allSrcs;
         }
 
         modulesDb()

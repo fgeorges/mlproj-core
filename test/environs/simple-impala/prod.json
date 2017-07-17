@@ -5,17 +5,20 @@
         "title": "Example with sources",
         "sources": [{
             "name": "foo",
-            "dir":  "../../foo",
+            "dir":  "foo",
             "include": "*.xqy,*.xql,*.xq"
         }, {
             "name": "bar",
-            "dir":  "../../bar",
+            "dir":  "bar",
             "exclude": [ "*.bck", "*.ignore" ]
         }, {
             "name": "baz",
-            "dir":  "../../baz",
+            "dir":  "baz",
             "include": [ "*.jpg", "*.png" ],
             "exclude": "*ignore*,*2017*"
+        }],
+        "databases": [{
+            "name": "content"
         }]
     }
 }

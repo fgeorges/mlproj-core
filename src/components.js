@@ -322,6 +322,31 @@
                 this.name,
                 this.props);
         }
+
+        load(actions, db, display) {
+            const pf   = actions.platform;
+            const path = pf.resolve(this.props.dir.value);
+            display.check(0, 'the directory', path);
+
+            //
+            // TODO: Use other source set attributes (garbage, include, exclude, etc.)
+            //
+
+            pf.allFiles(path).forEach(p => {
+                actions.add(
+                    new act.DocInsert(db, this.uri(path, p), p));
+            });
+        }
+
+        uri(dir, path) {
+            if ( dir === '.' || dir === './' ) {
+                return '/' + path;
+            }
+            else {
+                let len = dir.endsWith('/') ? dir.length - 1 : dir.length;
+                return path.slice(len);
+            }
+        }
     }
 
     module.exports = {
