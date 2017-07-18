@@ -375,6 +375,7 @@
             let exclude = compile(this.prop('exclude'));
 
             pf.allFiles(path)
+                .map(p => p.replace(/\\/g, '/'))
                 .filter(p => ! matches(p, garbage, false, 'Throwing'))
                 .filter(p =>   matches(p, include, true,  'Including'))
                 .filter(p => ! matches(p, exclude, false, 'Excluding'))
