@@ -125,11 +125,12 @@
                 var as    = args.server;
                 var db    = args.database;
                 var force = args.forceDb;
+                var srv;
                 // if no explicit target, try defaults
                 if ( ! as && ! db && ! force ) {
                     var srvs = space.servers();
                     if ( srvs.length === 1 ) {
-                        as = srvs[0];
+                        srv = srvs[0];
                     }
                     else if ( isDeploy ) {
                         throw new Error('Not exactly one server in the environ');
@@ -137,35 +138,45 @@
                     else {
                         var dbs = space.databases();
                         if ( dbs.length === 1 ) {
-                            db = dbs[0];
+                            return dbs[0];
                         }
                         else {
                             throw new Error('Not exactly one server or database in the environ');
                         }
                     }
                 }
+                else if ( as ) {
+                    srv = space.server(as);
+                    if ( ! srv ) {
+                        throw err.noSuchSrv(as);
+                    }
+                }
                 // if more than one explicit
-                else if ( (as && db) || (as && force) || (db && force) ) {
-                    throw new Error('Both target options @db and @as provided');
+                if ( (as && db) || (as && force) || (db && force) ) {
+                    throw new Error('Both target options --db and --as provided');
                 }
                 // resolve from server if set
-                else if ( as ) {
-                    db = isDeploy
-                        ? as.modules
-                        : as.content;
-                    if ( ! db ) {
-                        throw err.serverNoDb(as.name, isDeploy ? 'modules' : 'content');
+                else if ( srv ) {
+                    let res = isDeploy
+                        ? srv.modules
+                        : srv.content;
+                    if ( ! res ) {
+                        throw err.serverNoDb(srv.name, isDeploy ? 'modules' : 'content');
                     }
+                    return res;
                 }
                 // resolve from defined databases
                 else if ( db ) {
-                    db = space.database(db);
+                    let res = space.database(db);
+                    if ( ! res ) {
+                        throw err.noSuchDb(db);
+                    }
+                    return res;
                 }
                 // force the db name, e.g. for system databases
                 else {
-                    db = new cmp.SysDatabase(force);
+                    return new cmp.SysDatabase(force);
                 }
-                return db;
             };
 
             // TODO: It should be possible to attach a srcdir to a db as well

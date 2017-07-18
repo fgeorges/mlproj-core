@@ -22,6 +22,18 @@
         return err;
     }
 
+    function noSuchDb(name) {
+        var err = new MlprojError('no-such-db', 'No such database: ' + name);
+        err.name = name;
+        return err;
+    }
+
+    function noSuchSrv(name) {
+        var err = new MlprojError('no-such-srv', 'No such server: ' + name);
+        err.name = name;
+        return err;
+    }
+
     function serverNoDb(name, type) {
         var err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
         err.server = name;
