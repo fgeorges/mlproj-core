@@ -70,7 +70,7 @@
             throw err.abstractFun('Platform.resolve');
         }
         dirname(href) {
-            var steps = href.split('/');
+            var steps = href.replace(/\\/g, '/').split('/');
             steps.pop();
             return steps.join('/') + '/';
         }
