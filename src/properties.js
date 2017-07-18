@@ -28,11 +28,9 @@
      */
     class Result
     {
-        constructor(prop, value, type, frozen) {
-            this.prop   = prop;
-            this.value  = value;
-            this._type  = type;
-            this.frozen = frozen;
+        constructor(prop, value) {
+            this.prop  = prop;
+            this.value = value;
         }
 
         show(pf, level) {
@@ -86,18 +84,18 @@
         update(actions, display, body, comp) {
             var val = this.rawValue();
             if ( ! this.prop.compare(val, body[this.prop.name]) ) {
-                if ( this.frozen ) {
+                if ( this.prop.frozen ) {
                     throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name);
                 }
                 display.add(1, 'update', this.prop.label);
-                if ( 'database' === this._type ) {
+                if ( 'database' === this.prop._type ) {
                     actions.add(new act.DatabaseUpdate(comp, this.prop.name, val));
                 }
-                else if ( 'server' === this._type ) {
+                else if ( 'server' === this.prop._type ) {
                     actions.add(new act.ServerUpdate(comp, this.prop.name, val));
                 }
                 else {
-                    throw new Error('Unsupported component type: ' + this._type);
+                    throw new Error('Unsupported component type: ' + this.prop._type);
                 }
             }
         }
@@ -421,7 +419,7 @@
             if ( result[this.name] !== undefined ) {
                 throw new Error('Property already exists: ' + this.name);
             }
-            result[this.name] = new Result(this, this.value(value), this._type, this.frozen);
+            result[this.name] = new Result(this, this.value(value));
         }
 
         compare(lhs, rhs) {
