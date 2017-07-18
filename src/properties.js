@@ -661,7 +661,8 @@
         .add('compose',  false, new Ignore())
         .add('comment',  false, new Ignore())
         .add('name',     true,  new Ignore())
-        .add('dir',      true,  new     String('dir',     'directory'))
+        .add('dir',      false, new     String('dir',     'directory'))
+        .add('garbage',  false, new StringList('garbage', 'garbage patterns', /\s*,\s*/))
         .add('include',  false, new StringList('include', 'include patterns', /\s*,\s*/))
         .add('exclude',  false, new StringList('exclude', 'exclude patterns', /\s*,\s*/));
 

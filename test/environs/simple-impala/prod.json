@@ -4,6 +4,9 @@
         "code": "simple-impala",
         "title": "Example with sources",
         "sources": [{
+            "name": "@default",
+            "garbage": "*~"
+        }, {
             "name": "foo",
             "dir":  "foo",
             "include": "*.xqy,*.xql,*.xq"

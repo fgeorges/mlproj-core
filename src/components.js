@@ -2,6 +2,7 @@
 
 (function() {
 
+    const match = require("minimatch")
     const act   = require('./action');
     const props = require('./properties');
 
@@ -327,30 +328,60 @@
 
         prop(name)
         {
-            const v = this.props[name];
+            let v = this.props[name];
             if ( ! v && this.dflt ) {
                 v = this.dflt.props[name];
             }
-            if ( ! v && name === 'garbage' ) {
-                v = 'TODO: Set the default default garbage value...';
+            if ( v ) {
+                return v.value;
             }
-            return v;
+            if ( name === 'garbage' ) {
+                return [ 'TODO: Set the default default garbage value...', '*~' ];
+            }
         }
 
         load(actions, db, display)
         {
-            const pf   = actions.platform;
-            const path = pf.resolve(this.prop('dir').value);
+            const pf = actions.platform;
+
+            const compile = patterns => {
+                return patterns
+                    ? patterns.map(p => new match.Minimatch(p, { matchBase: true }))
+                    : [];
+            };
+
+            const matches = (path, compiled, ifNone, msg) => {
+                if ( ! compiled.length ) {
+                    return ifNone;
+                }
+                for ( let i = 0; i < compiled.length; ++i ) {
+                    let c = compiled[i];
+                    if ( c.match(path) ) {
+                        if ( pf.verbose ) {
+                            pf.warn('[' + pf.bold('verbose') + '] ' + msg
+                                    + ' ' + path + ', matching ' + c.pattern);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            const path = pf.resolve(this.prop('dir'));
             display.check(0, 'the directory', path);
 
-            //
-            // TODO: Use other source set attributes (garbage, include, exclude, etc.)
-            //
+            let garbage = compile(this.prop('garbage'));
+            let include = compile(this.prop('include'));
+            let exclude = compile(this.prop('exclude'));
 
-            pf.allFiles(path).forEach(p => {
-                actions.add(
-                    new act.DocInsert(db, this.uri(path, p), p));
-            });
+            pf.allFiles(path)
+                .filter(p => ! matches(p, garbage, false, 'Throwing'))
+                .filter(p =>   matches(p, include, true,  'Including'))
+                .filter(p => ! matches(p, exclude, false, 'Excluding'))
+                .forEach(p => {
+                    actions.add(
+                        new act.DocInsert(db, this.uri(path, p), p));
+                });
         }
 
         uri(dir, path) {

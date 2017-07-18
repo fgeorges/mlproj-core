@@ -1076,29 +1076,25 @@
 
         resolveVars(str, forbiden, ch, prefix)
         {
-            var at = str.indexOf(ch);
+            var at = str.indexOf(ch + '{');
             // no more to escape
             if ( at < 0 ) {
                 return str;
             }
-            // invalid ref
-            if ( str[at + 1] !== '{' ) {
-                throw new Error('Invalid @ reference, { is missing: ' + str);
-            }
-            // first "}" after the "@"
+            // first "}" after the @{ or ${
             var close = str.indexOf('}', at);
             // invalid ref
             if ( close < 0 ) {
-                throw new Error('Invalid @ reference, } is missing: ' + str);
+                throw new Error('Invalid ' + ch + ' reference, } is missing: ' + str);
             }
             var name = str.slice(at + 2, close);
             // cannot use a param in its own value
             if ( name === forbiden ) {
-                throw new Error('Invalid @ reference, value references itself: ' + name);
+                throw new Error('Invalid ' + ch + ' reference, value references itself: ' + name);
             }
             // name must be alphanumeric, with "-" separator
             if ( name.search(/^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$/) < 0 ) {
-                throw new Error('Invalid @ reference, invalid name: ' + name);
+                throw new Error('Invalid ' + ch + ' reference, invalid name: ' + name);
             }
             var val = this.root.param(prefix + name);
             if ( ! val ) {
