@@ -52,6 +52,8 @@ function run(tests, callback)
 proc.chdir('./test/');
 
 run([
-    { msg: 'Run test scenarii', cwd: './scenarii/' },
+    { msg: 'Run unit tests', cwd: './unit/' },
+    { script: './parse/parse-simple-ape.js' },
+    { msg: 'Run test scenarii', cwd: '../scenarii/' },
     { script: './run-scenario.js' }
 ]);
