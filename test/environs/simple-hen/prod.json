@@ -3,7 +3,6 @@
         "format": "0.1",
         "code": "simple-hen",
         "title": "Example with fast searches, and server output properties",
-        "srcdir": "/tmp/does/not/exist",
         "connect": {
             "host": "ml9ea4",
             "user": "admin",

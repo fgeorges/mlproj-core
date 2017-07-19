@@ -3,7 +3,6 @@
         "format": "0.1",
         "code": "simple-ape",
         "title": "Simple base space example",
-        "srcdir" : "/tmp/src/",
         "params": {
             "port": "7010"
         },

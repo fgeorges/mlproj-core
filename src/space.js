@@ -248,7 +248,7 @@
         project(code, configs, title, name, version) {
             throw err.abstractFun('Display.project');
         }
-        environ(envipath, title, desc, host, user, password, srcdir, mods, params, imports) {
+        environ(envipath, title, desc, host, user, password, mods, params, imports) {
             throw err.abstractFun('Display.environ');
         }
         check(indent, msg, arg) {
@@ -347,8 +347,7 @@
             this.abbrev  = p.abbrev;
             this.version = p.version;
             this.title   = p.title;
-            this.srcdir  = this.platform.resolve('src/', this.base) + '/';
-            super.load(params, force, { srcdir: this.srcdir, code: this.abbrev });
+            super.load(params, force, { code: this.abbrev });
         }
 
         show(display) {
@@ -419,9 +418,6 @@
                 });
             };
             extract(json, ['code', 'title', 'desc']);
-            if ( json.srcdir ) {
-                this.param('@srcdir', platform.resolve(json.srcdir, base) + '/');
-            }
             if ( json.connect ) {
                 extract(json.connect, ['host', 'user', 'password']);
             }
@@ -470,7 +466,6 @@
                 this.param('@host'),
                 this.param('@user'),
                 this.param('@password'),
-                this.param('@srcdir'),
                 mods,
                 this.params().map(p => {
                     return { name: p, value: this.param(p) };

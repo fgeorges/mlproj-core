@@ -235,11 +235,10 @@
             this.modules = modules;
             // extract the configured properties
             this.props   = props.server.parse(json);
-            // use @srcdir if no modules DB and no root
-            if ( ! this.modules && ! this.props.root ) {
-                var dir = space.param('@srcdir');
-                this.props.root = new props.Result(props.server.props.root, dir);
-            }
+            // TODO: If no modules DB and no root, and if there is a source set
+            // attached to this server, use its directory as the root of the
+            // server, to have the modules on disk.  When attaching source sets
+            // to servers and databases is supported...
         }
 
         show(display)
