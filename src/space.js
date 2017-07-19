@@ -546,9 +546,11 @@
         {
             if ( value === undefined ) {
                 var v = this._params[name];
-                var i = this._imports.length;
-                while ( v === undefined && i > 0 ) {
-                    v = this._imports[--i].space.param(name);
+                if ( name !== '@title' && name !== '@desc' ) {
+                    var i = this._imports.length;
+                    while ( v === undefined && i > 0 ) {
+                        v = this._imports[--i].space.param(name);
+                    }
                 }
                 return v;
             }
