@@ -179,7 +179,7 @@
                 }
             };
 
-            // TODO: It should be possible to attach a srcdir to a db as well
+            // TODO: It should be possible to attach a source set to a db as well
             // (like data/ to content, schemas/ to schemas, src/ to modules...)
             //
             // So the commands "mlproj load schemas", "mlproj load @src schemas"

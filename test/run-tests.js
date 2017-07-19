@@ -2,7 +2,7 @@
 
 "use strict";
 
-// TODO: This script is duplicated in mlproj-core, do we want to change that?
+// TODO: This script is duplicated in mlproj, do we want to change that?
 
 var chproc = require('child_process');
 var proc   = require('process');
@@ -14,6 +14,7 @@ function run(tests, callback)
     }
     else if ( tests[0].msg ) {
         let test = tests.shift();
+        console.log();
         console.log(test.msg);
         proc.chdir(test.cwd);
         run(tests);
