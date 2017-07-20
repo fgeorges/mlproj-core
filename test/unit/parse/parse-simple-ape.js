@@ -2,48 +2,15 @@
 
 "use strict";
 
-const fs   = require('fs');
-const path = require('path');
-const t    = require('../lib/unit-test');
-const s    = require('../../../src/space');
-const err  = require('../../../src/error');
+const p = require('./parse-platform');
+const t = require('../lib/unit-test');
+const s = require('../../../src/space');
 
-class Platform extends s.Platform
-{
-    constructor() {
-        super(true, true);
-    }
+const platform = new p.Platform();
 
-    read(path) {
-        try {
-            return fs.readFileSync(path, 'utf8');
-        }
-        catch (err) {
-            if ( err.code === 'ENOENT' ) {
-                throw err.noSuchFile(path);
-            }
-            else {
-                throw err;
-            }
-        }
-    }
-
-    resolve(href, base) {
-        if ( ! base ) {
-            base = '.';
-        }
-        return path.resolve(base, href);
-    }
-
-    info(msg) {
-        // ignore
-    }
-}
-
-t.test('Simple ape parsing of base.json', ass => {
-    let platform = new Platform();
-    let path     = t.spaceFile('simple-ape', 'base');
-    var space    = s.Space.load(platform, path, {}, {}, {});
+t.test('Simple ape parsing of base', ass => {
+    let path  = t.spaceFile('simple-ape', 'base');
+    let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params
     ass.params('The parameters',  space, { port: '7010' });
     ass.equal('The @code param',  space.param('@code'),  'simple-ape');
@@ -71,10 +38,9 @@ t.test('Simple ape parsing of base.json', ass => {
                });
 });
 
-t.test('Simple ape parsing of dev.json', ass => {
-    let platform = new Platform();
-    let path     = t.spaceFile('simple-ape', 'dev');
-    var space    = s.Space.load(platform, path, {}, {}, {});
+t.test('Simple ape parsing of dev', ass => {
+    let path  = t.spaceFile('simple-ape', 'dev');
+    let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params
     ass.params('The parameters',  space, { port: '7010' });
     ass.equal('The @code param',  space.param('@code'), 'simple-ape');
@@ -95,5 +61,5 @@ t.test('Simple ape parsing of dev.json', ass => {
     const srvs = space.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
     ass.server('The server', srvs[0], 'server', 'simple-ape', 'Default',
-               'simple-ape-content', null, { "server-type": 'http', port: 7010});
+               'simple-ape-content', null, { "server-type": 'http', port: 7010 });
 });
