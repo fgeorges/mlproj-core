@@ -45,7 +45,7 @@
 
         equal(msg, actual, expected) {
             if ( actual !== expected ) {
-                this.fail(msg + ': value is not equal');
+                this.fail(msg + ': value is not equal (' + actual + ' vs. ' + expected + ')');
             }
         }
 
@@ -134,15 +134,48 @@
             this.equal(msg + ': num of props', keys.length, Object.keys(expected).length);
             for ( let i = 0; i < keys.length; ++i ) {
                 let n = keys[i];
-                this.equal(msg + ': ' + n + ' prop', actual[n].value, expected[n]);
+                let a = actual[n].value;
+                let e = expected[n];
+                let m = msg + ': ' + n + ' prop';
+                // two cases where one is an array bot not the other one
+                if ( Array.isArray(a) && ! Array.isArray(e) ) {
+                    this.fail(m + ': is an array but not expected to be');
+                }
+                else if ( ! Array.isArray(a) && Array.isArray(e) ) {
+                    this.fail(m + ': is not an array but expected to be');
+                }
+                // case for arrays
+                else if ( Array.isArray(a) ) {
+                    if ( a.length !== e.length ) {
+                        this.fail(m + ': arrays not same length');
+                    }
+                    else {
+                        for ( let i = 0; i < a.length; ++i ) {
+                            if ( typeof e[i] === 'object' ) {
+                                this.props(m + ' #' + i, a[i], e[i]);
+                            }
+                            else {
+                                this.equal(m + ' #' + i, a[i], e[i]);
+                            }
+                        }
+                    }
+                }
+                // case for simple values (what for objects?)
+                else {
+                    this.equal(m, a, e);
+                }
             }
         }
 
         database(msg, db, id, name, forests, schema, security, triggers, props) {
-            if ( id ) {
-                this.equal(msg + ': id',          db.name, id);
+            if ( ! db ) {
+                this.fail(msg + ': no such database');
+                return;
             }
-            this.equal(msg + ': name',        db.name, name);
+            if ( id ) {
+                this.equal(msg + ': id', db.id, id);
+            }
+            this.equal(msg + ': name', db.name, name);
             this.equal(msg + ': forests num', Object.keys(db.forests).length, forests.length);
             for ( let i = 0; i < forests.length; ++i ) {
                 let n = forests[i];
@@ -150,21 +183,21 @@
             }
             if ( schema ) {
                 this.exist(msg + ': schema', db.schema);
-                this.equal(msg + ': schema', db.schema.name);
+                this.equal(msg + ': schema', db.schema && db.schema.name, schema);
             }
             else {
                 this.empty(msg + ': schema', db.schema);
             }
             if ( security ) {
                 this.exist(msg + ': security', db.security);
-                this.equal(msg + ': security', db.security.name);
+                this.equal(msg + ': security', db.security && db.security.name, security);
             }
             else {
                 this.empty(msg + ': security', db.security);
             }
             if ( triggers ) {
                 this.exist(msg + ': triggers', db.triggers);
-                this.equal(msg + ': triggers', db.triggers.name);
+                this.equal(msg + ': triggers', db.triggers && db.triggers.name, triggers);
             }
             else {
                 this.empty(msg + ': triggers', db.triggers);
@@ -173,6 +206,10 @@
         }
 
         server(msg, srv, id, name, group, content, modules, props) {
+            if ( ! srv ) {
+                this.fail(msg + ': no such server');
+                return;
+            }
             if ( id ) {
                 this.equal(msg + ': id',    srv.id,    id);
             }
