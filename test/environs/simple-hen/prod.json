@@ -4,7 +4,7 @@
         "code": "simple-hen",
         "title": "Example with fast searches, and server output properties",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },

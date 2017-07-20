@@ -4,7 +4,7 @@
         "code": "simple-frog",
         "title": "Simple example with lexicons",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },

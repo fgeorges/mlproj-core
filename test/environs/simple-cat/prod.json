@@ -5,7 +5,7 @@
         "title": "Example database with schema, security and triggers DBs",
         "desc": "Test setting a schema database, a security database and a triggers database (as opposed to use the default databases, resp. `Schemas`, `Security` and none).  The test database refers to the schema DB by ID, to the security DB by name and embeds the triggers DB.",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },

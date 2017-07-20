@@ -4,7 +4,7 @@
         "code": "simple-goat",
         "title": "Simple example with URL rewriter and error handler",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },

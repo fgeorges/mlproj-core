@@ -4,7 +4,7 @@
         "code": "simple-elephant",
         "title": "Simple example with attribute and path range indexes",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },

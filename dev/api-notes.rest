@@ -1,6 +1,6 @@
 # -*- restclient -*-
 
-:host = ml9ea4
+:host = ml911
 :db   = foo-content
 
 # retrieve DB properties

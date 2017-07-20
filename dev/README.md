@@ -13,7 +13,7 @@ have.
 
 ```
 http --auth-type digest -a admin:admin \
-    POST ml9ea4:8002/manage/v2/databases \
+    POST ml911:8002/manage/v2/databases \
     database-name=foo-content
 ```
 
@@ -21,7 +21,7 @@ http --auth-type digest -a admin:admin \
 
 ```
 http --auth-type digest -a admin:admin \
-    GET 'ml9ea4:8002/manage/v2/databases/foo-content/properties' \
+    GET 'ml911:8002/manage/v2/databases/foo-content/properties' \
     Accept:application/json
 ```
 

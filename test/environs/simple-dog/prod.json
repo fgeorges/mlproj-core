@@ -5,7 +5,7 @@
         "title": "More comprehensive example of database dependencies",
         "desc": "Test representing a real graph of dependencies between databases.  With both embedded and referenced databases (via both `idref` and `nameref`), in both databases (schema, security and triggers) and serveurs (content and modules).",
         "connect": {
-            "host": "ml9ea4",
+            "host": "ml911",
             "user": "admin",
             "password": "admin"
         },
