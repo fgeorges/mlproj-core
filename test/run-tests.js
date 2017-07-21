@@ -60,6 +60,7 @@ run([
     { script: './parse/parse-simple-elephant.js' },
     { script: './parse/parse-simple-frog.js'     },
     { script: './parse/parse-simple-goat.js'     },
+    { script: './parse/parse-simple-hen.js'      },
     { msg: 'Run test scenarii', cwd: '../scenarii/' },
     { script: './run-scenario.js' }
 ]);
