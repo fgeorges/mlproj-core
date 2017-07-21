@@ -8,7 +8,7 @@ const s = require('../../../src/space');
 
 const platform = new p.Platform();
 
-t.test('Simple bear parsing', ass => {
+t.test('Parsing bear - range indexes', ass => {
     let path  = t.spaceFile('simple-bear', 'prod');
     let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params
@@ -29,24 +29,24 @@ t.test('Simple bear parsing', ass => {
         "range-element-index": [{
             "scalar-type":           'string',
             "localname":             'ape',
+            "namespace-uri":         '',
             "range-value-positions": false,
             "invalid-values":        'ignore',
-            "collation":             'http://marklogic.com/collation/',
-            "namespace-uri":         ''
+            "collation":             'http://marklogic.com/collation/'
         }, {
             "scalar-type":           'string',
             "localname":             'bear',
+            "namespace-uri":         '',
             "range-value-positions": false,
             "invalid-values":        'ignore',
-            "collation":             'http://marklogic.com/collation/',
-            "namespace-uri":         ''
+            "collation":             'http://marklogic.com/collation/'
         }, {
             "scalar-type":           'string',
             "localname":             'cat',
+            "namespace-uri":         '',
             "range-value-positions": false,
             "invalid-values":        'ignore',
-            "collation":             'http://marklogic.com/collation/',
-            "namespace-uri":         ''
+            "collation":             'http://marklogic.com/collation/'
         }]
     });
     // the app server

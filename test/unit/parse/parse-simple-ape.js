@@ -8,7 +8,7 @@ const s = require('../../../src/space');
 
 const platform = new p.Platform();
 
-t.test('Simple ape parsing of base', ass => {
+t.test('Parsing ape (base) - parameters and typical topology', ass => {
     let path  = t.spaceFile('simple-ape', 'base');
     let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params
@@ -38,7 +38,7 @@ t.test('Simple ape parsing of base', ass => {
                });
 });
 
-t.test('Simple ape parsing of dev', ass => {
+t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     let path  = t.spaceFile('simple-ape', 'dev');
     let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params

@@ -8,7 +8,7 @@ const s = require('../../../src/space');
 
 const platform = new p.Platform();
 
-t.test('Simple dog parsing', ass => {
+t.test('Parsing dog - complex db topology and references/embedding', ass => {
     let path  = t.spaceFile('simple-dog', 'prod');
     let space = s.Space.load(platform, path, {}, {}, {});
     // the $* and @* params
@@ -19,7 +19,7 @@ t.test('Simple dog parsing', ass => {
     ass.equal('There must be no source set', srcs.length, 0);
     // the databases
     const dbs = space.databases();
-    ass.equal('There must be 8 database', dbs.length, 8);
+    ass.equal('There must be 8 databases', dbs.length, 8);
     ass.database('The triggers db', dbs[0], null, 'simple-dog-triggers', ['simple-dog-triggers-001']);
     ass.database('The security db', dbs[1], 'security', 'simple-dog-security',
                  ['simple-dog-security-001'], null, 'simple-dog-security');
@@ -34,7 +34,7 @@ t.test('Simple dog parsing', ass => {
     ass.database('The content db',  dbs[6], 'content', 'simple-dog-content',
                  ['simple-dog-content-001'], 'simple-dog-schema-1');
     ass.database('The modules db',  dbs[7], null, 'simple-dog-modules',
-                 ['simple-dog-modules-001'], 'simple-dog-schema-3');    
+                 ['simple-dog-modules-001'], 'simple-dog-schema-3');
     // the app server
     const srvs = space.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
