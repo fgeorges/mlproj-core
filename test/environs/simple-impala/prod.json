@@ -19,9 +19,6 @@
             "dir":  "baz",
             "include": [ "*.jpg", "*.png" ],
             "exclude": "*ignore*,*2017*"
-        }],
-        "databases": [{
-            "name": "content"
         }]
     }
 }

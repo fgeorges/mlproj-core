@@ -43,10 +43,38 @@
             }
         }
 
-        equal(msg, actual, expected) {
-            if ( actual !== expected ) {
-                this.fail(msg + ': value is not equal (' + actual + ' vs. ' + expected + ')');
+        _same(msg, actual, expected, cmp) {
+            // two cases where one is an array bot not the other one
+            if ( Array.isArray(actual) && ! Array.isArray(expected) ) {
+                this.fail(msg + ': is an array but not expected to be');
             }
+            else if ( ! Array.isArray(actual) && Array.isArray(expected) ) {
+                this.fail(msg + ': is not an array but expected to be');
+            }
+            // case for arrays
+            else if ( Array.isArray(actual) ) {
+                if ( actual.length !== expected.length ) {
+                    this.fail(msg + ': arrays not same length (' + actual.length
+                              + ' vs. ' + expected.length + ')');
+                }
+                else {
+                    for ( let i = 0; i < actual.length; ++i ) {
+                        cmp(msg + ' #' + i, actual[i], expected[i]);
+                    }
+                }
+            }
+            // case for simple values (what for objects?)
+            else {
+                cmp(msg, actual, expected);
+            }
+        }
+
+        equal(msg, actual, expected) {
+            this._same(msg, actual, expected, (m, a, e) => {
+                if ( a !== e ) {
+                    this.fail(m + ': value is not equal (' + a + ' vs. ' + e + ')');
+                }
+            });
         }
 
         jsonObject(msg, actual, expected) {
@@ -134,36 +162,14 @@
             this.equal(msg + ': num of props', keys.length, Object.keys(expected).length);
             for ( let i = 0; i < keys.length; ++i ) {
                 let n = keys[i];
-                let a = actual[n].value;
-                let e = expected[n];
-                let m = msg + ': ' + n + ' prop';
-                // two cases where one is an array bot not the other one
-                if ( Array.isArray(a) && ! Array.isArray(e) ) {
-                    this.fail(m + ': is an array but not expected to be');
-                }
-                else if ( ! Array.isArray(a) && Array.isArray(e) ) {
-                    this.fail(m + ': is not an array but expected to be');
-                }
-                // case for arrays
-                else if ( Array.isArray(a) ) {
-                    if ( a.length !== e.length ) {
-                        this.fail(m + ': arrays not same length');
+                this._same(msg + ': ' + n + ' prop', actual[n].value, expected[n], (m, a, e) => {
+                    if ( typeof e === 'object' ) {
+                        this.props(m, a, e);
                     }
                     else {
-                        for ( let i = 0; i < a.length; ++i ) {
-                            if ( typeof e[i] === 'object' ) {
-                                this.props(m + ' #' + i, a[i], e[i]);
-                            }
-                            else {
-                                this.equal(m + ' #' + i, a[i], e[i]);
-                            }
-                        }
+                        this.equal(m, a, e);
                     }
-                }
-                // case for simple values (what for objects?)
-                else {
-                    this.equal(m, a, e);
-                }
+                });
             }
         }
 
@@ -230,6 +236,15 @@
                 this.empty(msg + ': modules db', srv.modules);
             }
             this.props(msg + ': props', srv.props, props || {});
+        }
+
+        source(msg, src, name, props) {
+            if ( ! src ) {
+                this.fail(msg + ': no such source');
+                return;
+            }
+            this.equal(msg + ': name',  src.name,  name);
+            this.props(msg + ': props', src.props, props || {});
         }
     }
 
