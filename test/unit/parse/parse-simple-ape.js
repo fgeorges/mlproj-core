@@ -44,7 +44,6 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     // the $* and @* params
     ass.params('The parameters',  space, { port: '7010' });
     ass.equal('The @code param',  space.param('@code'), 'simple-ape');
-    // FIXME: Fails now, but shoudl not be inherited, should it?
     ass.empty('The @title param', space.param('@title'));
     // the API details
     ass.api('management', space.api('management'), 'manage/v2', 8002, false);

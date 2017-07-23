@@ -77,29 +77,10 @@
         read(path) {
             throw err.abstractFun('Platform.read');
         }
-        // validate a few rules for all JSON files, return the mlproj sub-object
-        validateJson(json) {
-            var proj = json.mlproj;
-            if ( ! proj ) {
-                throw new Error('Invalid file, must have the root `mlproj`');
-            }
-            if ( Object.keys(json).length !== 1 ) {
-                throw new Error('Invalid file, must have only one root');
-            }
-            if ( ! proj.format ) {
-                throw new Error('Invalid file, must have the property `format`');
-            }
-            if ( proj.format !== '0.1' ) {
-                throw new Error('Invalid file, `format` not 0.1: ' + proj.format);
-            }
-            return proj;
-        }
-        json(path, validate) {
-            var json = JSON.parse(this.read(path));
-            if ( validate ) {
-                return this.validateJson(json);
-            }
-            return json;
+        // TODO: Remove the validate param...
+        json(path, _validate) {
+            let json = JSON.parse(this.read(path));
+            return _validate ? json.mlproj : json;
         }
         projectXml(path) {
             throw err.abstractFun('Platform.projectXml');
@@ -1110,10 +1091,10 @@
                 var newBase = platform.dirname(path);
                 var space   = new Space(proj, newBase, platform);
                 var imports = proj['import'];
-                if ( typeof imports === 'string' ) {
-                    imports = [ imports ];
-                }
                 if ( imports ) {
+                    if ( ! Array.isArray(imports) ) {
+                        imports = [ imports ];
+                    }
                     imports.forEach((i) => {
                         // TODO: Should resolve properly against resolved `href`...
                         var s = impl(i, newBase);
