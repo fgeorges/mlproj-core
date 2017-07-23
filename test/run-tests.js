@@ -53,6 +53,7 @@ proc.chdir('./test/');
 
 run([
     { msg: 'Run unit tests', cwd: './unit/' },
+    { script: './parse/parse-new-ape.js'         },
     { script: './parse/parse-simple-ape.js'      },
     { script: './parse/parse-simple-bear.js'     },
     { script: './parse/parse-simple-cat.js'      },

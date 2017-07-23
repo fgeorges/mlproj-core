@@ -10,7 +10,7 @@ const ctxt = {
     platform: new p.Platform()
 };
 
-t.test('Parsing ape (base module) - parameters and typical topology', ass => {
+t.test('NEW Parsing ape (base module) - parameters and typical topology', ass => {
     let path = ctxt.platform.resolve(t.spaceFile('simple-ape', 'base'));
     let mod  = new e.Module(ctxt, path);
     mod.loadImports(ctxt);
@@ -38,7 +38,7 @@ t.test('Parsing ape (base module) - parameters and typical topology', ass => {
                });
 });
 
-t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
+t.test('NEW Parsing ape (dev module) - overriding and inheritence', ass => {
     let path = ctxt.platform.resolve(t.spaceFile('simple-ape', 'dev'));
     let mod  = new e.Module(ctxt, path);
     mod.loadImports(ctxt);
@@ -61,7 +61,7 @@ t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
                'simple-ape-content', null, { "server-type": 'http', port: 7010 });
 });
 
-t.test('Parsing ape (base) - parameters and typical topology', ass => {
+t.test('NEW Parsing ape (base) - parameters and typical topology', ass => {
     let path = ctxt.platform.resolve(t.spaceFile('simple-ape', 'base'));
     let env  = new e.Environ(ctxt, path);
     env.compile(ctxt);
@@ -92,7 +92,7 @@ t.test('Parsing ape (base) - parameters and typical topology', ass => {
                });
 });
 
-t.test('Parsing ape (dev) - overriding and inheritence', ass => {
+t.test('NEW Parsing ape (dev) - overriding and inheritence', ass => {
     let path = ctxt.platform.resolve(t.spaceFile('simple-ape', 'dev'));
     let env  = new e.Environ(ctxt, path);
     env.compile(ctxt);
