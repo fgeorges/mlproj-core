@@ -18,11 +18,18 @@
      */
     class Environ
     {
-        constructor(ctxt, path)
+        constructor(ctxt, path, proj)
         {
             this._params = {};
+            this.ctxt    = ctxt;
+            this.proj    = proj;
             this.module  = new Module(ctxt, path);
             this.module.loadImports(ctxt);
+            // needed for connect infos, find a nicer way to pass them
+            if ( ctxt.platform.environ ) {
+                throw new Error('Environ already set on the context');
+            }
+            ctxt.platform.environ = this;
         }
 
         static fromName(ctxt, name, base) {
@@ -30,6 +37,23 @@
             let env  = new Environ(ctxt, path);
             env.name = name;
             return env;
+        }
+
+        configs() {
+            var names = this.module.configs();
+            return names.concat(
+                this.proj.configs().filter(n => ! names.includes(n)));
+        }
+
+        // Precedence:
+        // - modules's config if exists
+        // - if not project's config if exists
+        // - if not global config if exists
+        config(name) {
+            var v = this.module.config(name);
+            return v !== undefined
+                ? v
+                : this.proj.config(name);
         }
 
         params() {
@@ -126,7 +150,7 @@
             }
         }
 
-        compile(ctxt, params, force, defaults) {
+        compile(params, force, defaults) {
             // if not set explicitly, use default values
             if ( defaults ) {
                 Object.keys(defaults).forEach(name => {
@@ -148,7 +172,29 @@
                 });
             }
             // compile databses, servers and source sets (with import priority)
-            this.module.compile(ctxt, this);
+            this.module.compile(this);
+        }
+
+        show() {
+            const addImports = (m, level) => {
+                m.imports.forEach(i => {
+                    imports.push({ level: level, href: i.path });
+                    addImports(i, level + 1);
+                });
+            };
+            const imports = [];
+            addImports(this.module, 1);
+            this.ctxt.display.environ(
+                this.name || this.module.path,
+                this.param('@title'),
+                this.param('@desc'),
+                this.param('@host'),
+                this.param('@user'),
+                this.param('@password'),
+                this.params().map(p => {
+                    return { name: p, value: this.param(p) };
+                }),
+                imports);
         }
     }
 
@@ -162,6 +208,7 @@
     class Module
     {
         constructor(ctxt, path) {
+            this.ctxt = ctxt;
             // TODO: Resolve...?
             this.path = path;
             // validate and extract mlproj sub-object
@@ -198,21 +245,39 @@
             }
         }
 
-        loadImports(ctxt) {
+        loadImports() {
             this.imports = [];
             var imports = this.json['import'];
             if ( imports ) {
                 if ( ! Array.isArray(imports) ) {
                     imports = [ imports ];
                 }
-                const base = ctxt.platform.dirname(this.path);
+                const base = this.ctxt.platform.dirname(this.path);
                 imports.forEach(i => {
-                    let p = ctxt.platform.resolve(i, base);
-                    let m = new Module(ctxt, p);
+                    let p = this.ctxt.platform.resolve(i, base);
+                    let m = new Module(this.ctxt, p);
                     this.imports.push(m);
-                    m.loadImports(ctxt);
+                    m.loadImports(this.ctxt);
                 });
             }
+        }
+
+        configs() {
+            let names = this.resolved.config ? Object.keys(this.resolved.config) : [];
+            for ( let i = this.imports.length - 1; i >= 0; --i ) {
+                this.imports[i].configs()
+                    .filter(n => ! names.includes(n))
+                    .forEach(n => names.push(n));
+            }
+            return names;
+        }
+
+        config(name) {
+            let v = this.resolved.config && this.resolved.config[name];
+            for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
+                v = this.imports[i].config(name);
+            }
+            return v;
         }
 
         params() {
@@ -337,11 +402,23 @@
         //
         // `root` can be the root module, or the environ itself
         // this function sets the _databases, _servers and _sources on it
-        compile(ctxt, root)
+        compile(root)
         {
             // start by resolving the param references (TODO: Should be done on
             // the fly whilst compiling...)
             this.resolve(root);
+
+            [ 'host', 'user', 'password' ].forEach(name => {
+                var val = this.param('@' + name);
+                if ( ! val ) {
+                    if ( this.proj && this.proj.connect && this.proj.connect[name] ) {
+                        this.param('@' + name, this.proj.connect[name]);
+                    }
+                    else if ( this.ctxt.connect && this.ctxt.connect[name] ) {
+                        this.param('@' + name, this.ctxt.connect[name]);
+                    }
+                }
+            });
 
             // merge database and server JSON objects
             var cache = {
@@ -355,7 +432,7 @@
                 srcs     : [],
                 srcNames : {}
             };
-            this.compileImpl(cache, ctxt);
+            this.compileImpl(cache);
 
             // build the array of database and server objects
             // the order of the database array guarantees there is no broken dependency
@@ -603,7 +680,7 @@
                         return res.names[db.sysref] = new cmp.SysDatabase(db.sysref);
                     }
                 };
-                return new cmp.Server(srv, this, resolve(srv.content), resolve(srv.modules));
+                return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules));
             });
 
             // instantiate all sources now
@@ -615,7 +692,7 @@
         }
 
         // recursive implementation of compile(), caching databases and servers
-        compileImpl(cache, ctxt)
+        compileImpl(cache)
         {
             // small helper to format info and error messages
             var _ = (c) => {
@@ -644,7 +721,7 @@
                                         + _(comp) + '|compose=' + comp.compose);
                     }
                     else if ( derived.compose === 'merge' ) {
-                        ctxt.platform.info('Merge ' + kind + 's derived:' + _(derived) + ' and base:' + _(comp));
+                        this.ctxt.display.info('Merge ' + kind + 's derived:' + _(derived) + ' and base:' + _(comp));
                         var overriden = Object.keys(derived);
                         for ( var p in comp ) {
                             if ( overriden.indexOf(p) === -1 ) {
@@ -659,7 +736,7 @@
                         }
                     }
                     else if ( derived.compose === 'hide' ) {
-                        ctxt.platform.info('Hide ' + kind + ' base:' + _(comp) + ' by derived:' + _(derived));
+                        this.ctxt.platform.info('Hide ' + kind + ' base:' + _(comp) + ' by derived:' + _(derived));
                     }
                     else {
                         throw new Error('Unknown compose on ' + kind + ': ' + _(derived) + '|compose=' + derived.compose);
@@ -698,7 +775,7 @@
             // recurse on imports
             this.imports.forEach(i => {
                 cache.href = i.path;
-                i.compileImpl(cache, ctxt);
+                i.compileImpl(cache);
             });
         }
     }

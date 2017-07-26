@@ -4,13 +4,6 @@
 
 (function() {
 
-    const mockery = require('mockery');
-    mockery.enable({
-        warnOnUnregistered: false
-    });
-    // requires mlproj-core to be cloned next to mlproj...
-    mockery.registerSubstitute('mlproj-core', '../../mlproj-core/index.js');
-
     const chalk = require('chalk');
 
     function success(msg) {
@@ -223,14 +216,14 @@
             this.equal(msg + ': group', srv.group, group);
             if ( content ) {
                 this.exist(msg + ': content db', srv.content);
-                this.equal(msg + ': content db', srv.content.name, content);
+                this.equal(msg + ': content db', srv.content && srv.content.name, content);
             }
             else {
                 this.empty(msg + ': content db', srv.content);
             }
             if ( modules ) {
                 this.exist(msg + ': modules db', srv.modules);
-                this.equal(msg + ': modules db', srv.modules.name, modules);
+                this.equal(msg + ': modules db', srv.modules && srv.modules.name, modules);
             }
             else {
                 this.empty(msg + ': modules db', srv.modules);
@@ -263,13 +256,18 @@
         }
     }
 
-    function spaceFile(group, name) {
-        return '../environs/' + group + '/' + name + '.json';
+    function spaceFile(ctxt, group, name) {
+        return ctxt.platform.resolve('../environs/' + group + '/' + name + '.json');
+    }
+
+    function projectDir(ctxt, name) {
+        return ctxt.platform.resolve('../projects/' + name + '/');
     }
 
     module.exports = {
-        test      : test,
-        spaceFile : spaceFile
+        test       : test,
+        spaceFile  : spaceFile,
+        projectDir : projectDir
     }
 }
 )();

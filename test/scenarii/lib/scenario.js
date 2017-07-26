@@ -2,9 +2,10 @@
 
 (function() {
 
-    const fs    = require('fs');
-    const path  = require('path');
-    const space = require('../../../src/space');
+    const fs   = require('fs');
+    const path = require('path');
+    const c    = require('../../../src/context');
+    const e    = require('../../../src/environ');
 
     // utility functions to create expected HTTP calls
 
@@ -103,7 +104,7 @@
 
     // function to assert the current HTTP call (they are in sequence)
 
-    function assertCall(runner, verb, api, url, error, success, data) {
+    function assertCall(runner, verb, api, url, data) {
         // log progress
         runner.progress(verb, api, url, data);
         // get the current expected call
@@ -149,13 +150,15 @@
         }
         // continue with expected result
         if ( call.response === 'OK' ) {
-            success(call.body);
+            return call.body;
         }
         else if ( call.response === 'Not found' ) {
-            success();
+            return;
         }
         else {
             runner.fail(call, 'Unknown return');
+            // TODO: Throw an error, even here...?
+            return;
         }
     };
 
@@ -164,48 +167,53 @@
         // set the expected calls on the runner object
         runner.calls = calls;
         // the platform instance
-        var platform = new space.Platform(false /* dry */, false /* verbose */);
+        let ctxt = new c.Context(new c.Display(), new c.Platform(process.cwd()));
         // override the http functions
-        platform.get = function(api, url, error, success) {
-            assertCall(runner, 'get', api, url, error, success);
+        ctxt.platform.get = function(api, url) {
+            return assertCall(runner, 'get', api, url);
         };
-        platform.post = function(api, url, data, error, success) {
-            assertCall(runner, 'post', api, url, error, success, data);
+        ctxt.platform.post = function(api, url, data) {
+            return assertCall(runner, 'post', api, url, data);
         };
-        platform.put = function(api, url, data, error, success) {
-            assertCall(runner, 'put', api, url, error, success, data);
+        ctxt.platform.put = function(api, url, data) {
+            return assertCall(runner, 'put', api, url, data);
         };
         // various functions on the platform object to load the project file
-        platform.resolve = function(href, base) {
+        ctxt.platform.resolve = function(href, base) {
             return path.resolve(base, href);
         };
-        platform.dirname = function(href) {
+        ctxt.platform.dirname = function(href) {
             return path.dirname(href);
         }
-        platform.read = function(path) {
+        ctxt.platform.read = function(path) {
             return fs.readFileSync(path, 'utf8');
         }
-        platform.bold = function(s) {
+        ctxt.platform.bold = function(s) {
             return s;
         };
-        platform.green = function(s) {
+        ctxt.platform.green = function(s) {
             return s;
         };
-        platform.yellow = function(s) {
+        ctxt.platform.yellow = function(s) {
             return s;
         };
         // TODO: Ignore the output for now, but redirect it to a file...
-        platform.log = function(msg) {
+        ctxt.platform.log = function(msg) {
         };
-        platform.info = function(msg) {
+        ctxt.platform.info = function(msg) {
         };
-        platform.warn = function(msg) {
+        ctxt.platform.warn = function(msg) {
+        };
+        ctxt.display.add = function(indent, verb, msg, arg) {
+        };
+        ctxt.display.check = function(indent, msg, arg) {
         };
         // launch processing
-        let base = process.cwd();
-        platform.project(undefined, file, base, [], {}, project => {
-            project.execute({}, cmd);
-        });
+        let env = new e.Environ(ctxt, file);
+        env.compile();
+        let command = new cmd({}, {}, ctxt, env);
+        let actions = command.prepare();
+        actions.execute();
     }
 
     module.exports = {

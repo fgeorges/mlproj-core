@@ -88,8 +88,8 @@
         setup(actions, display)
         {
             display.check(0, 'the database', this.name);
-            const body    = new act.DatabaseProps(this).execute(actions.platform);
-            const forests = new act.ForestList().execute(actions.platform);
+            const body    = new act.DatabaseProps(this).execute(actions.ctxt);
+            const forests = new act.ForestList().execute(actions.ctxt);
             const items   = forests['forest-default-list']['list-items']['list-item'];
             const names   = items.map(o => o.nameref);
             // if DB does not exist yet
@@ -225,7 +225,7 @@
      */
     class Server extends Component
     {
-        constructor(json, space, content, modules)
+        constructor(json, content, modules)
         {
             super();
             this.group   = json.group || 'Default';
@@ -255,7 +255,7 @@
         setup(actions, display)
         {
             display.check(0, 'the ' + this.props['server-type'].value + ' server', this.name);
-            const body = new act.ServerProps(this).execute(actions.platform);
+            const body = new act.ServerProps(this).execute(actions.ctxt);
             // if AS does not exist yet
             if ( ! body ) {
                 this.create(actions, display);
@@ -341,7 +341,7 @@
 
         load(actions, db, display)
         {
-            const pf = actions.platform;
+            const pf = actions.ctxt.platform;
 
             const compile = patterns => {
                 return patterns
@@ -356,7 +356,7 @@
                 for ( let i = 0; i < compiled.length; ++i ) {
                     let c = compiled[i];
                     if ( c.match(path) ) {
-                        if ( pf.verbose ) {
+                        if ( actions.ctxt.verbose ) {
                             pf.warn('[' + pf.bold('verbose') + '] ' + msg
                                     + ' ' + path + ', matching ' + c.pattern);
                         }

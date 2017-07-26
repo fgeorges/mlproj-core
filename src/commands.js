@@ -5,19 +5,17 @@
     const act = require('./action');
     const cmp = require('./components');
     const err = require('./error');
-    const s   = require('./space');
 
     /*~
      * The base class/interface for commands.
      */
     class Command
     {
-        constructor(globalArgs, cmdArgs, platform, display, project) {
+        constructor(globalArgs, cmdArgs, ctxt, environ) {
             this.globalArgs = globalArgs;
             this.cmdArgs    = cmdArgs;
-            this.platform   = platform;
-            this.display    = display;
-            this.project    = project;
+            this.ctxt       = ctxt;
+            this.environ    = environ;
         }
 
         prepare() {
@@ -31,8 +29,8 @@
     class NewCommand extends Command
     {
         prepare() {
-            var pf      = this.platform;
-            var actions = new act.ActionList(pf);
+            var pf      = this.ctxt.platform;
+            var actions = new act.ActionList(this.ctxt);
             actions.add(new act.FunAction('Create a new project', pf => {
                 var vars  = this.cmdArgs;
                 var force = vars.force;
@@ -62,44 +60,43 @@
     }
 
     /*~
-     * Display the resolved space.
+     * Display the resolved environ.
      */
     class ShowCommand extends Command
     {
         prepare() {
-            var actions = new act.ActionList(this.platform);
+            var actions = new act.ActionList(this.ctxt);
             actions.add(new act.FunAction('Display the environ details', pf => {
-                var space = this.project.space;
                 var components = comps => {
                     comps.forEach(c => {
-                        c.show(this.display);
+                        c.show(this.ctxt.display);
                     });
                 };
-                this.project.show(this.display);
-                this.project.space.show(
-                    this.display,
-                    this.project.environ || this.project.path);
-                components(space.databases());
-                components(space.servers());
-                components(space.sources());
+                if ( this.environ.proj ) {
+                    this.environ.proj.show();
+                }
+                this.environ.show();
+                components(this.environ.databases());
+                components(this.environ.servers());
+                components(this.environ.sources());
             }));
             return actions;
         }
     }
 
     /*~
-     * Create the components from the space on MarkLogic.
+     * Create the components from the environ on MarkLogic.
      */
     class SetupCommand extends Command
     {
         prepare() {
             // the action list
-            var actions = new act.ActionList(this.platform);
+            var actions = new act.ActionList(this.ctxt);
             // add all components
-            var dbs  = this.project.space.databases();
-            var srvs = this.project.space.servers();
+            var dbs  = this.environ.databases();
+            var srvs = this.environ.servers();
             for ( let comp of dbs.concat(srvs) ) {
-                comp.setup(actions, this.display);
+                comp.setup(actions, this.ctxt.display);
             }
             return actions;
         }
@@ -115,20 +112,18 @@
         }
 
         prepare() {
-            // "global" variables
-            var pf      = this.platform;
-            var space   = this.project.space;
-            var actions = new act.ActionList(pf);
+            // the action list
+            var actions = new act.ActionList(this.ctxt);
 
             // utility: resolve the target db from args
-            var target = function(args, isDeploy) {
+            const target = (args, isDeploy) => {
                 var as    = args.server;
                 var db    = args.database;
                 var force = args.forceDb;
                 var srv;
                 // if no explicit target, try defaults
                 if ( ! as && ! db && ! force ) {
-                    var srvs = space.servers();
+                    var srvs = this.environ.servers();
                     if ( srvs.length === 1 ) {
                         srv = srvs[0];
                     }
@@ -136,7 +131,7 @@
                         throw new Error('Not exactly one server in the environ');
                     }
                     else {
-                        var dbs = space.databases();
+                        var dbs = this.environ.databases();
                         if ( dbs.length === 1 ) {
                             return dbs[0];
                         }
@@ -146,7 +141,7 @@
                     }
                 }
                 else if ( as ) {
-                    srv = space.server(as);
+                    srv = this.environ.server(as);
                     if ( ! srv ) {
                         throw err.noSuchSrv(as);
                     }
@@ -167,7 +162,7 @@
                 }
                 // resolve from defined databases
                 else if ( db ) {
-                    let res = space.database(db);
+                    let res = this.environ.database(db);
                     if ( ! res ) {
                         throw err.noSuchDb(db);
                     }
@@ -189,7 +184,7 @@
             // "invoker" for an example.
             //
             // utility: resolve the content source from args
-            var content = function(args, isDeploy) {
+            const content = (args, isDeploy) => {
                 var dir = args.directory;
                 var doc = args.document;
                 var src = args.sourceset;
@@ -200,14 +195,14 @@
                     // if there was a source attached to a directory equal to
                     // "arg"?  Won't change the dir used, but might make a
                     // difference if we use other props on the source...
-                    return space.source(arg) || new cmp.SourceDir(arg);
+                    return this.environ.source(arg) || new cmp.SourceDir(arg);
                 }
                 // if two explicit at same time
                 if ( (src && dir) || (src && doc) || (dir && doc) ) {
                     throw new Error('Content options --src, --dir and --doc are mutually exclusive');
                 }
                 if ( args.sourceset ) {
-                    const res = space.source(args.sourceset);
+                    const res = this.environ.source(args.sourceset);
                     if ( ! res ) {
                         throw new Error('No such source set with name: ' + args.sourceset);
                     }
@@ -230,7 +225,7 @@
         }
 
         populateActions(actions, db, src) {
-            src.load(actions, db, this.display);
+            src.load(actions, db, this.ctxt.display);
         }
     }
 

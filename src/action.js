@@ -24,7 +24,7 @@
             platform.log(start + ' ' + this.msg);
         }
 
-        execute(platform) {
+        execute(ctxt) {
             throw err.abstractFun('Action.execute');
         }
 
@@ -47,11 +47,11 @@
             this.fun = fun;
         }
 
-        execute(platform) {
-            if ( platform.verbose ) {
-                platform.warn('Execute: ' + this.msg);
+        execute(ctxt) {
+            if ( ctxt.verbose ) {
+                ctxt.platform.warn('Execute: ' + this.msg);
             }
-            return this.fun(platform);
+            return this.fun(ctxt);
         }
     }
 
@@ -99,24 +99,24 @@
             }
         }
 
-        getData(platform) {
+        getData(ctxt) {
             return this.data;
         }
 
-        execute(platform) {
-            if ( platform.verbose ) {
-                platform.warn('[' + platform.bold('verbose') + '] '
-                              + this.verb + ' to ' + this.url);
+        execute(ctxt) {
+            if ( ctxt.verbose ) {
+                ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] '
+                                   + this.verb + ' to ' + this.url);
                 if ( this.data && ! this.type) {
-                    platform.warn('[' + platform.bold('verbose') + '] Body:');
-                    platform.warn(this.data);
+                    ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] Body:');
+                    ctxt.platform.warn(this.data);
                 }
             }
-            if ( platform.dry && this.verb !== 'GET' ) {
-                platform.warn(platform.yellow('→') + ' ' + this.msg);
+            if ( ctxt.dry && this.verb !== 'GET' ) {
+                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             }
             else {
-                return this.send(platform, this.api, this.url, this.getData(platform));
+                return this.send(ctxt, this.api, this.url, this.getData(ctxt));
             }
         }
     }
@@ -132,12 +132,12 @@
             super(api, url, 'GET', msg);
         }
 
-        send(platform, api, url, data) {
-            platform.warn(platform.yellow('→') + ' ' + this.msg);
+        send(ctxt, api, url, data) {
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             if ( data ) {
                 throw new Error('Data in a GET: ' + url + ', ' + data);
             }
-            return platform.get(api, url);
+            return ctxt.platform.get(api, url);
         }
     }
 
@@ -150,9 +150,9 @@
             super(api, url, 'POST', msg, data);
         }
 
-        send(platform, api, url, data) {
-            platform.warn(platform.yellow('→') + ' ' + this.msg);
-            return platform.post(api, url, data, this.type);
+        send(ctxt, api, url, data) {
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            return ctxt.platform.post(api, url, data, this.type);
         }
     }
 
@@ -165,9 +165,9 @@
             super(api, url, 'PUT', msg, data);
         }
 
-        send(platform, api, url, data) {
-            platform.warn(platform.yellow('→') + ' ' + this.msg);
-            return platform.put(api, url, data, this.type);
+        send(ctxt, api, url, data) {
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            return ctxt.platform.put(api, url, data, this.type);
         }
     }
 
@@ -334,13 +334,13 @@
                   'Update ' + name + ':  \t' + srvname);
         }
 
-        send(platform, api, url, data) {
-            var res = super.send(platform, api, url, data);
+        send(ctxt, api, url, data) {
+            var res = super.send(ctxt, api, url, data);
             if ( res ) {
                 // TODO: Do NOT use console.log() directly here...!
                 // Use the display instead...
                 console.log('MarkLogic is restarting, waiting for it to be back up...');
-                platform.restart(res);
+                ctxt.platform.restart(res);
             }
         }
     }
@@ -405,10 +405,10 @@
             this.type = 'text/plain';
         }
 
-        getData(platform) {
+        getData(ctxt) {
             try {
                 // TODO: read() uses utf-8, cannot handle binary
-                return platform.read(this.data);
+                return ctxt.platform.read(this.data);
             }
             catch (e) {
                 if ( e.name === 'no-such-file' ) {
@@ -426,12 +426,12 @@
      */
     class ActionList
     {
-        constructor(platform)
+        constructor(ctxt)
         {
-            this.platform = platform;
-            this.todo     = [];
-            this.done     = [];
-            this.error    = null;
+            this.ctxt  = ctxt;
+            this.todo  = [];
+            this.done  = [];
+            this.error = null;
         }
 
         add(a)
@@ -444,7 +444,7 @@
             var action;
             try {
                 while ( action = this.todo.shift() ) {
-                    action.execute(this.platform);
+                    action.execute(this.ctxt);
                     this.done.push(action);
                 }
             }

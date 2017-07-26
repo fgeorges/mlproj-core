@@ -4,18 +4,19 @@
 
 const p = require('./parse-platform');
 const t = require('../lib/unit-test');
-const s = require('../../../src/space');
+const e = require('../../../src/environ');
 
-const platform = new p.Platform();
+const ctxt = new p.Context();
 
 t.test('Parsing impala (prod) - source sets', ass => {
-    let path  = t.spaceFile('simple-impala', 'prod');
-    let space = s.Space.load(platform, path, {}, {}, {});
+    let path = t.spaceFile(ctxt, 'simple-impala', 'prod');
+    let env  = new e.Environ(ctxt, path);
+    env.compile();
     // the $* and @* params
-    ass.params('The parameters', space, {});
-    ass.equal('The @code param', space.param('@code'), 'simple-impala');
+    ass.params('The parameters', env, {});
+    ass.equal('The @code param', env.param('@code'), 'simple-impala');
     // the source sets
-    const srcs = space.sources();
+    const srcs = env.sources();
     ass.equal('There must be 3 source sets', srcs.length, 3);
     ass.source('The foo source', srcs[0], 'foo', {
         dir:     'foo',
@@ -34,21 +35,23 @@ t.test('Parsing impala (prod) - source sets', ass => {
     });
     ass.equal('The garbage of baz source', srcs[2].prop('garbage'), ['*~']);
     // the databases
-    const dbs = space.databases();
+    const dbs = env.databases();
     ass.equal('There must be no database', dbs.length, 0);
     // the app servers
-    const srvs = space.servers();
+    const srvs = env.servers();
     ass.equal('There must be no app server', srvs.length, 0);
 });
 
 t.test('Parsing impala (extended) - source sets inheritence', ass => {
-    let path  = t.spaceFile('simple-impala', 'extended');
-    let space = s.Space.load(platform, path, {}, {}, {});
+    ctxt.platform.environ = undefined; // reset
+    let path = t.spaceFile(ctxt, 'simple-impala', 'extended');
+    let env  = new e.Environ(ctxt, path);
+    env.compile();
     // the $* and @* params
-    ass.params('The parameters', space, {});
-    ass.equal('The @code param', space.param('@code'), 'simple-impala');
+    ass.params('The parameters', env, {});
+    ass.equal('The @code param', env.param('@code'), 'simple-impala');
     // the source sets
-    const srcs = space.sources();
+    const srcs = env.sources();
     ass.equal('There must be 3 source sets', srcs.length, 3);
     ass.source('The foo source', srcs[0], 'foo', {
         dir:     'foo',
@@ -67,9 +70,9 @@ t.test('Parsing impala (extended) - source sets inheritence', ass => {
     });
     ass.equal('The garbage of baz source', srcs[2].prop('garbage'), ['*~', '$$$']);
     // the databases
-    const dbs = space.databases();
+    const dbs = env.databases();
     ass.equal('There must be no database', dbs.length, 0);
     // the app servers
-    const srvs = space.servers();
+    const srvs = env.servers();
     ass.equal('There must be no app server', srvs.length, 0);
 });
