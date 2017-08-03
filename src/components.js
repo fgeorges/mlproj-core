@@ -433,13 +433,70 @@
         }
     }
 
+    /*~
+     * A MIME type.
+     */
+    class MimeType extends Component
+    {
+        constructor(json)
+        {
+            super();
+            this.name  = json.name;
+            // extract the configured properties
+            this.props = props.mime.parse(json);
+        }
+
+        show(display)
+        {
+            display.mimetype(
+                this.name,
+                this.props);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the mime type', this.name);
+            const body = new act.MimeProps(this).execute(actions.ctxt);
+            // if mime does not exist yet
+            if ( ! body ) {
+                this.create(actions, display);
+            }
+            // if mime already exists
+            else {
+                this.update(actions, display, body);
+            }
+        }
+
+        create(actions, display)
+        {
+            display.add(0, 'create', 'mime', this.name);
+            var obj = {
+                "name": this.name
+            };
+            Object.keys(this.props).forEach(p => {
+                this.props[p].create(obj);
+            });
+            actions.add(new act.MimeCreate(this, obj));
+        }
+
+        update(actions, display, actual)
+        {
+            // check properties
+            display.check(1, 'properties');
+            Object.keys(this.props).forEach(p => {
+                this.props[p].update(actions, display, actual, this);
+            });
+        }
+    }
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
         Server      : Server,
         SourceSet   : SourceSet,
         SourceDir   : SourceDir,
-        SourceDoc   : SourceDoc
+        SourceDoc   : SourceDoc,
+        MimeType    : MimeType
     }
 }
 )();

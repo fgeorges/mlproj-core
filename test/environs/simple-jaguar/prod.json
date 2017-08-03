@@ -1,0 +1,16 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "code": "simple-jaguar",
+        "title": "Example with MIME types",
+        "mime-types": [{
+            "name": "application/my-foo-bar",
+            "extensions": [ "foobar" ],
+            "format": "text"
+        }, {
+            "name": "text/markdown",
+            "extensions":  [ "md", "mdown", "markdown" ],
+            "format": "text"
+        }]
+    }
+}

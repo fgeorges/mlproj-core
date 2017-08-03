@@ -50,6 +50,10 @@
             throw err.abstractFun('Display.source');
         }
 
+        mimetype(name) {
+            throw err.abstractFun('Display.mimetype');
+        }
+
         project(abbrev, configs, title, name, version) {
             throw err.abstractFun('Display.project');
         }

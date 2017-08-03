@@ -345,6 +345,31 @@
         }
     }
 
+    /*~
+     * Management API: retrieve properties of a MIME type.
+     */
+    class MimeProps extends ManageGet
+    {
+        constructor(mime) {
+            var name = mime && mime.name;
+            super('/mimetypes/' + name + '/properties',
+                  'Retrieve mime props: \t' + name);
+        }
+    }
+
+    /*~
+     * Management API: create a MIME type.
+     */
+    class MimeCreate extends ManagePost
+    {
+        constructor(mime, body) {
+            var name = mime && mime.name;
+            super('/mimetypes',
+                  body,
+                  'Create mime: \t\t' + name);
+        }
+    }
+
     /*~~~~~ Client API actions. */
 
     /*~
@@ -472,6 +497,8 @@
         ServerProps    : ServerProps,
         ServerCreate   : ServerCreate,
         ServerUpdate   : ServerUpdate,
+        MimeProps      : MimeProps,
+        MimeCreate     : MimeCreate,
         DocInsert      : DocInsert
     }
 }

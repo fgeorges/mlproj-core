@@ -79,6 +79,7 @@
                 components(this.environ.databases());
                 components(this.environ.servers());
                 components(this.environ.sources());
+                components(this.environ.mimetypes());
             }));
             return actions;
         }
@@ -93,9 +94,10 @@
             // the action list
             var actions = new act.ActionList(this.ctxt);
             // add all components
-            var dbs  = this.environ.databases();
-            var srvs = this.environ.servers();
-            for ( let comp of dbs.concat(srvs) ) {
+            var dbs   = this.environ.databases();
+            var srvs  = this.environ.servers();
+            var mimes = this.environ.mimetypes();
+            for ( let comp of dbs.concat(srvs, mimes) ) {
                 comp.setup(actions, this.ctxt.display);
             }
             return actions;

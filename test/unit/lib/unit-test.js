@@ -239,6 +239,15 @@
             this.equal(msg + ': name',  src.name,  name);
             this.props(msg + ': props', src.props, props || {});
         }
+
+        mime(msg, m, name, props) {
+            if ( ! m ) {
+                this.fail(msg + ': no such MIME type');
+                return;
+            }
+            this.equal(msg + ': name',  m.name,  name);
+            this.props(msg + ': props', m.props, props || {});
+        }
     }
 
     function test(desc, fun) {

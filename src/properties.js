@@ -49,43 +49,46 @@
         }
 
         create(obj) {
-            var val = this.value;
-            if ( Array.isArray(this.value) ) {
-                val = this.value.map(v => {
-                    var obj = {};
-                    Object.keys(v).forEach(p => {
-                        v[p].create(obj);
+            const impl = value => {
+                if ( Array.isArray(value) ) {
+                    return value.map(v => impl(v));
+                }
+                else if ( typeof value === 'object' ) {
+                    let obj = {};
+                    Object.keys(value).forEach(p => {
+                        value[p].create(obj);
                     });
                     return obj;
-                });
-            }
-            else if ( typeof this.value === 'object' ) {
-                var val = {};
-                Object.keys(this.value).forEach(p => {
-                    this.value[p].create(val);
-                });
-            }
-            obj[this.prop.name] = val;
+                }
+                else {
+                    return value;
+                }
+            };
+            obj[this.prop.name] = impl(this.value);
         }
 
         rawValue() {
-            var val = this.value;
-            if ( Array.isArray(this.value) ) {
-                val = [];
-                this.value.forEach(item => {
-                    var obj = {};
-                    Object.keys(item).forEach(p => obj[p] = item[p].rawValue());
-                    val.push(obj);
-                });
-            }
-            return val;
+            const impl = value => {
+                if ( Array.isArray(value) ) {
+                    return value.map(v => impl(v));
+                }
+                else if ( typeof value === 'object' ) {
+                    let obj = {};
+                    Object.keys(value).forEach(p => obj[p] = value[p].rawValue());
+                    return obj;
+                }
+                else {
+                    return value;
+                }
+            };
+            return impl(this.value);
         }
 
         update(actions, display, body, comp) {
             var val = this.rawValue();
             if ( ! this.prop.compare(val, body[this.prop.name]) ) {
                 if ( this.prop.frozen ) {
-                    throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name);
+                    throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name + ', please proceed manually');
                 }
                 display.add(1, 'update', this.prop.label);
                 if ( 'database' === this.prop._type ) {
@@ -102,7 +105,7 @@
     }
 
     /*~
-     * The config item for objects, including the overall config file.
+     * The config item for objects, including databases, servers and source sets themselves.
      */
     class ConfigObject
     {
@@ -548,6 +551,19 @@
                 throw new Error('String list value neither a string or an array: ' + type);
             }
         }
+
+        // compare unordered
+        compare(lhs, rhs) {
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs.length; ++i ) {
+                if ( ! rhs.includes(lhs[i]) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     // same base for 3 types of range indexes, below
@@ -664,10 +680,21 @@
         .add('include',  false, new StringList('include', 'include patterns', /\s*,\s*/))
         .add('exclude',  false, new StringList('exclude', 'exclude patterns', /\s*,\s*/));
 
+    /*~
+     * The mime properties and config format.
+     */
+    var mime = new ConfigObject('mime')
+        .add('compose',    false, new Ignore())
+        .add('comment',    false, new Ignore())
+        .add('name',       true,  new Ignore())
+        .add('extensions', true,  new StringList('extension', 'extensions', /\s*,\s*/).freeze())
+        .add('format',     true,  new       Enum('format',    'format',     ['binary', 'json', 'text', 'xml']).freeze());
+
     module.exports = {
         database : database,
         server   : server,
         source   : source,
+        mime     : mime,
         Result   : Result
     }
 }

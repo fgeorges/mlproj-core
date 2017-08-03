@@ -136,6 +136,10 @@
             return this._sources;
         }
 
+        mimetypes() {
+            return this._mimetypes;
+        }
+
         source(name) {
             let res = this.sources().filter(src => src.name === name);
             if ( ! res.length ) {
@@ -401,7 +405,7 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _databases, _servers and _sources on it
+        // this function sets the _databases, _servers, _sources and _mimetypes on it
         compile(root)
         {
             // start by resolving the param references (TODO: Should be done on
@@ -422,15 +426,17 @@
 
             // merge database and server JSON objects
             var cache = {
-                href     : "@root",
-                dbs      : [],
-                dbIds    : {},
-                dbNames  : {},
-                srvs     : [],
-                srvIds   : {},
-                srvNames : {},
-                srcs     : [],
-                srcNames : {}
+                href      : "@root",
+                dbs       : [],
+                dbIds     : {},
+                dbNames   : {},
+                srvs      : [],
+                srvIds    : {},
+                srvNames  : {},
+                srcs      : [],
+                srcNames  : {},
+                mimes     : [],
+                mimeNames : {}
             };
             this.compileImpl(cache);
 
@@ -689,6 +695,11 @@
             root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
                 return new cmp.SourceSet(s, dflt);
             });
+
+            // instantiate all mime types now
+            root._mimetypes = cache.mimes.map(m => {
+                return new cmp.MimeType(m);
+            });
         }
 
         // recursive implementation of compile(), caching databases and servers
@@ -770,6 +781,12 @@
             if ( this.resolved.sources ) {
                 this.resolved.sources.forEach(src => {
                     impl(src, cache.srcs, null, cache.srcNames, 'source');
+                });
+            }
+            // compile mime types
+            if ( this.resolved['mime-types'] ) {
+                this.resolved['mime-types'].forEach(mime => {
+                    impl(mime, cache.mimes, null, cache.mimeNames, 'mime');
                 });
             }
             // recurse on imports

@@ -1,0 +1,16 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "import": "prod.json",
+        "sources": [{
+            "name": "@default",
+            "garbage": "*~, $$$"
+        }, {
+            "name": "foo",
+            "include": "*.sjs"
+        }, {
+            "name": "bar",
+            "dir":  "newbar"
+        }]
+    }
+}
