@@ -3,6 +3,9 @@
         "format": "0.1",
         "code": "simple-impala",
         "title": "Example with sources",
+        "params": {
+            "port": "7090"
+        },
         "sources": [{
             "name": "@default",
             "garbage": "*~"
@@ -19,6 +22,18 @@
             "dir":  "baz",
             "include": [ "*.jpg", "*.png" ],
             "exclude": "*ignore*,*2017*"
+        }],
+        "servers": [{
+            "name": "@{code}",
+            "type": "http",
+            "port": "${port}",
+            "content": {
+                "name": "@{code}-content"
+            },
+            "modules": {
+                "name": "@{code}-modules"
+            },
+            "root": "/"
         }]
     }
 }
