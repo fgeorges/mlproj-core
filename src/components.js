@@ -349,6 +349,27 @@
                     : [];
             };
 
+            const dir      = this.prop('dir');
+            const path     = pf.resolve(dir);
+            const include  = this.prop('include');
+            const exclude  = this.prop('exclude');
+            const garbage  = this.prop('garbage');
+            const patterns = {
+                include   : include,
+                exclude   : exclude,
+                garbage   : garbage,
+                mmInclude : compile(include),
+                mmExclude : compile(exclude),
+                mmGarbage : compile(garbage)
+            };
+
+            this.walkDir('', dir, path, path, patterns, actions, db, display);
+        }
+
+        walkDir(path, dir, full, base, patterns, actions, db, display)
+        {
+            const pf = actions.ctxt.platform;
+
             const matches = (path, compiled, ifNone, msg) => {
                 if ( ! compiled.length ) {
                     return ifNone;
@@ -366,31 +387,55 @@
                 return false;
             };
 
-            const path = pf.resolve(this.prop('dir'));
-            display.check(0, 'the directory', path);
+            display.check(0, 'the directory', dir);
 
-            let garbage = compile(this.prop('garbage'));
-            let include = compile(this.prop('include'));
-            let exclude = compile(this.prop('exclude'));
-
-            pf.allFiles(path)
-                .map(p => p.replace(/\\/g, '/'))
-                .filter(p => ! matches(p, garbage, false, 'Throwing'))
-                .filter(p =>   matches(p, include, true,  'Including'))
-                .filter(p => ! matches(p, exclude, false, 'Excluding'))
-                .forEach(p => {
-                    actions.add(
-                        new act.DocInsert(db, this.uri(path, p), p));
-                });
+            pf.dirChildren(full).forEach(child => {
+                let p = path + '/' + child.name;
+                if ( ! matches(p, patterns.mmGarbage, false, 'Throwing') ) {
+                    let desc = {
+                        base       : base,
+                        path       : p,
+                        full       : child.path,
+                        name       : child.name,
+                        isdir      : child.isdir,
+                        isIncluded : matches(p, patterns.mmInclude, true,  'Including'),
+                        isExcluded : matches(p, patterns.mmExclude, false, 'Excluding'),
+                        include    : patterns.include,
+                        exclude    : patterns.exclude,
+                        mmInclude  : patterns.mmInclude,
+                        mmExclude  : patterns.mmExclude
+                    };
+                    let resp = this.filter(desc);
+                    if ( resp ) {
+                        if ( child.isdir ) {
+                            let d = dir + '/' + child.name;
+                            this.walkDir(p, d, desc.full, base, patterns, actions, db, display);
+                        }
+                        else {
+                            let uri = resp.uri || resp.path;
+                            if ( ! uri ) {
+                                throw new Error('Impossible to compute URI for ' + resp);
+                            }
+                            let full = resp.full || resp.path && (base + resp.path);
+                            // TODO: Support resp.content as well...
+                            if ( ! full ) {
+                                throw new Error('Impossible to compute full path for ' + resp);
+                            }
+                            // TODO: Accumulate, "paginate" in a multipart request...
+                            actions.add(
+                                new act.DocInsert(db, uri, full));
+                        }
+                    }
+                }
+            });
         }
 
-        uri(dir, path) {
-            if ( dir === '.' || dir === './' ) {
-                return '/' + path;
+        filter(desc) {
+            if ( desc.isdir ) {
+                return desc.isIncluded && ! desc.isExcluded;
             }
-            else {
-                let len = dir.endsWith('/') ? dir.length - 1 : dir.length;
-                return path.slice(len);
+            else if ( desc.isIncluded && ! desc.isExcluded ) {
+                return desc;
             }
         }
     }
