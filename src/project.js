@@ -14,7 +14,9 @@
             // the project own config file
             try {
                 let cpath = pf.resolve('xproject/mlproj.json', path);
-                this.mlproj = pf.json(cpath, true);
+                let json  = pf.json(cpath);
+                // TODO: Add some validation rules? (must exist, format must be there, etc.)
+                this.mlproj = json.mlproj;
             }
             catch (e) {
                 // ignore if file does not exist

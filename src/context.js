@@ -118,14 +118,12 @@
             return steps.join('/') + '/';
         }
 
-        read(path) {
+        read(path, encoding) {
             throw err.abstractFun('Platform.read');
         }
 
-        // TODO: Remove the validate param...
-        json(path, _validate) {
-            let json = JSON.parse(this.read(path));
-            return _validate ? json.mlproj : json;
+        json(path, encoding) {
+            return JSON.parse(this.read(path, encoding || 'utf8'));
         }
 
         projectXml(path) {
