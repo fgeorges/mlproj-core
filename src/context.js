@@ -177,6 +177,11 @@
             throw err.abstractFun('Platform.put');
         }
 
+        // parts is [ {uri,path}, {uri,path}, ... ]
+        multipart(parts) {
+            throw err.abstractFun('Platform.multipart');
+        }
+
         restart(last) {
             throw err.abstractFun('Platform.restart');
         }

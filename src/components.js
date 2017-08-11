@@ -363,14 +363,18 @@
                 mmGarbage : compile(garbage)
             };
 
-            this.walkDir('', dir, path, path, patterns, actions, db, display);
+            let matches = [];
+            this.walkDir(matches, '', dir, path, path, patterns, actions, db, display);
+            if ( matches.length ) {
+                this.flush(matches, actions, db);
+            }
         }
 
-        walkDir(path, dir, full, base, patterns, actions, db, display)
+        walkDir(matches, path, dir, full, base, patterns, actions, db, display)
         {
             const pf = actions.ctxt.platform;
 
-            const matches = (path, compiled, ifNone, msg) => {
+            const match = (path, compiled, ifNone, msg) => {
                 if ( ! compiled.length ) {
                     return ifNone;
                 }
@@ -391,15 +395,15 @@
 
             pf.dirChildren(full).forEach(child => {
                 let p = path + '/' + child.name;
-                if ( ! matches(p, patterns.mmGarbage, false, 'Throwing') ) {
+                if ( ! match(p, patterns.mmGarbage, false, 'Throwing') ) {
                     let desc = {
                         base       : base,
                         path       : p,
                         full       : child.path,
                         name       : child.name,
                         isdir      : child.isdir,
-                        isIncluded : matches(p, patterns.mmInclude, true,  'Including'),
-                        isExcluded : matches(p, patterns.mmExclude, false, 'Excluding'),
+                        isIncluded : match(p, patterns.mmInclude, true,  'Including'),
+                        isExcluded : match(p, patterns.mmExclude, false, 'Excluding'),
                         include    : patterns.include,
                         exclude    : patterns.exclude,
                         mmInclude  : patterns.mmInclude,
@@ -409,7 +413,7 @@
                     if ( resp ) {
                         if ( child.isdir ) {
                             let d = dir + '/' + child.name;
-                            this.walkDir(p, d, desc.full, base, patterns, actions, db, display);
+                            this.walkDir(matches, p, d, desc.full, base, patterns, actions, db, display);
                         }
                         else {
                             let uri = resp.uri || resp.path;
@@ -421,9 +425,7 @@
                             if ( ! full ) {
                                 throw new Error('Impossible to compute full path for ' + resp);
                             }
-                            // TODO: Accumulate, "paginate" in a multipart request...
-                            actions.add(
-                                new act.DocInsert(db, uri, full));
+                            this.addMatch(matches, actions, db, uri, full);
                         }
                     }
                 }
@@ -438,7 +440,24 @@
                 return desc;
             }
         }
+
+        addMatch(matches, actions, db, uri, full) {
+            matches.push({ uri: uri, path: full });
+            if ( matches.length >= INSERT_LENGTH ) {
+                this.flush(matches, actions, db);
+            }
+        }
+
+        flush(matches, actions, db) {
+            actions.add(
+                new act.MultiDocInsert(db, matches));
+            // empty the array
+            matches.splice(0);
+        }
     }
+
+    // TODO: Set another, real-world length...
+    const INSERT_LENGTH = 4;
 
     /*~
      * A source set wrapping just a plain dir.

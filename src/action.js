@@ -107,7 +107,7 @@
             if ( ctxt.verbose ) {
                 ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] '
                                    + this.verb + ' to ' + this.url);
-                if ( this.data && ! this.type) {
+                if ( this.data && ! this.type ) {
                     ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] Body:');
                     ctxt.platform.warn(this.data);
                 }
@@ -402,6 +402,30 @@
         }
     }
 
+    /*~
+     * Client API: insert several documents.
+     */
+    class MultiDocInsert extends ClientPost
+    {
+        /*~
+         * The parameter `docs` is an array of the form:
+         *
+         *     [{uri:'/uri/to/use.xml', path:'/path/on/fs/file.xml'}, {uri:'', path:''}, ...]
+         */
+        constructor(db, docs) {
+            super('/documents?database=' + db.name,
+                  // make a copy
+                  docs.slice(),
+                  'Insert documents: \t' + docs.length + ' docment' + (docs.length === 1 ? '' : 's'));
+        }
+
+        getData(ctxt) {
+            this.boundary = ctxt.platform.boundary();
+            this.type     = 'multipart/mixed; boundary=' + this.boundary;
+            return ctxt.platform.multipart(this.boundary, this.data);
+        }
+    }
+
     /*~~~~~ XDBC actions. */
 
     /*~
@@ -419,12 +443,12 @@
      */
     class DocInsert extends XdbcPut
     {
-        constructor(db, uri, doc) {
+        constructor(db, uri, path) {
             var name = db && db.name;
             // TODO: Add "perm" parameters.
             // TODO: Add "format" parameter (xml, text, binary)
             super('/insert?uri=' + uri + '&dbname=' + name,
-                  doc,
+                  path,
                   'Insert document: \t' + uri);
             // TODO: Should we use something else?  XDBC/XCC is badly (is not!) documented...
             this.type = 'text/plain';
@@ -499,6 +523,7 @@
         ServerUpdate   : ServerUpdate,
         MimeProps      : MimeProps,
         MimeCreate     : MimeCreate,
+        MultiDocInsert : MultiDocInsert,
         DocInsert      : DocInsert
     }
 }
