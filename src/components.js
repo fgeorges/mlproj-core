@@ -456,8 +456,8 @@
         }
     }
 
-    // TODO: Set another, real-world length...
-    const INSERT_LENGTH = 4;
+    // TODO: Set another, real-world length, or based on the size...
+    const INSERT_LENGTH = 10;
 
     /*~
      * A source set wrapping just a plain dir.
