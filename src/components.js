@@ -457,6 +457,7 @@
     }
 
     // TODO: Set another, real-world length, or based on the size...
+    // TODO: And of course, be able to set this (these) from the environs.
     const INSERT_LENGTH = 10;
 
     /*~

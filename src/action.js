@@ -416,13 +416,15 @@
             super('/documents?database=' + db.name,
                   // make a copy
                   docs.slice(),
-                  'Insert documents: \t' + docs.length + ' docment' + (docs.length === 1 ? '' : 's'));
+                  'Insert documents: \t' + docs.length + ' document' + (docs.length === 1 ? '' : 's'));
         }
 
         getData(ctxt) {
             this.boundary = ctxt.platform.boundary();
             this.type     = 'multipart/mixed; boundary=' + this.boundary;
-            return ctxt.platform.multipart(this.boundary, this.data);
+            let res = ctxt.platform.multipart(this.boundary, this.data);
+            this.msg += ', for ' + (res.length / (1024*1024)).toFixed(3) + ' Mo';
+            return res;
         }
     }
 
