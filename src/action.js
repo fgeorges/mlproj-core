@@ -413,10 +413,13 @@
          *     [{uri:'/uri/to/use.xml', path:'/path/on/fs/file.xml'}, {uri:'', path:''}, ...]
          */
         constructor(db, docs) {
-            super('/documents?database=' + db.name,
-                  // make a copy
-                  docs.slice(),
-                  'Insert documents: \t' + docs.length + ' document' + (docs.length === 1 ? '' : 's'));
+            var name = db   && db.name;
+            var len  = docs && docs.length;
+            // make a copy
+            var copy = docs && docs.slice();
+            super('/documents?database=' + name,
+                  copy,
+                  'Insert documents: \t' + len + ' document' + (len === 1 ? '' : 's'));
         }
 
         getData(ctxt) {

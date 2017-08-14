@@ -343,26 +343,47 @@
         {
             const pf = actions.ctxt.platform;
 
-            const compile = patterns => {
-                return patterns
-                    ? patterns.map(p => new match.Minimatch(p, { matchBase: true }))
-                    : [];
+            // from one array of strings, return two arrays:
+            // - first one with all strings ending with '/', removed
+            // - second one with all strings not ending with '/'
+            const dirNotDir = pats => {
+                let dir    = [];
+                let notdir = [];
+                if ( pats ) {
+                    pats.forEach(p => {
+                        if ( p.endsWith('/') ) {
+                            dir.push(p.slice(0, -1));
+                        }
+                        else {
+                            notdir.push(p);
+                        }
+                    });
+                }
+                return [ dir, notdir ];
             };
 
-            const dir      = this.prop('dir');
-            const path     = pf.resolve(dir);
-            const include  = this.prop('include');
-            const exclude  = this.prop('exclude');
-            const garbage  = this.prop('garbage');
-            const patterns = {
-                include   : include,
-                exclude   : exclude,
-                garbage   : garbage,
-                mmInclude : compile(include),
-                mmExclude : compile(exclude),
-                mmGarbage : compile(garbage)
+            const options = { matchBase: true, dot: true, nocomment: true };
+
+            const compile = name => {
+                let pats = this.prop(name);
+                let res  = dirNotDir(pats);
+                patterns.dir[name]            = res[0];
+                patterns.dir['mm_' + name]    = res[0].map(p => new match.Minimatch(p, options));
+                patterns.notdir[name]         = res[1];
+                patterns.notdir['mm_' + name] = res[1].map(p => new match.Minimatch(p, options));
             };
 
+            let patterns = {
+                dir    : {},
+                notdir : {}
+            };
+
+            compile('include');
+            compile('exclude');
+            compile('garbage');
+
+            const dir   = this.prop('dir');
+            const path  = pf.resolve(dir);
             let matches = [];
             this.walkDir(matches, '', dir, path, path, patterns, actions, db, display);
             if ( matches.length ) {
@@ -395,19 +416,20 @@
 
             pf.dirChildren(full).forEach(child => {
                 let p = path + '/' + child.name;
-                if ( ! match(p, patterns.mmGarbage, false, 'Throwing') ) {
+                let pats = child.isdir ? patterns.dir : patterns.notdir;
+                if ( ! match(p, pats.mm_garbage, false, 'Throwing') ) {
                     let desc = {
                         base       : base,
                         path       : p,
                         full       : child.path,
                         name       : child.name,
                         isdir      : child.isdir,
-                        isIncluded : match(p, patterns.mmInclude, true,  'Including'),
-                        isExcluded : match(p, patterns.mmExclude, false, 'Excluding'),
-                        include    : patterns.include,
-                        exclude    : patterns.exclude,
-                        mmInclude  : patterns.mmInclude,
-                        mmExclude  : patterns.mmExclude
+                        isIncluded : match(p, pats.mm_include, true,  'Including'),
+                        isExcluded : match(p, pats.mm_exclude, false, 'Excluding'),
+                        include    : pats.include,
+                        exclude    : pats.exclude,
+                        mm_include : pats.mm_include,
+                        mm_exclude : pats.mm_exclude
                     };
                     let resp = this.filter(desc);
                     if ( resp ) {

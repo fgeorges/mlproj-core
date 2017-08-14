@@ -46,11 +46,11 @@
             throw err.abstractFun('Display.server');
         }
 
-        source(name) {
+        source(name, props) {
             throw err.abstractFun('Display.source');
         }
 
-        mimetype(name) {
+        mimetype(name, props) {
             throw err.abstractFun('Display.mimetype');
         }
 
