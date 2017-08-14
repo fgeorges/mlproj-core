@@ -687,8 +687,8 @@
         .add('compose',    false, new Ignore())
         .add('comment',    false, new Ignore())
         .add('name',       true,  new Ignore())
-        .add('extensions', true,  new StringList('extension', 'extensions', /\s*,\s*/).freeze())
-        .add('format',     true,  new       Enum('format',    'format',     ['binary', 'json', 'text', 'xml']).freeze());
+        .add('extensions', true,  new StringList('extensions', 'extensions', /\s*,\s*/).freeze())
+        .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
     module.exports = {
         database : database,

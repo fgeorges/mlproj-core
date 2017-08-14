@@ -13,7 +13,7 @@ t.test('Parsing impala (prod) - source sets', ass => {
     let env  = new e.Environ(ctxt, path);
     env.compile();
     // the $* and @* params
-    ass.params('The parameters', env, {});
+    ass.params('The parameters', env, { port: '7090' });
     ass.equal('The @code param', env.param('@code'), 'simple-impala');
     // the source sets
     const srcs = env.sources();
@@ -36,10 +36,14 @@ t.test('Parsing impala (prod) - source sets', ass => {
     ass.equal('The garbage of baz source', srcs[2].prop('garbage'), ['*~']);
     // the databases
     const dbs = env.databases();
-    ass.equal('There must be no database', dbs.length, 0);
+    ass.equal('There must be 2 databases', dbs.length, 2);
+    ass.database('The content db', dbs[0], null, 'simple-impala-content');
+    ass.database('The modules db', dbs[1], null, 'simple-impala-modules');
     // the app servers
     const srvs = env.servers();
-    ass.equal('There must be no app server', srvs.length, 0);
+    ass.equal('There must be 1 app server', srvs.length, 1);
+    ass.server('The server', srvs[0], null, 'simple-impala', 'Default',
+               'simple-impala-content', 'simple-impala-modules');
 });
 
 t.test('Parsing impala (extended) - source sets inheritence', ass => {
@@ -48,7 +52,7 @@ t.test('Parsing impala (extended) - source sets inheritence', ass => {
     let env  = new e.Environ(ctxt, path);
     env.compile();
     // the $* and @* params
-    ass.params('The parameters', env, {});
+    ass.params('The parameters', env, { port: '7090' });
     ass.equal('The @code param', env.param('@code'), 'simple-impala');
     // the source sets
     const srcs = env.sources();
@@ -71,8 +75,12 @@ t.test('Parsing impala (extended) - source sets inheritence', ass => {
     ass.equal('The garbage of baz source', srcs[2].prop('garbage'), ['*~', '$$$']);
     // the databases
     const dbs = env.databases();
-    ass.equal('There must be no database', dbs.length, 0);
+    ass.equal('There must be 2 databases', dbs.length, 2);
+    ass.database('The content db', dbs[0], null, 'simple-impala-content');
+    ass.database('The modules db', dbs[1], null, 'simple-impala-modules');
     // the app servers
     const srvs = env.servers();
-    ass.equal('There must be no app server', srvs.length, 0);
+    ass.equal('There must be 1 app server', srvs.length, 1);
+    ass.server('The server', srvs[0], null, 'simple-impala', 'Default',
+               'simple-impala-content', 'simple-impala-modules');
 });

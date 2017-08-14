@@ -4,6 +4,10 @@
         "code": "simple-jaguar",
         "title": "Example with MIME types",
         "mime-types": [{
+            "name": "application/xquery",
+            "extensions": "xql,xq",
+            "format": "text"
+        }, {
             "name": "application/my-foo-bar",
             "extensions": [ "foobar" ],
             "format": "text"

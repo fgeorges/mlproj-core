@@ -26,12 +26,16 @@ t.test('Parsing jaguar - mime types', ass => {
     ass.equal('There must be no app server', srvs.length, 0);
     // the mime types
     const mimes = env.mimetypes();
-    ass.equal('There must be 2 MIME types', mimes.length, 2);
+    ass.equal('There must be 3 MIME types', mimes.length, 3);
     ass.mime('The XQuery MIME type',   mimes[0], 'application/xquery', {
         format:     'text',
         extensions: ['xql', 'xq']
     });
-    ass.mime('The Markdown MIME type', mimes[1], 'text/markdown', {
+    ass.mime('The Foobar MIME type',   mimes[1], 'application/my-foo-bar', {
+        format:     'text',
+        extensions: ['foobar']
+    });
+    ass.mime('The Markdown MIME type', mimes[2], 'text/markdown', {
         format:     'text',
         extensions: ['md', 'mdown', 'markdown']
     });

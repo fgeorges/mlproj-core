@@ -175,10 +175,12 @@
                 this.equal(msg + ': id', db.id, id);
             }
             this.equal(msg + ': name', db.name, name);
-            this.equal(msg + ': forests num', Object.keys(db.forests).length, forests.length);
-            for ( let i = 0; i < forests.length; ++i ) {
-                let n = forests[i];
-                this.exist(msg + ': forest ' + n, db.forests[n]);
+            if ( forests ) {
+                this.equal(msg + ': forests num', Object.keys(db.forests).length, forests.length);
+                for ( let i = 0; i < forests.length; ++i ) {
+                    let n = forests[i];
+                    this.exist(msg + ': forest ' + n, db.forests[n]);
+                }
             }
             if ( schema ) {
                 this.exist(msg + ': schema', db.schema);
@@ -201,7 +203,9 @@
             else {
                 this.empty(msg + ': triggers', db.triggers);
             }
-            this.props(msg + ': props', db.props, props || {});
+            if ( props ) {
+                this.props(msg + ': props', db.props, props);
+            }
         }
 
         server(msg, srv, id, name, group, content, modules, props) {
@@ -210,7 +214,7 @@
                 return;
             }
             if ( id ) {
-                this.equal(msg + ': id',    srv.id,    id);
+                this.equal(msg + ': id', srv.id, id);
             }
             this.equal(msg + ': name',  srv.name,  name);
             this.equal(msg + ': group', srv.group, group);
@@ -228,7 +232,9 @@
             else {
                 this.empty(msg + ': modules db', srv.modules);
             }
-            this.props(msg + ': props', srv.props, props || {});
+            if ( props ) {
+                this.props(msg + ': props', srv.props, props);
+            }
         }
 
         source(msg, src, name, props) {
