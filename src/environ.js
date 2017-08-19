@@ -10,12 +10,12 @@
      */
     class Environ
     {
-        constructor(ctxt, path, proj)
+        constructor(ctxt, json, path, proj)
         {
             this._params = {};
             this.ctxt    = ctxt;
             this.proj    = proj;
-            this.module  = new Module(ctxt, path);
+            this.module  = new Module(ctxt, json, path);
             this.module.loadImports(ctxt);
             // needed for connect infos, find a nicer way to pass them
             if ( ctxt.platform.environ ) {
@@ -24,9 +24,21 @@
             ctxt.platform.environ = this;
         }
 
-        static fromName(ctxt, name, base) {
-            let path = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
-            let env  = new Environ(ctxt, path);
+        static fromName(ctxt, name, base, proj) {
+            let json;
+            let path;
+            if ( name.includes('/') ) {
+                path = ctxt.platform.resolve('xproject/mlenvs/@' + name.replace('/', '+'), base);
+                json = { "mlproj": {
+                    "format": '0.1',
+                    "import": name.split('/').map(n => n + '.json')
+                }};
+            }
+            else {
+                path = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
+                json = ctxt.platform.json(path);
+            }
+            let env = new Environ(ctxt, json, path, proj);
             env.name = name;
             return env;
         }
@@ -211,17 +223,15 @@
      */
     class Module
     {
-        constructor(ctxt, path) {
+        constructor(ctxt, json, path) {
             this.ctxt = ctxt;
             // TODO: Resolve...?
             this.path = path;
-            // validate and extract mlproj sub-object
-            const doc = ctxt.platform.json(path);
-            if ( Object.keys(doc).length !== 1 ) {
+            if ( Object.keys(json).length !== 1 ) {
                 // TODO: Use proper e.* errors...
                 throw new Error('Invalid file, must have exactly one root');
             }
-            this.json = doc.mlproj;
+            this.json = json.mlproj;
             if ( ! this.json ) {
                 throw new Error('Invalid file, must have the root `mlproj`');
             }
@@ -256,10 +266,11 @@
                 if ( ! Array.isArray(imports) ) {
                     imports = [ imports ];
                 }
-                const base = this.ctxt.platform.dirname(this.path);
                 imports.forEach(i => {
-                    let p = this.ctxt.platform.resolve(i, base);
-                    let m = new Module(this.ctxt, p);
+                    let b = this.ctxt.platform.dirname(this.path);
+                    let p = this.ctxt.platform.resolve(i, b);
+                    let j = this.ctxt.platform.json(p);
+                    let m = new Module(this.ctxt, j, p);
                     this.imports.push(m);
                     m.loadImports(this.ctxt);
                 });
