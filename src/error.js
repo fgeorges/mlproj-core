@@ -11,31 +11,42 @@
     }
 
     function abstractFun(name) {
-        var err = new MlprojError('abstract-fun', 'Function ' + name + ' is abstract');
+        let err = new MlprojError('abstract-fun', 'Function ' + name + ' is abstract');
         err.fun = name;
         return err;
     }
 
     function noSuchFile(path) {
-        var err = new MlprojError('no-such-file', 'No such file or directory: ' + path);
+        let err = new MlprojError('no-such-file', 'No such file or directory: ' + path);
         err.path = path;
         return err;
     }
 
+    function invalidJson(reason, path) {
+        let msg = 'Invalid JSON: ' + reason;
+        if ( path ) {
+            msg += ', in ' + path;
+        }
+        let err = new MlprojError('invalid-json', msg);
+        err.reason = reason;
+        err.path   = path;
+        return err;
+    }
+
     function noSuchDb(name) {
-        var err = new MlprojError('no-such-db', 'No such database: ' + name);
+        let err = new MlprojError('no-such-db', 'No such database: ' + name);
         err.name = name;
         return err;
     }
 
     function noSuchSrv(name) {
-        var err = new MlprojError('no-such-srv', 'No such server: ' + name);
+        let err = new MlprojError('no-such-srv', 'No such server: ' + name);
         err.name = name;
         return err;
     }
 
     function serverNoDb(name, type) {
-        var err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
+        let err = new MlprojError('server-no-' + type, 'Server has no ' + type + ' database: ' + name);
         err.server = name;
         return err;
     }
@@ -43,6 +54,9 @@
     module.exports = {
         abstractFun : abstractFun,
         noSuchFile  : noSuchFile,
+        invalidJson : invalidJson,
+        noSuchDb    : noSuchDb,
+        noSuchSrv   : noSuchSrv,
         serverNoDb  : serverNoDb
     };
 }

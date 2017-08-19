@@ -123,7 +123,18 @@
         }
 
         json(path, encoding) {
-            return JSON.parse(this.read(path, encoding || 'utf8'));
+            let text = this.read(path, encoding || 'utf8');
+            try {
+                return JSON.parse(text);
+            }
+            catch ( e ) {
+                if ( e instanceof SyntaxError ) {
+                    throw err.invalidJson(e.message, path);
+                }
+                else {
+                    throw e;
+                }
+            }
         }
 
         projectXml(path) {
