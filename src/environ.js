@@ -71,7 +71,7 @@
         // TODO: The API list should be "compiled" as well (why do it on the fly
         // and not for the components...?)
         //
-        api(name) {
+        api(name, dflt) {
             // "flatten" the import graph in a single array
             // most priority at index 0, least priority at the end
             var imports = [];
@@ -89,7 +89,7 @@
                 }
             };
             // start with the default
-            var res = DEFAULT_APIS[name];
+            var res = dflt || DEFAULT_APIS[name];
             if ( ! res ) {
                 throw new Error('Unknown API: ' + name);
             }
@@ -180,6 +180,13 @@
             };
             const imports = [];
             addImports(this.module, 1);
+            let apis = {};
+            ['management', 'admin', 'client', 'xdbc'].forEach(a => {
+                let api = this.api(a, {});
+                if ( Object.keys(api).length ) {
+                    apis[a] = api;
+                }
+            });
             this.ctxt.display.environ(
                 this.name || this.module.path,
                 this.param('@title'),
@@ -190,6 +197,7 @@
                 this.params().map(p => {
                     return { name: p, value: this.param(p) };
                 }),
+                apis,
                 imports);
         }
     }
