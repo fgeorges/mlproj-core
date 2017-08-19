@@ -455,10 +455,7 @@
         }
 
         filter(desc) {
-            if ( desc.isdir ) {
-                return desc.isIncluded && ! desc.isExcluded;
-            }
-            else if ( desc.isIncluded && ! desc.isExcluded ) {
+            if ( desc.isIncluded && ! desc.isExcluded ) {
                 return desc;
             }
         }

@@ -49,10 +49,7 @@
         }
 
         environ(name, params, force) {
-            let pf   = this.ctxt.platform;
-            let path = pf.resolve('xproject/mlenvs/' + name + '.json', this.path);
-            let e    = new env.Environ(this.ctxt, path, this);
-            e.name = name;
+            let e = env.Environ.fromName(this.ctxt, name, this.path, this);
             e.compile(params, force, { code: this.abbrev });
             return e;
         }

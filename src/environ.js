@@ -7,14 +7,6 @@
 
     /*~
      * A complete environment.
-     *
-     * TODO: Missing interfaces:
-     *
-     * - show(display, envipath)
-     * - config(name)
-     * - configs()
-     * - modulesDb() (keep it...?)
-     * - contentDb() (keep it...?)
      */
     class Environ
     {
