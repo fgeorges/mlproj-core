@@ -31,8 +31,9 @@
         prepare() {
             var pf      = this.ctxt.platform;
             var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Create a new project', pf => {
-                var vars  = this.cmdArgs;
+            actions.add(new act.FunAction('Create a new project', ctxt => {
+                var pf    = ctxt.platform;
+                var force = vars.force;
                 var force = vars.force;
 
                 // create `src/`
@@ -66,10 +67,10 @@
     {
         prepare() {
             var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Display the environ details', pf => {
+            actions.add(new act.FunAction('Display the environ details', ctxt => {
                 var components = comps => {
                     comps.forEach(c => {
-                        c.show(this.ctxt.display);
+                        c.show(ctxt.display);
                     });
                 };
                 if ( this.environ.proj ) {
