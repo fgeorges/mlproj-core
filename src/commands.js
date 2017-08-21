@@ -33,7 +33,7 @@
             var actions = new act.ActionList(this.ctxt);
             actions.add(new act.FunAction('Create a new project', ctxt => {
                 var pf    = ctxt.platform;
-                var force = vars.force;
+                var vars  = this.cmdArgs;
                 var force = vars.force;
 
                 // create `src/`
