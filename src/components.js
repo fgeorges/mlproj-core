@@ -153,7 +153,12 @@
             // check properties
             display.check(1, 'properties');
             Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, display, body, this);
+                let res = this.props[p];
+                // TODO: Rather fix the "_type" setting mechanism, AKA the root cause...
+                if ( ! res.prop._type ) {
+                    res.prop._type = 'database';
+                }
+                res.update(actions, display, body, this);
             });
         }
 

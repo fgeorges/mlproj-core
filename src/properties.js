@@ -98,7 +98,12 @@
                     actions.add(new act.ServerUpdate(comp, this.prop.name, val));
                 }
                 else {
-                    throw new Error('Unsupported component type: ' + this.prop._type);
+                    let msg = 'Unsupported component type: ' + this.prop._type;
+                    if ( display.verbose ) {
+                        msg += ' - ';
+                        msg += JSON.stringify(this.prop);
+                    }
+                    throw new Error(msg);
                 }
             }
         }
