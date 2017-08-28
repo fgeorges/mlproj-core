@@ -586,6 +586,16 @@
     }
 
     /*~
+     * The host properties and config format.
+     */
+    var host = new ConfigObject('host')
+        .add('compose', false, new Ignore())
+        .add('comment', false, new Ignore())
+        .add('name',    true,  new Ignore())
+        .add('apis',    false, new Ignore())
+        .add('host',    false, new String('host', 'host'));
+
+    /*~
      * The database properties and config format.
      */
     var database = new ConfigObject('database')
@@ -696,6 +706,7 @@
         .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
     module.exports = {
+        host     : host,
         database : database,
         server   : server,
         source   : source,

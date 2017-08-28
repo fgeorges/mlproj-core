@@ -171,6 +171,78 @@
         }
     }
 
+    /*~~~~~ Admin API actions. */
+
+    /*~
+     * An Admin API GET action.
+     */
+    class AdminGet extends Get
+    {
+        constructor(url, msg) {
+            super('admin', url, msg);
+        }
+    }
+
+    /*~
+     * An Admin API POST action.
+     */
+    class AdminPost extends Post
+    {
+        constructor(url, data, msg) {
+            super('admin', url, data, msg);
+        }
+    }
+
+    /*~
+     * An Admin API PUT action.
+     */
+    class AdminPut extends Put
+    {
+        constructor(url, data, msg) {
+            super('admin', url, data, msg);
+        }
+    }
+
+    /*~
+     * Admin API: init host.
+     */
+    class AdminInit extends AdminPost
+    {
+        // TOSO: Support licensee and license-key...
+        constructor(key, licensee) {
+            let body = {};
+            if ( key ) {
+                body['license-key'] = key;
+            }
+            if ( licensee ) {
+                body['licensee'] = licensee;
+            }
+            super('/init', body, 'Initialize host');
+        }
+
+        send(ctxt, api, url, data) {
+            var res = super.send(ctxt, api, url, data);
+            if ( res ) {
+                // TODO: Do NOT use console.log() directly here...!
+                // Use the display instead...
+                console.log('MarkLogic is restarting, waiting for it to be back up...');
+                ctxt.platform.restart(res);
+            }
+        }
+    }
+
+    /*~
+     * Admin API: instance admin.
+     */
+    class AdminInstance extends AdminPost
+    {
+        constructor(user, pwd) {
+            super('/instance-admin',
+                  { "admin-username": user, "admin-password": pwd },
+                  'Set admin username and password');
+        }
+    }
+
     /*~~~~~ Management API actions. */
 
     /*~
@@ -516,6 +588,8 @@
         ActionList     : ActionList,
         Action         : Action,
         FunAction      : FunAction,
+        AdminInit      : AdminInit,
+        AdminInstance  : AdminInstance,
         ForestList     : ForestList,
         ForestCreate   : ForestCreate,
         ForestAttach   : ForestAttach,

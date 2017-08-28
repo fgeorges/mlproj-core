@@ -61,6 +61,9 @@
                     throw new Error('Number of forests greater than 100 (' + forests + ') on id:'
                                     + json.id + '|name:' + json.name);
                 }
+
+// TODO: If several hosts, generate forests on each... !
+
                 var array = [];
                 for ( var i = 1; i <= forests; ++i ) {
                     var num = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
@@ -523,6 +526,43 @@
     }
 
     /*~
+     * A host.
+     */
+    class Host extends Component
+    {
+        constructor(json)
+        {
+            super();
+            this.name  = json.name;
+            this.apis  = json.apis;
+            // extract the configured properties
+            this.props = props.host.parse(json);
+        }
+
+        init(actions, master)
+        {
+            if ( master ) {
+                this.extraNode(actions, master);
+            }
+            else {
+                this.bootstrap(actions);
+            }
+        }
+
+        bootstrap(actions)
+        {
+            let msg = 'TODO: Initialize the first node in the cluster';
+            actions.add(new act.FunAction(msg, () => console.log(msg)));
+        }
+
+        extraNode(actions, master)
+        {
+            let msg = 'TODO: Initialize an extra node in the cluster';
+            actions.add(new act.FunAction(msg, () => console.log(msg)));
+        }
+    }
+
+    /*~
      * A MIME type.
      */
     class MimeType extends Component
@@ -585,6 +625,7 @@
         SourceSet   : SourceSet,
         SourceDir   : SourceDir,
         SourceDoc   : SourceDoc,
+        Host        : Host,
         MimeType    : MimeType
     }
 }

@@ -17,6 +17,7 @@
         Project       : prj.Project,
         NewCommand    : cmd.NewCommand,
         ShowCommand   : cmd.ShowCommand,
+        InitCommand   : cmd.InitCommand,
         SetupCommand  : cmd.SetupCommand,
         LoadCommand   : cmd.LoadCommand,
         DeployCommand : cmd.DeployCommand,

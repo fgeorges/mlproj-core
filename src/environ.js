@@ -113,6 +113,10 @@
             return res;
         }
 
+        hosts() {
+            return this._hosts;
+        }
+
         databases() {
             return this._databases;
         }
@@ -416,7 +420,7 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _databases, _servers, _sources and _mimetypes on it
+        // this function sets the _hosts, _databases, _servers, _sources and _mimetypes on it
         compile(root)
         {
             // start by resolving the param references (TODO: Should be done on
@@ -438,6 +442,8 @@
             // merge database and server JSON objects
             var cache = {
                 href      : "@root",
+                hosts     : [],
+                hostNames : {},
                 dbs       : [],
                 dbIds     : {},
                 dbNames   : {},
@@ -707,6 +713,11 @@
                 return new cmp.SourceSet(s, dflt);
             });
 
+            // instantiate all hosts now
+            root._hosts = cache.hosts.map(h => {
+                return new cmp.Host(h);
+            });
+
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
@@ -776,6 +787,12 @@
                 }
             };
 
+            // compile hosts
+            if ( this.resolved.hosts ) {
+                this.resolved.hosts.forEach(host => {
+                    impl(host, cache.hosts, null, cache.hostNames, 'host');
+                });
+            }
             // compile databases
             if ( this.resolved.databases ) {
                 this.resolved.databases.forEach(db => {

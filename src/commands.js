@@ -87,6 +87,43 @@
     }
 
     /*~
+     * Initialize a new MarkLogic instance or cluster.
+     *
+     * TOSO: Support licensee and license-key from this.cmdArgs...
+     */
+    class InitCommand extends Command
+    {
+        prepare() {
+            let user = this.environ.param('@user');
+            let pwd  = this.environ.param('@password');
+            if ( ! user ) {
+                throw new Error('No user in environ');
+            }
+            if ( ! pwd ) {
+                throw new Error('No password in environ');
+            }
+            let key      = this.cmdArgs.key;
+            let licensee = this.cmdArgs.licensee
+            // the action list
+            let actions = new act.ActionList(this.ctxt);
+            let hosts   = this.environ.hosts();
+            // if explicit hosts, init the cluster
+            if ( hosts.length ) {
+                let master = hosts[0];
+                let extras = hosts.slice(1);
+                master.init(actions, user, pwd, key, licensee);
+                extras.forEach(e => e.init(actions, master));
+            }
+            // if no explicit host, init the implicit single node
+            else {
+                actions.add(new act.AdminInit(key, licensee));
+                actions.add(new act.AdminInstance(user, pwd));
+            }
+            return actions;
+        }
+    }
+
+    /*~
      * Create the components from the environ on MarkLogic.
      */
     class SetupCommand extends Command
@@ -349,6 +386,7 @@
     module.exports = {
         NewCommand    : NewCommand,
         ShowCommand   : ShowCommand,
+        InitCommand   : InitCommand,
         SetupCommand  : SetupCommand,
         LoadCommand   : LoadCommand,
         DeployCommand : DeployCommand
