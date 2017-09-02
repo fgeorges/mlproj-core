@@ -96,35 +96,10 @@
             }
         }
 
-        // TODO: The API list should be "compiled" as well (why do it on the fly
-        // and not for the components...?)
-        //
-        api(name, dflt) {
-            // "flatten" the import graph in a single array
-            // most priority at index 0, least priority at the end
-            var imports = [];
-            var flatten = mod => {
-                if ( ! imports.includes(mod) ) {
-                    imports.push(mod);
-                    mod.imports.forEach(i => flatten(i));
-                }
-            };
-            flatten(this.module);
-            // overrides lhs props with those in rhs, if any
-            var collapse = (lhs, rhs) => {
-                if ( rhs ) {
-                    Object.keys(rhs).forEach(k => lhs[k] = rhs[k]);
-                }
-            };
-            // start with the default
-            var res = dflt || DEFAULT_APIS[name];
+        api(name) {
+            let res = this._apis[name];
             if ( ! res ) {
                 throw new Error('Unknown API: ' + name);
-            }
-            // walk the flatten import graph
-            while ( imports.length ) {
-                let apis = imports.pop().json.apis;
-                collapse(res, apis && apis[name]);
             }
             return res;
         }
@@ -195,7 +170,8 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers and source sets (with import priority)
+            // compile databses, servers, source sets, mime types and apis (with
+            // import priority)
             this.module.compile(this);
         }
 
@@ -210,7 +186,7 @@
             addImports(this.module, 1);
             let apis = {};
             ['management', 'admin', 'client', 'xdbc'].forEach(a => {
-                let api = this.api(a, {});
+                let api = this._overridenApis[a];
                 if ( Object.keys(api).length ) {
                     apis[a] = api;
                 }
@@ -434,13 +410,14 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _databases, _servers, _sources and _mimetypes on it
+        // sets the _databases, _servers, _sources, _mimetypes and _apis on it
         compile(root)
         {
-            // start by resolving the param references (TODO: Should be done on
-            // the fly whilst compiling...)
+            // start by resolving the param references (could it be done on the
+            // fly whilst compiling?)
             this.resolve(root);
 
+            // resolve the connection infos
             [ 'host', 'user', 'password' ].forEach(name => {
                 var val = this.param('@' + name);
                 if ( ! val ) {
@@ -469,6 +446,65 @@
             };
             this.compileImpl(cache);
 
+            // compile databases and servers
+            this.compileDbsSrvs(root, cache);
+
+            // instantiate all sources now
+            let dfltSrc = cache.srcs.find(s => s.name === '@default');
+            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
+            root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
+                return new cmp.SourceSet(s, dflt);
+            });
+
+            // instantiate all mime types now
+            root._mimetypes = cache.mimes.map(m => {
+                return new cmp.MimeType(m);
+            });
+
+            // compile apis
+            this.compileApis(root, cache);
+        }
+
+        compileApis(root, cache)
+        {
+            // "flatten" the import graph in a single array
+            // most priority at index 0, least priority at the end
+            var imports = [];
+            var flatten = mod => {
+                if ( ! imports.includes(mod) ) {
+                    imports.push(mod);
+                    mod.imports.forEach(i => flatten(i));
+                }
+            };
+            flatten(this);
+            // overrides lhs props with those in rhs, if any
+            var collapse = (lhs, rhs) => {
+                if ( rhs ) {
+                    Object.keys(rhs).forEach(k => lhs[k] = rhs[k]);
+                }
+            };
+            root._overridenApis = {};
+            root._apis          = {};
+            // loop over all known apis
+            Object.keys(DEFAULT_APIS).forEach(name => {
+                // start with nothing
+                root._overridenApis[name] = {};
+                root._apis[name]          = {};
+                // walk the flatten import graph
+                for ( let i = imports.length - 1; i >= 0; --i ) {
+                    let apis = imports[i].json.apis;
+                    collapse(root._overridenApis[name], apis && apis[name]);
+                }
+                Object.keys(DEFAULT_APIS[name]).forEach(p => {
+                    root._apis[name][p] =
+                        root._overridenApis[name][p]
+                        || DEFAULT_APIS[name][p];
+                });
+            });
+        }
+
+        compileDbsSrvs(root, cache)
+        {
             // build the array of database and server objects
             // the order of the database array guarantees there is no broken dependency
             var res = {
@@ -716,18 +752,6 @@
                     }
                 };
                 return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules));
-            });
-
-            // instantiate all sources now
-            let dfltSrc = cache.srcs.find(s => s.name === '@default');
-            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
-            root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
-                return new cmp.SourceSet(s, dflt);
-            });
-
-            // instantiate all mime types now
-            root._mimetypes = cache.mimes.map(m => {
-                return new cmp.MimeType(m);
             });
         }
 
