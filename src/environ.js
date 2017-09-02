@@ -31,12 +31,28 @@
                 path = ctxt.platform.resolve('xproject/mlenvs/@' + name.replace('/', '+'), base);
                 json = { "mlproj": {
                     "format": '0.1',
-                    "import": name.split('/').map(n => n + '.json')
+                    "import": name.split('/').map(n => {
+                        let pjson = ctxt.platform.resolve(n + '.json', 'xproject/mlenvs');
+                        let pjs   = ctxt.platform.resolve(n + '.js',   'xproject/mlenvs');
+                        // return .js only if .json does not exist and .js does exist
+                        return (! ctxt.platform.exists(pjson) && ctxt.platform.exists(pjs))
+                            ? n + '.js'
+                            : n + '.json';
+                    })
                 }};
             }
             else {
-                path = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
-                json = ctxt.platform.json(path);
+                let pjson = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
+                let pjs   = ctxt.platform.resolve('xproject/mlenvs/' + name + '.js',   base);
+                // use .js only if .json does not exist and .js does exist
+                if ( ! ctxt.platform.exists(pjson) && ctxt.platform.exists(pjs) ) {
+                    path = pjs;
+                    json = require(path)();
+                }
+                else {
+                    path = pjson;
+                    json = ctxt.platform.json(path);
+                }
             }
             let env = new Environ(ctxt, json, path, proj);
             env.name = name;
@@ -269,7 +285,9 @@
                 imports.forEach(i => {
                     let b = this.ctxt.platform.dirname(this.path);
                     let p = this.ctxt.platform.resolve(i, b);
-                    let j = this.ctxt.platform.json(p);
+                    let j = p.endsWith('.js')
+                        ? require(p)()
+                        : this.ctxt.platform.json(p);
                     let m = new Module(this.ctxt, j, p);
                     this.imports.push(m);
                     m.loadImports(this.ctxt);

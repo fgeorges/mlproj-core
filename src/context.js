@@ -197,6 +197,10 @@
             throw err.abstractFun('Platform.restart');
         }
 
+        exists(path) {
+            throw err.abstractFun('Platform.exists');
+        }
+
         isDirectory(path) {
             throw err.abstractFun('Platform.isDirectory');
         }
