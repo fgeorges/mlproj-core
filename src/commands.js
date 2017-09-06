@@ -5,16 +5,17 @@
     const act = require('./action');
     const cmp = require('./components');
     const err = require('./error');
+    const api = require('./apis');
 
     /*~
      * The base class/interface for commands.
      */
     class Command
     {
-        constructor(name, globalArgs, cmdArgs, ctxt, environ) {
+        constructor(name, globalArgs, args, ctxt, environ) {
             this.name       = name;
+            this.args       = args;
             this.globalArgs = globalArgs;
-            this.cmdArgs    = cmdArgs;
             this.ctxt       = ctxt;
             this.environ    = environ;
         }
@@ -34,7 +35,7 @@
             var actions = new act.ActionList(this.ctxt);
             actions.add(new act.FunAction('Create a new project', ctxt => {
                 var pf    = ctxt.platform;
-                var vars  = this.cmdArgs;
+                var vars  = this.args;
                 var force = vars.force;
 
                 // create `src/`
@@ -221,8 +222,8 @@
             }
 
             // do it: the actual execute() implem
-            let db  = target( this.cmdArgs, this.isDeploy());
-            let src = content(this.cmdArgs, this.isDeploy());
+            let db  = target( this.args, this.isDeploy());
+            let src = content(this.args, this.isDeploy());
             this.populateActions(actions, db, src);
 
             return actions;
@@ -257,7 +258,8 @@
                     throw new Error('Unknown user command: ' + this.name);
                 }
                 let impl = this.getImplem(cmd);
-                impl.call(this, this.ctxt.environ, this.ctxt);
+                let apis = new api.Apis(this);
+                impl.call(this, apis, this.ctxt.environ, this.ctxt);
             }));
             return actions;
         }

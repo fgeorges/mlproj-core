@@ -143,6 +143,21 @@
             return this._servers;
         }
 
+        // ref is either ID or name
+        server(ref) {
+            let res = this.servers().filter(srv => srv.id === ref || srv.name === ref);
+            if ( ! res.length ) {
+                return;
+            }
+            else if ( res.length === 1 ) {
+                return res[0];
+            }
+            else {
+                let list = res.map(srv => 'id:' + srv.id + '/name:' + srv.name).join(', ');
+                throw new Error('More than one server with ID or name "' + ref + '": ' + list);
+            }
+        }
+
         sources() {
             return this._sources;
         }
@@ -163,6 +178,10 @@
                 let list = res.map(src => src.name).join(', ');
                 throw new Error('More than one source with name "' + name + '": ' + list);
             }
+        }
+
+        substitute(val) {
+            return this.module.resolveThing(this, val);
         }
 
         compile(params, force, defaults) {
@@ -454,6 +473,10 @@
         //
         // `root` can be the root module, or the environ itself
         // sets the _databases, _servers, _sources, _mimetypes and _apis on it
+        //
+        // TODO: Don't we want to validate user-command names as well?  Like
+        // containing a colon, except starting with "mlproj:" and "ml:",
+        // something like that...
         compile(root)
         {
             // start by resolving the param references (could it be done on the
