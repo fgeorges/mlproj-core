@@ -51,7 +51,10 @@
             if ( ctxt.verbose ) {
                 ctxt.platform.warn('Execute: ' + this.msg);
             }
-            return this.fun(ctxt);
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            if ( ! ctxt.dry ) {
+                return this.fun(ctxt);
+            }
         }
     }
 
@@ -112,10 +115,10 @@
                     ctxt.platform.warn(this.data);
                 }
             }
-            if ( ctxt.dry && this.verb !== 'GET' ) {
+            if ( ! ctxt.dry || this.verb !== 'GET' ) {
                 ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             }
-            else {
+            if ( ! ctxt.dry || this.verb === 'GET' ) {
                 return this.send(ctxt, this.api, this.url, this.getData(ctxt));
             }
         }
@@ -133,11 +136,20 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             if ( data ) {
                 throw new Error('Data in a GET: ' + url + ', ' + data);
             }
-            return ctxt.platform.get(api, url);
+            let resp = ctxt.platform.get({ api: api }, url);
+            if ( resp.status === 200 ) {
+                return resp.body;
+            }
+            else if ( resp.status === 404 ) {
+                return;
+            }
+            else {
+                throw new Error('Error retrieving entity: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
         }
     }
 
@@ -151,8 +163,23 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
-            return ctxt.platform.post(api, url, data, this.type);
+            let resp = ctxt.platform.post({ api: api }, url, data, this.type);
+            if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
+                // nothing
+            }
+            // when operation needs a server restart
+            else if ( resp.status === 202 ) {
+                let body = resp.body.restart;
+                if ( ! body ) {
+                    throw new Error('202 returned NOT for a restart reason?!?');
+                }
+                let time = Date.parse(body['last-startup'][0].value);
+                ctxt.platform.restart(time);
+            }
+            else {
+                throw new Error('Entity not created: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
         }
     }
 
@@ -166,8 +193,24 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
-            return ctxt.platform.put(api, url, data, this.type);
+            let resp = ctxt.platform.put({ api: api }, url, data, this.type);
+            // XDBC PUT /insert returns 200
+            if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
+                // nothing
+            }
+            // when operation needs a server restart
+            else if ( resp.status === 202 ) {
+                let body = resp.body.restart;
+                if ( ! body ) {
+                    throw new Error('202 returned NOT for a restart reason?!?');
+                }
+                let time = Date.parse(body['last-startup'][0].value);
+                ctxt.platform.restart(time);
+            }
+            else {
+                throw new Error('Entity not updated: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
         }
     }
 
