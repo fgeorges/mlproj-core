@@ -11,7 +11,8 @@
      */
     class Command
     {
-        constructor(globalArgs, cmdArgs, ctxt, environ) {
+        constructor(name, globalArgs, cmdArgs, ctxt, environ) {
+            this.name       = name;
             this.globalArgs = globalArgs;
             this.cmdArgs    = cmdArgs;
             this.ctxt       = ctxt;
@@ -242,6 +243,43 @@
         }
     }
 
+    /*~
+     * User-provided command.
+     */
+    class UserCommand extends Command
+    {
+        prepare() {
+            var pf      = this.ctxt.platform;
+            var actions = new act.ActionList(this.ctxt);
+            actions.add(new act.FunAction('Apply the user command: ' + this.name, ctxt => {
+                let cmd = this.environ.command(this.name);
+                if ( ! cmd ) {
+                    throw new Error('Unknown user command: ' + this.name);
+                }
+                let impl = this.getImplem(cmd);
+                impl.call(this, this.ctxt.environ, this.ctxt);
+            }));
+            return actions;
+        }
+
+        getImplem(cmd) {
+            if ( typeof cmd === "function" ) {
+                return cmd;
+            }
+            else if ( typeof cmd === "object" ) {
+                if ( typeof cmd.implem === "function" ) {
+                    return cmd.implem;
+                }
+                else {
+                    throw new Error('User command implem is not a function: ' + this.name);
+                }
+            }
+            else {
+                throw new Error('User command is not a function: ' + this.name);
+            }
+        }
+    }
+
     // helper function for the command `new`, to create xproject/project.xml
     function NEW_PROJECT_XML(vars)
     {
@@ -351,7 +389,8 @@
         ShowCommand   : ShowCommand,
         SetupCommand  : SetupCommand,
         LoadCommand   : LoadCommand,
-        DeployCommand : DeployCommand
+        DeployCommand : DeployCommand,
+        UserCommand   : UserCommand
     }
 }
 )();

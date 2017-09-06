@@ -58,7 +58,7 @@
             throw err.abstractFun('Display.project');
         }
 
-        environ(envipath, title, desc, host, user, password, params, apis, imports) {
+        environ(envipath, title, desc, host, user, password, params, apis, commands, imports) {
             throw err.abstractFun('Display.environ');
         }
 

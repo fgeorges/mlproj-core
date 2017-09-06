@@ -96,6 +96,22 @@
             }
         }
 
+        commands() {
+            return this.module.commands();
+        }
+
+        // TODO: Define the exact type/structure of the command values:
+        //
+        // - function
+        // - string/array of strings
+        // - object with different properties
+        //
+        // Then should we do some normalization here?  Or let the caller do it?
+        //
+        command(name) {
+            return this.module.command(name);
+        }
+
         api(name) {
             let res = this._apis[name];
             if ( ! res ) {
@@ -202,6 +218,7 @@
                     return { name: p, value: this.param(p) };
                 }),
                 apis,
+                this.commands(),
                 imports);
         }
     }
@@ -233,9 +250,18 @@
             if ( this.json.format !== '0.1' ) {
                 throw new Error('Invalid file, `format` not 0.1: ' + this.json.format);
             }
-            this.resolved = JSON.parse(JSON.stringify(this.json));
-            // the params hash, empty by default
-            this._params = this.resolved.params || {};
+
+            // TODO: FIXME: Why serializing then parsing again?  Copy?  This
+            // silently ignore function objects, so not suitabke for our needs!
+            // Why do we want to make a copy in the first place...?  Do we
+            // really access the non-resolved JSON anytime after resolution?
+            //
+            this.resolved = this.json;
+            //this.resolved = JSON.parse(JSON.stringify(this.json));
+
+            // the params and commands hashes, empty by default
+            this._params   = this.resolved.params   || {};
+            this._commands = this.resolved.commands || {};
             // extract defined values from `obj` and put them in `this._params`
             var extract = (obj, props) => {
                 props.forEach(p => {
@@ -303,9 +329,8 @@
             if ( value === undefined ) {
                 var v = this._params[name];
                 if ( name !== '@title' && name !== '@desc' ) {
-                    var i = this.imports.length;
-                    while ( v === undefined && i > 0 ) {
-                        v = this.imports[--i].param(name);
+                    for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
+                        v = this.imports[i].param(name);
                     }
                 }
                 return v;
@@ -313,6 +338,24 @@
             else {
                 this._params[name] = value;
             }
+        }
+
+        commands() {
+            var names = Object.keys(this._commands);
+            this.imports.forEach(i => {
+                i.commands()
+                    .filter(n => ! names.includes(n))
+                    .forEach(n => names.push(n));
+            });
+            return names;
+        }
+
+        command(name) {
+            var cmd = this._commands[name];
+            for ( let i = this.imports.length - 1; cmd === undefined && i >= 0; --i ) {
+                cmd = this.imports[i].command(name);
+            }
+            return cmd;
         }
 
         // `root` can be the root module, or the environ itself
