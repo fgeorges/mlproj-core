@@ -384,8 +384,27 @@
 
         load(actions, db, display)
         {
-            const pf = actions.ctxt.platform;
+            let   matches = [];
+            const onFlush = () => {
+                actions.add(
+                    new act.MultiDocInsert(db, matches));
+                // empty the array
+                matches.splice(0);
+            };
+            const onMatch = (path, uri) => {
+                matches.push({ uri: uri, path: path });
+                if ( matches.length >= INSERT_LENGTH ) {
+                    onFlush();
+                }
+            };
+            this.walk(actions.ctxt, display, onMatch);
+            if ( matches.length ) {
+                onFlush();
+            }
+        }
 
+        walk(ctxt, display, onMatch)
+        {
             // from one array of strings, return two arrays:
             // - first one with all strings ending with '/', removed
             // - second one with all strings not ending with '/'
@@ -425,18 +444,14 @@
             compile('exclude');
             compile('garbage');
 
-            const dir   = this.prop('dir');
-            const path  = pf.resolve(dir);
-            let matches = [];
-            this.walkDir(matches, '', dir, path, path, patterns, actions, db, display);
-            if ( matches.length ) {
-                this.flush(matches, actions, db);
-            }
+            const dir  = this.prop('dir');
+            const path = ctxt.platform.resolve(dir);
+            this.walkDir(onMatch, '', dir, path, path, patterns, ctxt, display);
         }
 
-        walkDir(matches, path, dir, full, base, patterns, actions, db, display)
+        walkDir(onMatch, path, dir, full, base, patterns, ctxt, display)
         {
-            const pf = actions.ctxt.platform;
+            const pf = ctxt.platform;
 
             const match = (path, compiled, ifNone, msg) => {
                 if ( ! compiled.length ) {
@@ -445,7 +460,7 @@
                 for ( let i = 0; i < compiled.length; ++i ) {
                     let c = compiled[i];
                     if ( c.match(path) ) {
-                        if ( actions.ctxt.verbose ) {
+                        if ( ctxt.verbose ) {
                             pf.warn('[' + pf.bold('verbose') + '] ' + msg
                                     + ' ' + path + ', matching ' + c.pattern);
                         }
@@ -478,7 +493,7 @@
                     if ( resp ) {
                         if ( child.isdir ) {
                             let d = dir + '/' + child.name;
-                            this.walkDir(matches, p, d, desc.full, base, patterns, actions, db, display);
+                            this.walkDir(onMatch, p, d, desc.full, base, patterns, ctxt, display);
                         }
                         else {
                             let uri = resp.uri || resp.path;
@@ -490,7 +505,7 @@
                             if ( ! full ) {
                                 throw new Error('Impossible to compute full path for ' + resp);
                             }
-                            this.addMatch(matches, actions, db, uri, full);
+                            onMatch(full, uri);
                         }
                     }
                 }
@@ -501,20 +516,6 @@
             if ( desc.isIncluded && ! desc.isExcluded ) {
                 return desc;
             }
-        }
-
-        addMatch(matches, actions, db, uri, full) {
-            matches.push({ uri: uri, path: full });
-            if ( matches.length >= INSERT_LENGTH ) {
-                this.flush(matches, actions, db);
-            }
-        }
-
-        flush(matches, actions, db) {
-            actions.add(
-                new act.MultiDocInsert(db, matches));
-            // empty the array
-            matches.splice(0);
         }
     }
 
