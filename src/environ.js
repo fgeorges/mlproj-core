@@ -918,17 +918,17 @@
 
     const DEFAULT_APIS = {
         manage: {
-            root : 'manage/v2',
+            root : '/manage/v2',
             port : 8002,
             ssl  : false
         },
         admin: {
-            root : 'admin/v1',
+            root : '/admin/v1',
             port : 8001,
             ssl  : false
         },
         client: {
-            root : 'v1',
+            root : '/v1',
             port : 8000,
             ssl  : false
         },
