@@ -39,14 +39,15 @@
         constructor(json, schema, security, triggers)
         {
             super();
-            this.id       = json.id;
-            this.name     = json.name;
-            this.schema   = schema   === 'self' ? this : schema;
-            this.security = security === 'self' ? this : security;
-            this.triggers = triggers === 'self' ? this : triggers;
-            this.forests  = {};
+            this.id         = json.id;
+            this.name       = json.name;
+            this.properties = json.properties;
+            this.schema     = schema   === 'self' ? this : schema;
+            this.security   = security === 'self' ? this : security;
+            this.triggers   = triggers === 'self' ? this : triggers;
+            this.forests    = {};
             // extract the configured properties
-            this.props    = props.database.parse(json);
+            this.props      = props.database.parse(json);
             // the forests
             var forests = json.forests;
             if ( forests === null || forests === undefined ) {
@@ -117,6 +118,15 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( obj[p] ) {
+                        throw new Error('Explicit property already set on database: name='
+                                        + this.name + ',id=' + this.id + ' - ' + p);
+                    }
+                    obj[p] = this.properties[p];
+                });
+            }
             // enqueue the "create db" action
             actions.add(new act.DatabaseCreate(this, obj));
             display.check(1, 'forests');
@@ -154,12 +164,19 @@
             display.check(1, 'properties');
             Object.keys(this.props).forEach(p => {
                 let res = this.props[p];
-                // TODO: Rather fix the "_type" setting mechanism, AKA the root cause...
+                // TODO: Rather fix the "_type" setting mechanism, AKA the "root cause"...
                 if ( ! res.prop._type ) {
                     res.prop._type = 'database';
                 }
                 res.update(actions, display, body, this);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( this.properties[p] !== actual[p] ) {
+                        actions.add(new act.DatabaseUpdate(this, p, this.properties[p]));
+                    }
+                });
+            }
         }
 
         updateDb(actions, display, db, body, prop, dflt)
@@ -233,13 +250,14 @@
         constructor(json, content, modules)
         {
             super();
-            this.group   = json.group || 'Default';
-            this.id      = json.id;
-            this.name    = json.name;
-            this.content = content;
-            this.modules = modules;
+            this.group      = json.group || 'Default';
+            this.id         = json.id;
+            this.name       = json.name;
+            this.properties = json.properties;
+            this.content    = content;
+            this.modules    = modules;
             // extract the configured properties
-            this.props   = props.server.parse(json);
+            this.props      = props.server.parse(json);
             // TODO: If no modules DB and no root, and if there is a source set
             // attached to this server, use its directory as the root of the
             // server, to have the modules on disk.  When attaching source sets
@@ -274,14 +292,27 @@
         create(actions, display)
         {
             display.add(0, 'create', 'server', this.name);
+            // the base server object
             var obj = {
                 "server-name":      this.name,
                 "content-database": this.content.name
             };
+            // its modules DB
             this.modules && ( obj['modules-database'] = this.modules.name );
+            // its properties
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( obj[p] ) {
+                        throw new Error('Explicit property already set on server: name='
+                                        + this.name + ',id=' + this.id + ' - ' + p);
+                    }
+                    obj[p] = this.properties[p];
+                });
+            }
+            // enqueue the "create server" action
             actions.add(new act.ServerCreate(this, obj));
         }
 
@@ -305,6 +336,13 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].update(actions, display, actual, this);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( this.properties[p] !== actual[p] ) {
+                        actions.add(new act.ServerUpdate(this, p, this.properties[p]));
+                    }
+                });
+            }
         }
     }
 

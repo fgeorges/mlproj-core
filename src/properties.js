@@ -634,11 +634,12 @@
      * The server properties and config format.
      */
     var server = new ConfigObject('server')
-        .add('compose',  false, new Ignore())
-        .add('comment',  false, new Ignore())
-        .add('id',       false, new Ignore())
-        .add('name',     true,  new Ignore())
-        .add('group',    false, new Ignore())
+        .add('compose',    false, new Ignore())
+        .add('comment',    false, new Ignore())
+        .add('id',         false, new Ignore())
+        .add('name',       true,  new Ignore())
+        .add('group',      false, new Ignore())
+        .add('properties', false, new Ignore())
         // .add('content',  true,  new Database('content-database'))
         // .add('modules',  false, new Database('modules-database'))
         .add('content',  true,  new Ignore())
