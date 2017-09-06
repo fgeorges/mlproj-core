@@ -12,7 +12,7 @@
     function dbProps(name) {
         var res = {
             verb: 'get',
-            api: 'management',
+            api: 'manage',
             url: '/databases/' + name + '/properties',
             response: 'Not found'
         };
@@ -22,7 +22,7 @@
     function asProps(name) {
         var res = {
             verb: 'get',
-            api: 'management',
+            api: 'manage',
             url: '/servers/' + name + '/properties?group-id=Default',
             response: 'Not found'
         };
@@ -32,7 +32,7 @@
     function forests(list) {
         var res = {
             verb: 'get',
-            api: 'management',
+            api: 'manage',
             url: '/forests',
             response: 'OK',
             body: {
@@ -50,7 +50,7 @@
     function createDb(props) {
         var res = {
             verb: 'post',
-            api: 'management',
+            api: 'manage',
             url: '/databases',
             data: props,
             response: 'OK'
@@ -61,7 +61,7 @@
     function createForest(props) {
         var res = {
             verb: 'post',
-            api: 'management',
+            api: 'manage',
             url: '/forests',
             data: props,
             response: 'OK'
@@ -72,7 +72,7 @@
     function attachForest(forest, db) {
         var res = {
             verb: 'post',
-            api: 'management',
+            api: 'manage',
             url: '/forests/' + forest + '?state=attach&database=' + db,
             response: 'OK'
         };
@@ -82,7 +82,7 @@
     function createAs(props) {
         var res = {
             verb: 'post',
-            api: 'management',
+            api: 'manage',
             url: '/servers?group-id=Default',
             data: props,
             response: 'OK'

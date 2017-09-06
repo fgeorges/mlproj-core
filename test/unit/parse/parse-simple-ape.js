@@ -68,9 +68,9 @@ t.test('Parsing ape (base) - parameters and typical topology', ass => {
     ass.equal('The @code param',  env.param('@code'),  'simple-ape');
     ass.equal('The @title param', env.param('@title'), 'Simple base space example');
     // the API details
-    ass.api('management', env.api('management'), 'manage/v2', 8002, false);
-    ass.api('client',     env.api('client'),     'v1',        8000, false);
-    ass.api('xdbc',       env.api('xdbc'),       '',          8000, false);
+    ass.api('manage', env.api('manage'), 'manage/v2', 8002, false);
+    ass.api('client', env.api('client'), 'v1',        8000, false);
+    ass.api('xdbc',   env.api('xdbc'),   '',          8000, false);
     // the source sets
     const srcs = env.sources();
     ass.equal('There must be no source set', srcs.length, 0);
@@ -100,9 +100,9 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     ass.equal('The @code param',  env.param('@code'), 'simple-ape');
     ass.empty('The @title param', env.param('@title'));
     // the API details
-    ass.api('management', env.api('management'), 'manage/v2', 8002, false);
-    ass.api('client',     env.api('client'),     'v1',        8000, false);
-    ass.api('xdbc',       env.api('xdbc'),       '',          8000, false);
+    ass.api('manage', env.api('manage'), 'manage/v2', 8002, false);
+    ass.api('client', env.api('client'), 'v1',        8000, false);
+    ass.api('xdbc',   env.api('xdbc'),   '',          8000, false);
     // the source sets
     const srcs = env.sources();
     ass.equal('There must be no source set', srcs.length, 0);

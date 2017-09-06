@@ -179,7 +179,7 @@
     class ManageGet extends Get
     {
         constructor(url, msg) {
-            super('management', url, msg);
+            super('manage', url, msg);
         }
     }
 
@@ -189,7 +189,7 @@
     class ManagePost extends Post
     {
         constructor(url, data, msg) {
-            super('management', url, data, msg);
+            super('manage', url, data, msg);
         }
     }
 
@@ -199,7 +199,7 @@
     class ManagePut extends Put
     {
         constructor(url, data, msg) {
-            super('management', url, data, msg);
+            super('manage', url, data, msg);
         }
     }
 

@@ -185,7 +185,7 @@
             const imports = [];
             addImports(this.module, 1);
             let apis = {};
-            ['management', 'admin', 'client', 'xdbc'].forEach(a => {
+            ['manage', 'admin', 'client', 'xdbc'].forEach(a => {
                 let api = this._overridenApis[a];
                 if ( Object.keys(api).length ) {
                     apis[a] = api;
@@ -851,7 +851,7 @@
     }
 
     const DEFAULT_APIS = {
-        management: {
+        manage: {
             root : 'manage/v2',
             port : 8002,
             ssl  : false
