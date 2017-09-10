@@ -57,7 +57,7 @@
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
                 this.xpdir  = xpdir;
-            }));
+            }, this));
             return actions;
         }
     }
