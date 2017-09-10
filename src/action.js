@@ -42,9 +42,10 @@
      */
     class FunAction extends Action
     {
-        constructor(msg, fun) {
+        constructor(msg, fun, cmd) {
             super(msg);
             this.fun = fun;
+            this.cmd = cmd;
         }
 
         execute(ctxt) {
