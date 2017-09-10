@@ -922,6 +922,11 @@
             port : 8002,
             ssl  : false
         },
+        rest: {
+            root : '/v1/rest-apis',
+            port : 8002,
+            ssl  : false
+        },
         admin: {
             root : '/admin/v1',
             port : 8001,

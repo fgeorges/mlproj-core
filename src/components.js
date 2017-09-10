@@ -250,6 +250,7 @@
         constructor(json, content, modules)
         {
             super();
+            this.type       = json.type;
             this.group      = json.group || 'Default';
             this.id         = json.id;
             this.name       = json.name;
@@ -262,6 +263,13 @@
             // attached to this server, use its directory as the root of the
             // server, to have the modules on disk.  When attaching source sets
             // to servers and databases is supported...
+            if ( json['rest-config'] ) {
+                if ( this.type !== 'rest' ) {
+                    throw new Error('REST config on a non-REST server: ' + this.type
+                                   + ' - ' + this.id + '/' + this.name);
+                }
+                this.rest = json['rest-config'];
+            }
         }
 
         show(display)
@@ -269,6 +277,7 @@
             display.server(
                 this.name,
                 this.id,
+                this.type,
                 this.group,
                 this.content,
                 this.modules,
@@ -277,29 +286,39 @@
 
         setup(actions, display)
         {
-            display.check(0, 'the ' + this.props['server-type'].value + ' server', this.name);
+            display.check(0, 'the ' + this.type + ' server', this.name);
             const body = new act.ServerProps(this).execute(actions.ctxt);
             // if AS does not exist yet
             if ( ! body ) {
-                this.create(actions, display);
+                if ( this.type === 'http' ) {
+                    this.createHttp(actions, display);
+                }
+                else {
+                    this.createRest(actions, display);
+                }
             }
             // if AS already exists
             else {
+                if ( this.type === 'rest' ) {
+                    // TODO: In case of REST, check extra rest-specific config
+                    // items, to retrieve from :8002/v1/rest-apis/[name]
+                    // (e.g. the config item xdbc-enabled).
+                    //
+                    // There seems to be no way to change the value of such a
+                    // config item (they are used at creation only).
+                    //
+                    // In addition, there are properties specific to REST
+                    // servers (not for HTTP), like debug and update-policy.
+                    //
+                    // 1) retrieve config, if anything differs, -> error
+                    // 2) retrieve properties, and update them, as for any component
+                }
                 this.update(actions, display, body);
             }
         }
 
-        create(actions, display)
+        createAddProps(obj)
         {
-            display.add(0, 'create', 'server', this.name);
-            // the base server object
-            var obj = {
-                "server-name":      this.name,
-                "content-database": this.content.name
-            };
-            // its modules DB
-            this.modules && ( obj['modules-database'] = this.modules.name );
-            // its properties
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });
@@ -312,10 +331,88 @@
                     obj[p] = this.properties[p];
                 });
             }
+        }
+
+        createHttp(actions, display)
+        {
+            display.add(0, 'create', 'http server', this.name);
+            // the base server object
+            var obj = {
+                "server-name":      this.name,
+                "server-type":      this.type,
+                "content-database": this.content.name
+            };
+            // its modules DB
+            this.modules && ( obj['modules-database'] = this.modules.name );
+            // its properties
+            this.createAddProps(obj);
             // enqueue the "create server" action
             actions.add(new act.ServerCreate(this, obj));
         }
 
+        createRest(actions, display)
+        {
+            display.add(0, 'create', 'rest server', this.name);
+            let obj = {
+                "name":             this.name,
+                "group":            this.group,
+                "database":         this.content.name,
+                "modules-database": this.modules.name
+            };
+            this.props.port.create(obj);
+            if ( this.rest ) {
+                if ( this.rest['error-format'] ) {
+                    obj['error-format'] = this.rest['error-format'];
+                }
+                if ( this.rest['xdbc'] ) {
+                    obj['xdbc-enabled'] = this.rest['xdbc'];
+                }
+            }
+            // enqueue the "create rest server" action
+            actions.add(new act.ServerRestCreate(this, { "rest-api": obj }));
+            // its other properties
+            let extra = {};
+            this.createAddProps(extra);
+            // port is handled at creation
+            delete extra['port'];
+            delete extra['server-type'];
+            if ( Object.keys(extra).length ) {
+                // enqueue the "update server" action
+                actions.add(new act.ServerUpdate(this, extra));
+            }
+            if ( this.rest ) {
+                let keys = Object.keys(this.rest).filter(k => {
+                    return k !== 'error-format' && k !== 'xdbc';
+                });
+                if ( keys.length ) {
+                    const map = {
+                        "debug":            'debug',
+                        "tranform-all":     'document-transform-all',
+                        "tranform-out":     'document-transform-out',
+                        "update-policy":    'update-policy',
+                        "validate-options": 'validate-options',
+                        "validate-queries": 'validate-queries'
+                    };
+                    let props = {};
+                    keys.forEach(k => {
+                        let p = map[k];
+                        if ( ! p ) {
+                            throw new Error('Unknown property on server.rest: ' + k);
+                        }
+                        props[p] = this.rest[k];
+                    });
+                    // enqueue the "update rest server props" action
+                    actions.add(new act.ServerRestUpdate(this, props, this.props.port.value));
+                }
+            }
+        }
+
+        // TODO: It should not be hard to make it possible to add more and more
+        // property/value pairs to the server update action, and send them all
+        // in one request.  That would have an impact on displaying the action
+        // though, as we would probably want to keep multiple lines for multiple
+        // properties, as it is clearer.
+        //
         update(actions, display, actual)
         {
             // the content and modules databases
@@ -333,9 +430,11 @@
 
             // check properties
             display.check(1, 'properties');
-            Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, display, actual, this);
-            });
+            Object.keys(this.props)
+                .filter(p => p !== 'server-type')
+                .forEach(p => {
+                    this.props[p].update(actions, display, actual, this);
+                });
             if ( this.properties ) {
                 Object.keys(this.properties).forEach(p => {
                     if ( this.properties[p] !== actual[p] ) {

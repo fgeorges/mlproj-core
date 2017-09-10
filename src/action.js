@@ -106,6 +106,12 @@
             return this.data;
         }
 
+        connect(api) {
+            return {
+                api: api
+            };
+        }
+
         execute(ctxt) {
             if ( ctxt.verbose ) {
                 ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] '
@@ -139,7 +145,7 @@
             if ( data ) {
                 throw new Error('Data in a GET: ' + url + ', ' + data);
             }
-            let resp = ctxt.platform.get({ api: api }, url);
+            let resp = ctxt.platform.get(this.connect(api), url);
             if ( resp.status === 200 ) {
                 return resp.body;
             }
@@ -163,7 +169,7 @@
         }
 
         send(ctxt, api, url, data) {
-            let resp = ctxt.platform.post({ api: api }, url, data, this.type);
+            let resp = ctxt.platform.post(this.connect(api), url, data, this.type);
             if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
                 // nothing
             }
@@ -193,7 +199,7 @@
         }
 
         send(ctxt, api, url, data) {
-            let resp = ctxt.platform.put({ api: api }, url, data, this.type);
+            let resp = ctxt.platform.put(this.connect(api), url, data, this.type);
             // XDBC PUT /insert returns 200
             if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
                 // nothing
@@ -211,6 +217,52 @@
                 throw new Error('Entity not updated: ' + (resp.body.errorResponse
                                 ? resp.body.errorResponse.message : resp.body));
             }
+        }
+    }
+
+    /*~
+     * REST server: update server properties.
+     */
+    class ServerRestUpdate extends Put
+    {
+        constructor(srv, body, port) {
+            var name = srv && srv.name;
+            super(null,
+                  '/v1/config/properties',
+                  body,
+                  'Update REST server props: \t' + name);
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port
+            };
+        }
+    }
+
+    /*~~~~~ REST API actions. */
+
+    /*~
+     * A REST API POST action.
+     */
+    class RestPost extends Post
+    {
+        constructor(url, data, msg) {
+            super('rest', url, data, msg);
+        }
+    }
+
+    /*~
+     * REST API: create a server.
+     */
+    class ServerRestCreate extends RestPost
+    {
+        constructor(srv, body) {
+            var name = srv && srv.name;
+            super('',
+                  body,
+                  'Create REST server: \t\t' + name);
         }
     }
 
@@ -371,20 +423,15 @@
         constructor(srv, name, value) {
             var group   = srv && srv.group;
             var srvname = srv && srv.name;
-            var body    = name && { [name]: value };
+            var body    = name;
+            var what    = 'properties';
+            if ( typeof name !== 'object' ) {
+                body = name && { [name]: value };
+                what = name;
+            }
             super('/servers/' + srvname + '/properties?group-id=' + group,
                   body,
-                  'Update ' + name + ':  \t' + srvname);
-        }
-
-        send(ctxt, api, url, data) {
-            var res = super.send(ctxt, api, url, data);
-            if ( res ) {
-                // TODO: Do NOT use console.log() directly here...!
-                // Use the display instead...
-                console.log('MarkLogic is restarting, waiting for it to be back up...');
-                ctxt.platform.restart(res);
-            }
+                  'Update ' + what + ':  \t\t' + srvname);
         }
     }
 
@@ -556,23 +603,25 @@
     }
 
     module.exports = {
-        ActionList     : ActionList,
-        Action         : Action,
-        FunAction      : FunAction,
-        ForestList     : ForestList,
-        ForestCreate   : ForestCreate,
-        ForestAttach   : ForestAttach,
-        ForestDetach   : ForestDetach,
-        DatabaseProps  : DatabaseProps,
-        DatabaseCreate : DatabaseCreate,
-        DatabaseUpdate : DatabaseUpdate,
-        ServerProps    : ServerProps,
-        ServerCreate   : ServerCreate,
-        ServerUpdate   : ServerUpdate,
-        MimeProps      : MimeProps,
-        MimeCreate     : MimeCreate,
-        MultiDocInsert : MultiDocInsert,
-        DocInsert      : DocInsert
+        ActionList       : ActionList,
+        Action           : Action,
+        FunAction        : FunAction,
+        ForestList       : ForestList,
+        ForestCreate     : ForestCreate,
+        ForestAttach     : ForestAttach,
+        ForestDetach     : ForestDetach,
+        DatabaseProps    : DatabaseProps,
+        DatabaseCreate   : DatabaseCreate,
+        DatabaseUpdate   : DatabaseUpdate,
+        ServerProps      : ServerProps,
+        ServerCreate     : ServerCreate,
+        ServerUpdate     : ServerUpdate,
+        ServerRestCreate : ServerRestCreate,
+        ServerRestUpdate : ServerRestUpdate,
+        MimeProps        : MimeProps,
+        MimeCreate       : MimeCreate,
+        MultiDocInsert   : MultiDocInsert,
+        DocInsert        : DocInsert
     }
 }
 )();

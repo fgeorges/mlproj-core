@@ -42,7 +42,7 @@
             throw err.abstractFun('Display.database');
         }
 
-        server(name, id, group, content, modules, props) {
+        server(name, id, type, group, content, modules, props) {
             throw err.abstractFun('Display.server');
         }
 
@@ -183,12 +183,12 @@
                 let api = environ().api(params.api);
                 ssl  = params.ssl === undefined ? api.ssl : params.ssl;
                 port = params.port || api.port;
-                path = api.root + (url || params.path);
+                path = api.root + (url || params.path || '');
             }
             else {
                 ssl  = params.ssl;
                 port = params.port;
-                path = url || params.path;
+                path = url || params.path || '/';
             }
             let res = (ssl ? 'https' : 'http') + '://' + host + ':' + port + path;
             //console.log(res);
