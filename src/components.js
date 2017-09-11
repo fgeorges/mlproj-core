@@ -300,20 +300,9 @@
             // if AS already exists
             else {
                 if ( this.type === 'rest' ) {
-                    // TODO: In case of REST, check extra rest-specific config
-                    // items, to retrieve from :8002/v1/rest-apis/[name]
-                    // (e.g. the config item xdbc-enabled).
-                    //
-                    // There seems to be no way to change the value of such a
-                    // config item (they are used at creation only).
-                    //
-                    // In addition, there are properties specific to REST
-                    // servers (not for HTTP), like debug and update-policy.
-                    //
-                    // 1) retrieve config, if anything differs, -> error
-                    // 2) retrieve properties, and update them, as for any component
+                    this.updateRest(actions, display, body);
                 }
-                this.update(actions, display, body);
+                this.updateHttp(actions, display, body);
             }
         }
 
@@ -413,8 +402,12 @@
         // though, as we would probably want to keep multiple lines for multiple
         // properties, as it is clearer.
         //
-        update(actions, display, actual)
+        updateHttp(actions, display, actual)
         {
+            if ( 'http' !== actual['server-type'] ) {
+                throw new Error('Server type cannot change, from '
+                                + actual['server-type'] + ' to ' + this.type);
+            }
             // the content and modules databases
             if ( this.content.name !== actual['content-database'] ) {
                 display.add(0, 'update', 'content-database');
@@ -441,6 +434,78 @@
                         actions.add(new act.ServerUpdate(this, p, this.properties[p]));
                     }
                 });
+            }
+        }
+
+        /*~
+         * For a REST server, check REST-specific config items (its "creation
+         * properties", the values passed to the endpoint when creating the REST
+         * server), like `xdbc-enabled`.  These properties are to be retrieved
+         * from `:8002/v1/rest-apis/[name]`.
+         *
+         * There seems to be no way to change the value of such a creation
+         * property (they are used at creation only).
+         *
+         * In addition, there are properties specific to REST servers (not for
+         * HTTP), like `debug` and `update-policy`.  These properties are to be
+         * retrieved from `:[port]/v1/config/properties`.
+         *
+         * 1) retrieve creation properties, if anything differs, -> error
+         * 2) retrieve properties, and update them, as for any component
+         */
+        updateRest(actions, display, actual)
+        {
+            // 1) check creation properties for any difference
+            const check = (name, old, current) => {
+                if ( old !== current ) {
+                    throw new Error('Cannot update REST server ' + name + ', from ' + old + ' to ' + current);
+                }
+            };
+            const bool = val => {
+                var type = typeof val;
+                if ( 'boolean' === type ) {
+                    return val;
+                }
+                else if ( 'string' === type ) {
+                    if ( 'false' === val ) {
+                        return false;
+                    }
+                    else if ( 'true' === val ) {
+                        return true;
+                    }
+                    else {
+                        throw new Error('Invalid boolean value: ' + val);
+                    }
+                }
+                else {
+                    throw new Error('Boolean value neither a string or a boolean: ' + type);
+                }
+            };
+            const cprops = new act.ServerRestCreationProps(this).execute(actions.ctxt);
+            check('name',             cprops.name,                  this.name);
+            check('group',            cprops.group,                 this.group);
+            check('database',         cprops.database,              this.content && this.content.name);
+            check('modules-database', cprops['modules-database'],   this.modules && this.modules.name);
+            check('port',             parseInt(cprops.port, 10),    this.props.port && this.props.port.value);
+            check('error-format',     cprops['error-format'],       this.rest && this.rest['error-format']);
+            check('xdbc-enabled',     bool(cprops['xdbc-enabled']), bool(this.rest && this.rest.xdbc));
+
+            // 2) update all properties with different value
+            let obj = {};
+            const update = (name, old, current, dflt) => {
+                if ( old !== (current === undefined ? dflt : current) ) {
+                    obj[name] = current;
+                }
+            };
+            const props = new act.ServerRestProps(this, this.props.port.value).execute(actions.ctxt);
+            update('debug',                  bool(props['debug']),                  this.rest && this.rest['debug'],               false);
+            update('document-transform-all', bool(props['document-transform-all']), this.rest && this.rest['transform-all'],       true);
+            update('document-transform-out', props['document-transform-out'],       this.rest && this.rest['transform-out'] || '', '');
+            update('update-policy',          props['update-policy'],                this.rest && this.rest['update-policy'],       'merge-metadata');
+            update('validate-options',       bool(props['validate-options']),       this.rest && this.rest['validate-options'],    true);
+            update('validate-queries',       bool(props['validate-queries']),       this.rest && this.rest['validate-queries'],    false);
+            if ( Object.keys(obj).length ) {
+                actions.add(new act.ServerRestUpdate(this, obj, this.props.port.value));
             }
         }
     }

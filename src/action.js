@@ -222,6 +222,26 @@
     }
 
     /*~
+     * REST server: retrieve server properties.
+     */
+    class ServerRestProps extends Get
+    {
+        constructor(srv, port) {
+            var name = srv && srv.name;
+            super(null,
+                  '/v1/config/properties',
+                  'Retrieve REST server props: \t' + name);
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port
+            };
+        }
+    }
+
+    /*~
      * REST server: update server properties.
      */
     class ServerRestUpdate extends Put
@@ -245,6 +265,16 @@
     /*~~~~~ REST API actions. */
 
     /*~
+     * A REST API GET action.
+     */
+    class RestGet extends Get
+    {
+        constructor(url, msg) {
+            super('rest', url, msg);
+        }
+    }
+
+    /*~
      * A REST API POST action.
      */
     class RestPost extends Post
@@ -264,6 +294,18 @@
             super('',
                   body,
                   'Create REST server: \t\t' + name);
+        }
+    }
+
+    /*~
+     * REST API: get server creation properties.
+     */
+    class ServerRestCreationProps extends RestGet
+    {
+        constructor(srv) {
+            var name = srv && srv.name;
+            super('/' + name,
+                  'Retrieve REST config props: \t' + name);
         }
     }
 
@@ -642,25 +684,27 @@
     }
 
     module.exports = {
-        ActionList       : ActionList,
-        Action           : Action,
-        FunAction        : FunAction,
-        ForestList       : ForestList,
-        ForestCreate     : ForestCreate,
-        ForestAttach     : ForestAttach,
-        ForestDetach     : ForestDetach,
-        DatabaseProps    : DatabaseProps,
-        DatabaseCreate   : DatabaseCreate,
-        DatabaseUpdate   : DatabaseUpdate,
-        ServerProps      : ServerProps,
-        ServerCreate     : ServerCreate,
-        ServerUpdate     : ServerUpdate,
-        ServerRestCreate : ServerRestCreate,
-        ServerRestUpdate : ServerRestUpdate,
-        MimeProps        : MimeProps,
-        MimeCreate       : MimeCreate,
-        MultiDocInsert   : MultiDocInsert,
-        DocInsert        : DocInsert
+        ActionList              : ActionList,
+        Action                  : Action,
+        FunAction               : FunAction,
+        ForestList              : ForestList,
+        ForestCreate            : ForestCreate,
+        ForestAttach            : ForestAttach,
+        ForestDetach            : ForestDetach,
+        DatabaseProps           : DatabaseProps,
+        DatabaseCreate          : DatabaseCreate,
+        DatabaseUpdate          : DatabaseUpdate,
+        ServerProps             : ServerProps,
+        ServerCreate            : ServerCreate,
+        ServerUpdate            : ServerUpdate,
+        ServerRestProps         : ServerRestProps,
+        ServerRestCreate        : ServerRestCreate,
+        ServerRestUpdate        : ServerRestUpdate,
+        ServerRestCreationProps : ServerRestCreationProps,
+        MimeProps               : MimeProps,
+        MimeCreate              : MimeCreate,
+        MultiDocInsert          : MultiDocInsert,
+        DocInsert               : DocInsert
     }
 }
 )();
