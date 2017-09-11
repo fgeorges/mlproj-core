@@ -148,7 +148,7 @@
             }
             let resp = ctxt.platform.get(this.connect(api), url);
             if ( resp.status === 200 ) {
-                return resp.body;
+                return this.onOk(resp);
             }
             else if ( resp.status === 404 ) {
                 return;
@@ -157,6 +157,10 @@
                 throw new Error('Error retrieving entity: ' + (resp.body.errorResponse
                                 ? resp.body.errorResponse.message : resp.body));
             }
+        }
+
+        onOk(resp) {
+            return resp.body;
         }
     }
 
@@ -306,6 +310,23 @@
             var name = srv && srv.name;
             super('/' + name,
                   'Retrieve REST config props: \t' + name);
+        }
+
+        /*
+         * There is a bug on GET /v1/rest-apis/{name}, where it returns Content-
+         * Type as text/plain instead of application/json.  At least MarkLogic
+         * 9.1.1: http://marklogic.markmail.org/thread/7mstpjktts6j56pq.
+         */
+        onOk(resp) {
+            if ( resp.headers
+                 && resp.headers['content-type']
+                 // TODO: Parse it properly, e.g. "text/plain; charset=UTF-8"
+                 && resp.headers['content-type'].startsWith('text/plain') ) {
+                return JSON.parse(resp.body);
+            }
+            else {
+                return resp.body;
+            }
         }
     }
 
