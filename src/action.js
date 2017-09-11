@@ -413,6 +413,25 @@
             super('/servers?group-id=' + group,
                   body,
                   'Create server: \t\t' + name);
+            this.name = name;
+            this.port = body && body.port;
+        }
+
+        send(ctxt, api, url, data) {
+            try {
+                super.send(ctxt, api, url, data);
+            }
+            catch ( e ) {
+                const msg    = e.message;
+                const code   = 'MANAGE-INVALIDPAYLOAD';
+                const phrase = 'Port is currently in use';
+                if ( msg.includes(code) && msg.endsWith(phrase) ) {
+                    throw err.serverPortUsed(this.name, this.port);
+                }
+                else {
+                    throw e;
+                }
+            }
         }
     }
 
@@ -433,6 +452,25 @@
             super('/servers/' + srvname + '/properties?group-id=' + group,
                   body,
                   'Update ' + what + ':  \t\t' + srvname);
+            this.name = srvname;
+            this.port = body && body.port;
+        }
+
+        send(ctxt, api, url, data) {
+            try {
+                super.send(ctxt, api, url, data);
+            }
+            catch ( e ) {
+                const msg    = e.message;
+                const code   = 'ADMIN-INVALIDPORT';
+                const phrase = 'is not valid or bindable';
+                if ( msg.includes(code) && msg.endsWith(phrase) ) {
+                    throw err.serverPortUsed(this.name, this.port);
+                }
+                else {
+                    throw e;
+                }
+            }
         }
     }
 

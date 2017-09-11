@@ -51,13 +51,22 @@
         return err;
     }
 
+    function serverPortUsed(name, port) {
+        let err = new MlprojError('server-port-used',
+                                  'Port already used (or invalid) for server ' + name + ': ' + port);
+        err.server = name;
+        err.port   = port;
+        return err;
+    }
+
     module.exports = {
-        abstractFun : abstractFun,
-        noSuchFile  : noSuchFile,
-        invalidJson : invalidJson,
-        noSuchDb    : noSuchDb,
-        noSuchSrv   : noSuchSrv,
-        serverNoDb  : serverNoDb
+        abstractFun    : abstractFun,
+        noSuchFile     : noSuchFile,
+        invalidJson    : invalidJson,
+        noSuchDb       : noSuchDb,
+        noSuchSrv      : noSuchSrv,
+        serverNoDb     : serverNoDb,
+        serverPortUsed : serverPortUsed
     };
 }
 )();
