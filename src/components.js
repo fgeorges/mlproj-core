@@ -29,6 +29,21 @@
             super();
             this.name = name;
         }
+
+        show(display)
+        {
+            display.sysDatabase(this.name);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the database', this.name);
+            const body = new act.DatabaseProps(this).execute(actions.ctxt);
+            // if DB does not exist
+            if ( ! body ) {
+                display.remove(0, 'be created', 'outside', this.name);
+            }
+        }
     }
 
     /*~

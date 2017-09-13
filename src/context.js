@@ -42,6 +42,10 @@
             throw err.abstractFun('Display.database');
         }
 
+        sysDatabase(name) {
+            throw err.abstractFun('Display.sysDatabase');
+        }
+
         server(name, id, type, group, content, modules, props) {
             throw err.abstractFun('Display.server');
         }
