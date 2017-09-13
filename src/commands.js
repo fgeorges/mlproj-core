@@ -121,27 +121,43 @@
             var actions = new act.ActionList(this.ctxt);
 
             // utility: resolve the target db from args
-            const target = (args, isDeploy) => {
+            const target = (args, isDeploy, src) => {
                 var as    = args.server;
                 var db    = args.database;
                 var force = args.forceDb;
                 var srv;
-                // if no explicit target, try defaults
+                // if no explicit target, try...
                 if ( ! as && ! db && ! force ) {
-                    var srvs = this.environ.servers();
-                    if ( srvs.length === 1 ) {
-                        srv = srvs[0];
+                    // ...source target(s)
+                    if ( src.targets.length > 1 ) {
+                        throw new Error('Several targets attached to the source set: ' + src.name);
                     }
-                    else if ( isDeploy ) {
-                        throw new Error('Not exactly one server in the environ');
-                    }
-                    else {
-                        var dbs = this.environ.databases();
-                        if ( dbs.length === 1 ) {
-                            return dbs[0];
+                    else if ( src.targets.length === 1 ) {
+                        if ( src.targets[0] instanceof cmp.Database ) {
+                            return src.targets[0];
                         }
                         else {
-                            throw new Error('Not exactly one server or database in the environ');
+                            srv = src.targets[0];
+                            return isDeploy ? srv.modules : srv.content;
+                        }
+                    }
+                    // ...or defaults
+                    else {
+                        var srvs = this.environ.servers();
+                        if ( srvs.length === 1 ) {
+                            srv = srvs[0];
+                        }
+                        else if ( isDeploy ) {
+                            throw new Error('Not exactly one server in the environ');
+                        }
+                        else {
+                            var dbs = this.environ.databases();
+                            if ( dbs.length === 1 ) {
+                                return dbs[0];
+                            }
+                            else {
+                                throw new Error('Not exactly one server or database in the environ');
+                            }
                         }
                     }
                 }
@@ -222,15 +238,15 @@
             }
 
             // do it: the actual execute() implem
-            let db  = target( this.args, this.isDeploy());
             let src = content(this.args, this.isDeploy());
-            this.populateActions(actions, db, src);
+            let db  = target( this.args, this.isDeploy(), src);
+            this.populateActions(actions, db, src, srv);
 
             return actions;
         }
 
-        populateActions(actions, db, src) {
-            src.load(actions, db, this.ctxt.display);
+        populateActions(actions, db, src, srv) {
+            src.load(actions, db, srv, this.ctxt.display);
         }
     }
 

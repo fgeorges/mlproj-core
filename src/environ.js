@@ -515,16 +515,16 @@
             // compile databases and servers
             this.compileDbsSrvs(root, cache);
 
+            // instantiate all mime types now
+            root._mimetypes = cache.mimes.map(m => {
+                return new cmp.MimeType(m);
+            });
+
             // instantiate all sources now
             let dfltSrc = cache.srcs.find(s => s.name === '@default');
             let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
             root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
-                return new cmp.SourceSet(s, dflt);
-            });
-
-            // instantiate all mime types now
-            root._mimetypes = cache.mimes.map(m => {
-                return new cmp.MimeType(m);
+                return new cmp.SourceSet(s, root, dflt);
             });
 
             // compile apis

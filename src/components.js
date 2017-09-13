@@ -515,13 +515,26 @@
      */
     class SourceSet extends Component
     {
-        constructor(json, dflt)
+        constructor(json, environ, dflt)
         {
             super();
-            this.dflt  = dflt;
-            this.name  = json && json.name;
+            this.dflt    = dflt;
+            this.name    = json && json.name;
             // extract the configured properties
-            this.props = json ? props.source.parse(json) : {};
+            this.props   = json ? props.source.parse(json) : {};
+            // resolve targets (dbs and srvs)
+            // TODO: Provide the other way around, `source` on dbs and srvs?
+            this.targets = [];
+            this.environ = environ;
+            if ( this.props.target ) {
+                if ( ! environ ) {
+                    const msg = 'Source set has target(s) but no environ provided for resolving: ';
+                    throw new Error(msg + this.name);
+                }
+                this.props.target.value.forEach(t => {
+                    this.targets.push(environ.database(t) || environ.server(t));
+                });
+            }
         }
 
         show(display)
@@ -599,6 +612,15 @@
                 patterns.notdir['mm_' + name] = res[1].map(p => new match.Minimatch(p, options));
             };
 
+            // Both `dir` and `notdir` are pupolated with the following properties:
+            //
+            //     include: [...], mm_include: [...],
+            //     exclude: [...], mm_exclude: [...],
+            //     garbage: [...], mm_garbage: [...]
+            //
+            // Properties `include`, `exclude` and `garbage` contain the original
+            // string patterns, the corresponding `mm_*` are the minimatch compiled
+            // patterns.
             let patterns = {
                 dir    : {},
                 notdir : {}
