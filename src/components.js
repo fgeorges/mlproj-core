@@ -247,6 +247,11 @@
      */
     class Server extends Component
     {
+        /* TODO: If no modules DB and no root, and if there is a source set
+         * attached to this server, use its directory as the root of the server,
+         * to have the modules on disk.  When attaching source sets to servers
+         * and databases is supported...
+         */
         constructor(json, content, modules)
         {
             super();
@@ -259,16 +264,32 @@
             this.modules    = modules;
             // extract the configured properties
             this.props      = props.server.parse(json);
-            // TODO: If no modules DB and no root, and if there is a source set
-            // attached to this server, use its directory as the root of the
-            // server, to have the modules on disk.  When attaching source sets
-            // to servers and databases is supported...
-            if ( json['rest-config'] ) {
-                if ( this.type !== 'rest' ) {
-                    throw new Error('REST config on a non-REST server: ' + this.type
-                                   + ' - ' + this.id + '/' + this.name);
-                }
+            // some validation
+            const error = msg => {
+                throw new Error(msg + ': ' + this.type + ' - ' + this.id + '/' + this.name);
+            };
+            if ( ! content ) {
+                error('App server with no content database');
+            }
+            // validation specific to REST servers
+            if ( json.type === 'rest' ) {
                 this.rest = json['rest-config'];
+                if ( ! modules ) {
+                    error('REST server has no modules database');
+                }
+                if ( json.root ) {
+                    error('REST server has root (' + json.root + ')');
+                }
+                if ( json.rewriter ) {
+                    error('REST server has rewriter (' + json.rewriter + ')');
+                }
+                if ( json.properties && json.properties['rewrite-resolves-globally'] ) {
+                    error('REST server has rewrite-resolves-globally ('
+                          + json.properties['rewrite-resolves-globally'] + ')');
+                }
+            }
+            else if ( json['rest-config'] ) {
+                error('REST config on a non-REST server');
             }
         }
 
@@ -522,6 +543,7 @@
             this.name    = json && json.name;
             // extract the configured properties
             this.props   = json ? props.source.parse(json) : {};
+            this.type    = this.props.type && this.props.type.value;
             // resolve targets (dbs and srvs)
             // TODO: Provide the other way around, `source` on dbs and srvs?
             this.targets = [];
@@ -534,6 +556,26 @@
                 this.props.target.value.forEach(t => {
                     this.targets.push(environ.database(t) || environ.server(t));
                 });
+            }
+        }
+
+        restTarget()
+        {
+            if ( this.type === 'rest-src' ) {
+                let rests = this.targets.filter(t => {
+                    return t instanceof Server && t.type === 'rest';
+                });
+                if ( ! rests.length ) {
+                    rests = root.servers().filter(s => s.type === 'rest');
+                }
+                if ( rests.length > 1 ) {
+                    throw new Error('More than one REST servers for resolving the REST source set '
+                                    + this.name + ': ' + rests.map(s => s.id + '/' + s.name));
+                }
+                if ( ! rests.length ) {
+                    throw new Error('No REST server for resolving the REST source set: ' + this.name);
+                }
+                return rests[0];
             }
         }
 
@@ -559,24 +601,46 @@
             }
         }
 
-        load(actions, db, display)
+        // TODO: Resolve the `db` here, to take targets into account?  Or at least
+        // take them into account where `db` is resolved (in LoadCommand...)
+        //
+        load(actions, db, srv, display)
         {
             let   matches = [];
-            const onFlush = () => {
+            const flush = () => {
                 actions.add(
                     new act.MultiDocInsert(db, matches));
                 // empty the array
                 matches.splice(0);
             };
             const onMatch = (path, uri) => {
-                matches.push({ uri: uri, path: path });
-                if ( matches.length >= INSERT_LENGTH ) {
-                    onFlush();
+                if ( this.type === 'rest-src' && (
+                         uri.startsWith('/services/')
+                      || uri.startsWith('/transforms/') ) ) {
+                    let kind = 'resources';
+                    let file = uri.slice(10);
+                    if ( uri.startsWith('/transforms/') ) {
+                        kind = 'transforms';
+                        file = uri.slice(12);
+                    }
+                    let [ name, ext ] = file.split('.');
+                    let type = ext === 'xqy'
+                        ? 'application/xquery'
+                        : 'application/javascript';
+                    let port = (srv || this.restTarget()).props.port.value;
+                    actions.add(
+                        new act.ServerRestDeploy(kind, name, path, type, port));
+                }
+                else {
+                    matches.push({ uri: uri, path: path });
+                    if ( matches.length >= INSERT_LENGTH ) {
+                        flush();
+                    }
                 }
             };
             this.walk(actions.ctxt, display, onMatch);
             if ( matches.length ) {
-                onFlush();
+                flush();
             }
         }
 
@@ -731,7 +795,7 @@
             this.doc = doc;
         }
 
-        load(actions, db, display)
+        load(actions, db, srv, display)
         {
             display.check(0, 'the file', this.doc);
             actions.add(

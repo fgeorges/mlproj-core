@@ -119,13 +119,13 @@
         prepare() {
             // the action list
             var actions = new act.ActionList(this.ctxt);
+            var srv;
 
             // utility: resolve the target db from args
             const target = (args, isDeploy, src) => {
                 var as    = args.server;
                 var db    = args.database;
                 var force = args.forceDb;
-                var srv;
                 // if no explicit target, try...
                 if ( ! as && ! db && ! force ) {
                     // ...source target(s)

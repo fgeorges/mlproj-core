@@ -266,6 +266,32 @@
         }
     }
 
+    /*~
+     * REST server: deploy service or transform.
+     */
+    class ServerRestDeploy extends Put
+    {
+        constructor(kind, name, path, type, port) {
+            super(null,
+                  '/v1/config/' + kind + '/' + name,
+                  path,
+                  'Deploy REST ' + kind + ': \t' + name);
+            this.type = type;
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port,
+                type: this.type
+            };
+        }
+
+        getData(ctxt) {
+            return ctxt.platform.read(this.data);
+        }
+    }
+
     /*~~~~~ REST API actions. */
 
     /*~
@@ -611,7 +637,7 @@
             var copy = docs && docs.slice();
             super('/documents?database=' + name,
                   copy,
-                  'Insert documents: \t' + len + ' document' + (len === 1 ? '' : 's'));
+                  'Insert documents: \t\t' + len + ' document' + (len === 1 ? '' : 's'));
         }
 
         getData(ctxt) {
@@ -652,18 +678,7 @@
         }
 
         getData(ctxt) {
-            try {
-                // TODO: read() uses utf-8, cannot handle binary
-                return ctxt.platform.read(this.data);
-            }
-            catch (e) {
-                if ( e.name === 'no-such-file' ) {
-                    throw err.noSuchFile(this.data);
-                }
-                else {
-                    throw e;
-                }
-            }
+            return ctxt.platform.read(this.data);
         }
     }
 
@@ -722,6 +737,7 @@
         ServerRestCreate        : ServerRestCreate,
         ServerRestUpdate        : ServerRestUpdate,
         ServerRestCreationProps : ServerRestCreationProps,
+        ServerRestDeploy        : ServerRestDeploy,
         MimeProps               : MimeProps,
         MimeCreate              : MimeCreate,
         MultiDocInsert          : MultiDocInsert,

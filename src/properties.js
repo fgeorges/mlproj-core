@@ -683,6 +683,7 @@
         .add('comment',  false, new Ignore())
         .add('name',     true,  new Ignore())
         .add('dir',      false, new     String('dir',     'directory'))
+        .add('type',     false, new       Enum('type',    'type',                      [ 'rest-src' ]))
         .add('garbage',  false, new StringList('garbage', 'garbage patterns',          /\s*,\s*/))
         .add('include',  false, new StringList('include', 'include patterns',          /\s*,\s*/))
         .add('exclude',  false, new StringList('exclude', 'exclude patterns',          /\s*,\s*/))
