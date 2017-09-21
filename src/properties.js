@@ -347,7 +347,14 @@
             all.forEach(one => result[this.name].value.push(one));
         }
 
+        // undefined compares equal to the empty array
         compare(lhs, rhs) {
+            if ( lhs === undefined ) {
+                lhs = [];
+            }
+            if ( rhs === undefined ) {
+                rhs = [];
+            }
             if ( ! Array.isArray(lhs) ) {
                 throw new Error('lhs is not an array');
             }
