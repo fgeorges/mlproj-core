@@ -610,7 +610,7 @@
         .add('indexes',  false, new ConfigObject(/*'db.indexes'*/)
              .add('ranges', false, new MultiArray()
                   .add(item => item.path, new ObjectArray('range-path-index', 'path range index', rangeBase()
-                       .add('path',      true,  new String('path-expression', 'path'))))
+                       .add('path',      true,  new Multiplexer(new String('path-expression', 'path')))))
                   .add(item => item.parent, new ObjectArray('range-element-attribute-index', 'Attribute range index', rangeBase()
                        .add('name',      true,  new Multiplexer(new String('localname', 'name')))
                        .add('namespace', false, new String('namespace-uri', 'ns'))
