@@ -512,9 +512,6 @@
             };
             this.compileImpl(cache);
 
-            // compile databases and servers
-            this.compileDbsSrvs(root, cache);
-
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
@@ -526,6 +523,9 @@
             root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
                 return new cmp.SourceSet(s, root, dflt);
             });
+
+            // compile databases and servers
+            this.compileDbsSrvs(root, cache, root.source('src'));
 
             // compile apis
             this.compileApis(root, cache);
@@ -569,7 +569,7 @@
             });
         }
 
-        compileDbsSrvs(root, cache)
+        compileDbsSrvs(root, cache, src)
         {
             // build the array of database and server objects
             // the order of the database array guarantees there is no broken dependency
@@ -817,7 +817,7 @@
                         return res.names[db.sysref] = new cmp.SysDatabase(db.sysref);
                     }
                 };
-                return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules));
+                return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules), src, this.ctxt.platform);
             });
         }
 

@@ -262,12 +262,7 @@
      */
     class Server extends Component
     {
-        /* TODO: If no modules DB and no root, and if there is a source set
-         * attached to this server, use its directory as the root of the server,
-         * to have the modules on disk.  When attaching source sets to servers
-         * and databases is supported...
-         */
-        constructor(json, content, modules)
+        constructor(json, content, modules, src, platform)
         {
             super();
             this.type       = json.type;
@@ -303,8 +298,29 @@
                           + json.properties['rewrite-resolves-globally'] + ')');
                 }
             }
-            else if ( json['rest-config'] ) {
-                error('REST config on a non-REST server');
+            // for plain HTTP servers
+            else {
+                if ( json['rest-config'] ) {
+                    error('REST config on a non-REST server');
+                }
+                // use a source set as filesystem modules if no modules DB and no root
+                if ( ! this.modules && ! this.props.root ) {
+                    // TODO: For now, only try the default `src`.  Once
+                    // implmented the links from databses and servers to source
+                    // sets, check if there is one on this server then.
+                    if ( ! src ) {
+                        throw new Error(
+                            'The app server has no modules db, no root, and there is no default src: ',
+                            this.name);
+                    }
+                    if ( ! src.props.dir ) {
+                        throw new Error(
+                            'The app server has no modules db, no root, and default src has no dir: ',
+                            this.name);
+                    }
+                    var dir = platform.resolve(src.props.dir.value) + '/';
+                    this.props.root = new props.Result(props.server.props.root, dir);
+                }
             }
         }
 
