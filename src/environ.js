@@ -270,17 +270,9 @@
                 throw new Error('Invalid file, `format` not 0.1: ' + this.json.format);
             }
 
-            // TODO: FIXME: Why serializing then parsing again?  Copy?  This
-            // silently ignore function objects, so not suitabke for our needs!
-            // Why do we want to make a copy in the first place...?  Do we
-            // really access the non-resolved JSON anytime after resolution?
-            //
-            this.resolved = this.json;
-            //this.resolved = JSON.parse(JSON.stringify(this.json));
-
             // the params and commands hashes, empty by default
-            this._params   = this.resolved.params   || {};
-            this._commands = this.resolved.commands || {};
+            this._params   = this.json.params   || {};
+            this._commands = this.json.commands || {};
             // extract defined values from `obj` and put them in `this._params`
             var extract = (obj, props) => {
                 props.forEach(p => {
@@ -290,9 +282,9 @@
                     }
                 });
             };
-            extract(this.resolved, ['code', 'title', 'desc']);
-            if ( this.resolved.connect ) {
-                extract(this.resolved.connect, ['host', 'user', 'password']);
+            extract(this.json, ['code', 'title', 'desc']);
+            if ( this.json.connect ) {
+                extract(this.json.connect, ['host', 'user', 'password']);
             }
         }
 
@@ -317,7 +309,7 @@
         }
 
         configs() {
-            let names = this.resolved.config ? Object.keys(this.resolved.config) : [];
+            let names = this.json.config ? Object.keys(this.json.config) : [];
             for ( let i = this.imports.length - 1; i >= 0; --i ) {
                 this.imports[i].configs()
                     .filter(n => ! names.includes(n))
@@ -327,7 +319,7 @@
         }
 
         config(name) {
-            let v = this.resolved.config && this.resolved.config[name];
+            let v = this.json.config && this.json.config[name];
             for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
                 v = this.imports[i].config(name);
             }
@@ -379,14 +371,11 @@
 
         // `root` can be the root module, or the environ itself
         //
-        // TODO: Instead of using `this.resolved`, resolve $* and @* references
-        // on the fly, when "compiling" params and databses, servers and source
-        // sets.
         resolve(root) {
-            this.resolveObject(root, this.resolved.params, true);
-            this.resolveArray(root, this.resolved.databases);
-            this.resolveArray(root, this.resolved.servers);
-            this.resolveArray(root, this.resolved.sources);
+            this.resolveObject(root, this.json.params, true);
+            this.resolveArray(root, this.json.databases);
+            this.resolveArray(root, this.json.servers);
+            this.resolveArray(root, this.json.sources);
             this.imports.forEach(i => i.resolve(root));
         }
 
@@ -885,26 +874,26 @@
             };
 
             // compile databases
-            if ( this.resolved.databases ) {
-                this.resolved.databases.forEach(db => {
+            if ( this.json.databases ) {
+                this.json.databases.forEach(db => {
                     impl(db, cache.dbs, cache.dbIds, cache.dbNames, 'database');
                 });
             }
             // compile servers
-            if ( this.resolved.servers ) {
-                this.resolved.servers.forEach(srv => {
+            if ( this.json.servers ) {
+                this.json.servers.forEach(srv => {
                     impl(srv, cache.srvs, cache.srvIds, cache.srvNames, 'server');
                 });
             }
             // compile sources
-            if ( this.resolved.sources ) {
-                this.resolved.sources.forEach(src => {
+            if ( this.json.sources ) {
+                this.json.sources.forEach(src => {
                     impl(src, cache.srcs, null, cache.srcNames, 'source');
                 });
             }
             // compile mime types
-            if ( this.resolved['mime-types'] ) {
-                this.resolved['mime-types'].forEach(mime => {
+            if ( this.json['mime-types'] ) {
+                this.json['mime-types'].forEach(mime => {
                     impl(mime, cache.mimes, null, cache.mimeNames, 'mime');
                 });
             }
