@@ -123,11 +123,11 @@
 
             // utility: resolve the target db from args
             const target = (args, isDeploy, src) => {
-                var as    = args.server;
-                var db    = args.database;
-                var force = args.forceDb;
+                var as     = args.server;
+                var db     = args.database;
+                var system = args.systemDb;
                 // if no explicit target, try...
-                if ( ! as && ! db && ! force ) {
+                if ( ! as && ! db && ! system ) {
                     // ...source target(s)
                     if ( src.targets.length > 1 ) {
                         throw new Error('Several targets attached to the source set: ' + src.name);
@@ -168,8 +168,8 @@
                     }
                 }
                 // if more than one explicit
-                if ( (as && db) || (as && force) || (db && force) ) {
-                    throw new Error('Both target options --db and --as provided');
+                if ( (as && db) || (as && system) || (db && system) ) {
+                    throw new Error('More than one option provided for --as, --db and --sys');
                 }
                 // resolve from server if set
                 else if ( srv ) {
@@ -191,7 +191,7 @@
                 }
                 // force the db name, e.g. for system databases
                 else {
-                    return new cmp.SysDatabase(force);
+                    return new cmp.SysDatabase(system);
                 }
             };
 
