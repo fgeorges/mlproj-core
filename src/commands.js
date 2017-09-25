@@ -95,14 +95,43 @@
     {
         prepare() {
             // the action list
-            var actions = new act.ActionList(this.ctxt);
-            // add all components
-            var dbs   = this.environ.databases();
-            var srvs  = this.environ.servers();
-            var mimes = this.environ.mimetypes();
-            for ( let comp of dbs.concat(srvs, mimes) ) {
-                comp.setup(actions, this.ctxt.display);
+            let actions = new act.ActionList(this.ctxt);
+            // setup a specific component?
+            let what  = this.args.what;
+            let comps = [];
+            if ( what === 'databases' ) {
+                comps = this.environ.databases();
             }
+            else if ( what === 'servers' ) {
+                comps = this.environ.servers();
+            }
+            else if ( what === 'mimetypes' ) {
+                comps = this.environ.mimetypes();
+            }
+            else if ( what ) {
+                let db  = this.environ.database(what);
+                let srv = this.environ.server(what);
+                // make sure there is exactly one
+                if ( ! db && ! srv ) {
+                    throw new Error('No such component: ' + what);
+                }
+                if ( db && srv ) {
+                    throw new Error('More than one such component: ' + what);
+                }
+                // setup the one
+                comps.push(db || srv);
+            }
+            else {
+                // add all components
+                var dbs   = this.environ.databases();
+                var srvs  = this.environ.servers();
+                var mimes = this.environ.mimetypes();
+                comps = dbs.concat(srvs, mimes);
+            }
+            // do it
+            comps.forEach(comp => {
+                comp.setup(actions, this.ctxt.display);
+            });
             return actions;
         }
     }
