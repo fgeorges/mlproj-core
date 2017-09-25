@@ -454,6 +454,9 @@
         // though, as we would probably want to keep multiple lines for multiple
         // properties, as it is clearer.
         //
+        // This is actually required for scenarii where on property depends on
+        // another, like path range index on path namespaces...
+        //
         updateHttp(actions, display, actual)
         {
             if ( 'http' !== actual['server-type'] ) {

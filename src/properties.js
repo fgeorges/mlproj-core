@@ -414,6 +414,71 @@
     }
 
     /*~
+     * An object, to represent an array of 2 properties (as key and value).
+     */
+    class CouplesAsMap extends ConfigItem
+    {
+        constructor(name, label, key, value) {
+            super();
+            this.name    = name;
+            this.label   = label;
+            this.keyProp = key;
+            this.valProp = value;
+        }
+
+        handle(result, value, key) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const prefix = new String('prefix',        'namespace prefix');
+            const uri    = new String('namespace-uri', 'namespace uri');
+            let v = Object.keys(value).map(p => {
+                // return { "prefix": p, "namespace-uri": value[p] };
+                return {
+                    "prefix"        : new Result(prefix, p),
+                    "namespace-uri" : new Result(prefix, value[p])
+                };
+            });
+            result[this.name] = new Result(this, v);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined ) {
+                lhs = [];
+            }
+            if ( rhs === undefined ) {
+                rhs = [];
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            let lhs_obj = {};
+            let rhs_obj = {};
+            lhs.forEach(item => lhs_obj[item.prefix] = item["namespace-uri"]);
+            rhs.forEach(item => rhs_obj[item.prefix] = item["namespace-uri"]);
+            let lhs_keys = Object.keys(lhs_obj).sort();
+            let rhs_keys = Object.keys(rhs_obj).sort();
+            if ( lhs_keys.length !== rhs_keys.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs_keys.length; ++i ) {
+                let key = lhs_keys[i];
+                if ( key !== rhs_keys[i] || lhs_obj[key] !== rhs_obj[key] ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
+        }
+    }
+
+    /*~
      * A simple, atomic config item (base for string, integer, etc.)
      */
     class Simple extends ConfigItem
@@ -608,6 +673,7 @@
         .add('security', false, new Ignore())
         .add('triggers', false, new Ignore())
         .add('indexes',  false, new ConfigObject(/*'db.indexes'*/)
+             .add('namespaces', false, new CouplesAsMap('path-namespace', 'path namespaces', 'prefix', 'namespace-uri'))
              .add('ranges', false, new MultiArray()
                   .add(item => item.path, new ObjectArray('range-path-index', 'path range index', rangeBase()
                        .add('path',      true,  new Multiplexer(new String('path-expression', 'path')))))
