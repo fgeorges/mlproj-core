@@ -290,17 +290,21 @@
     }
 
     /*~
-     * User-provided command.
+     * Run user command.
      */
-    class UserCommand extends Command
+    class RunCommand extends Command
     {
         prepare() {
             var pf      = this.ctxt.platform;
             var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Apply the user command: ' + this.name, ctxt => {
-                let cmd = this.environ.command(this.name);
+            let name    = this.args.cmd;
+            if ( ! name ) {
+                throw new Error('No command name provided.');
+            }
+            actions.add(new act.FunAction('Apply the user command: ' + name, ctxt => {
+                let cmd = this.environ.command(name);
                 if ( ! cmd ) {
-                    throw new Error('Unknown user command: ' + this.name);
+                    throw new Error('Unknown user command: ' + name);
                 }
                 let impl = this.getImplem(cmd);
                 let apis = new api.Apis(this);
@@ -437,7 +441,7 @@
         SetupCommand  : SetupCommand,
         LoadCommand   : LoadCommand,
         DeployCommand : DeployCommand,
-        UserCommand   : UserCommand
+        RunCommand    : RunCommand
     }
 }
 )();

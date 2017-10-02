@@ -20,7 +20,7 @@
         SetupCommand  : cmd.SetupCommand,
         LoadCommand   : cmd.LoadCommand,
         DeployCommand : cmd.DeployCommand,
-        UserCommand   : cmd.UserCommand,
+        RunCommand    : cmd.RunCommand,
         error         : err,
         actions       : action
     }
