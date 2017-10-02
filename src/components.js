@@ -187,7 +187,7 @@
             });
             if ( this.properties ) {
                 Object.keys(this.properties).forEach(p => {
-                    if ( this.properties[p] !== actual[p] ) {
+                    if ( this.properties[p] !== body[p] ) {
                         actions.add(new act.DatabaseUpdate(this, p, this.properties[p]));
                     }
                 });
@@ -376,7 +376,7 @@
 
         createHttp(actions, display)
         {
-            display.add(0, 'create', 'http server', this.name);
+            display.add(0, 'create', this.type + ' server', this.name);
             // the base server object
             var obj = {
                 "server-name":      this.name,
@@ -665,11 +665,14 @@
                     actions.add(
                         new act.ServerRestDeploy(kind, name, path, type, port));
                 }
-                else {
+                else if ( this.type === 'plain' ) {
                     matches.push({ uri: uri, path: path });
                     if ( matches.length >= INSERT_LENGTH ) {
                         flush();
                     }
+                }
+                else {
+                    throw new Error('Unknown source set type: ' + this.type);
                 }
             };
             this.walk(actions.ctxt, display, onMatch);

@@ -158,12 +158,12 @@
             }
         }
 
-        sources() {
-            return this._sources;
-        }
-
         mimetypes() {
             return this._mimetypes;
+        }
+
+        sources() {
+            return this._sources;
         }
 
         source(name) {
