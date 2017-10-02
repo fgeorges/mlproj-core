@@ -295,21 +295,26 @@
     class RunCommand extends Command
     {
         prepare() {
-            var pf      = this.ctxt.platform;
-            var actions = new act.ActionList(this.ctxt);
+            let actions = new act.ActionList(this.ctxt);
             let name    = this.args.cmd;
-            if ( ! name ) {
-                throw new Error('No command name provided.');
+            if ( name ) {
+                actions.add(new act.FunAction('Apply the user command: ' + name, ctxt => {
+                    let cmd = this.environ.command(name);
+                    if ( ! cmd ) {
+                        throw new Error('Unknown user command: ' + name);
+                    }
+                    let impl = this.getImplem(cmd);
+                    let apis = new api.Apis(this);
+                    impl.call(this, apis, this.ctxt.environ, this.ctxt);
+                }));
             }
-            actions.add(new act.FunAction('Apply the user command: ' + name, ctxt => {
-                let cmd = this.environ.command(name);
-                if ( ! cmd ) {
-                    throw new Error('Unknown user command: ' + name);
-                }
-                let impl = this.getImplem(cmd);
-                let apis = new api.Apis(this);
-                impl.call(this, apis, this.ctxt.environ, this.ctxt);
-            }));
+            else {
+                actions.add(new act.FunAction('List user commands', ctxt => {
+                    this.environ.commands().forEach(c => {
+                        ctxt.platform.log('- ' + c);
+                    });
+                }));
+            }
             return actions;
         }
 
