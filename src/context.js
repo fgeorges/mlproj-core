@@ -3,6 +3,7 @@
 (function() {
 
     const err = require('./error');
+    const pkg = require('../package.json');
 
     class Context
     {
@@ -21,6 +22,10 @@
 
         configs() {
             return this.mlproj ? Object.keys(this.mlproj) : [];
+        }
+
+        coreVersion() {
+            return pkg.version;
         }
     }
 
