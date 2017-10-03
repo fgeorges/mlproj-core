@@ -35,7 +35,7 @@
     class Display
     {
         constructor(verbose) {
-            this.verbose  = verbose;
+            this.verbose = verbose;
         }
 
         database(name, id, schema, security, triggers, forests, props) {

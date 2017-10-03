@@ -647,41 +647,108 @@
                 // empty the array
                 matches.splice(0);
             };
-            const onMatch = (path, uri) => {
-                if ( this.type === 'rest-src' && (
-                         uri.startsWith('/services/')
-                      || uri.startsWith('/transforms/') ) ) {
-                    let kind = 'resources';
-                    let file = uri.slice(10);
-                    if ( uri.startsWith('/transforms/') ) {
-                        kind = 'transforms';
-                        file = uri.slice(12);
-                    }
-                    let [ name, ext ] = file.split('.');
-                    let type = ext === 'xqy'
-                        ? 'application/xquery'
-                        : 'application/javascript';
-                    let port = (srv || this.restTarget()).props.port.value;
-                    actions.add(
-                        new act.ServerRestDeploy(kind, name, path, type, port));
-                }
-                else if ( this.type === 'plain' ) {
-                    matches.push({ uri: uri, path: path });
-                    if ( matches.length >= INSERT_LENGTH ) {
-                        flush();
-                    }
-                }
-                else {
-                    throw new Error('Unknown source set type: ' + this.type);
-                }
-            };
-            this.walk(actions.ctxt, display, onMatch);
+            if ( ! this.type || this.type === 'plain' ) {
+                this.loadPlain(actions.ctxt, display, matches, flush);
+            }
+            else if ( this.type === 'rest-src' ) {
+                const port = (srv || this.restTarget()).props.port.value;
+                this.loadRestSrc(actions, db, port, display, matches, flush);
+            }
+            else {
+                throw new Error('Unknown source set type: ' + this.type);
+            }
             if ( matches.length ) {
                 flush();
             }
         }
 
-        walk(ctxt, display, onMatch)
+        loadRestSrc(actions, db, port, display, matches, flush)
+        {
+            const pf       = actions.ctxt.platform;
+            const dir      = this.prop('dir');
+            // check there is nothing outside of `root/`, `services/` and `transforms/`
+            const children = pf.dirChildren(dir);
+            let   count    = 0;
+            const filter   = (name) => {
+                let match = children.find(c => c.name === name);
+                if ( ! match ) {
+                    // nothing
+                }
+                else if ( ! match.isdir ) {
+                    throw new Error('REST source child not a dir: ' + name);
+                }
+                else {
+                    ++ count;
+                }
+            };
+            filter('root');
+            filter('services');
+            filter('transforms');
+            if ( count !== children.length ) {
+                let unknown = children.map(c => c.name).filter(n => {
+                    return n !== 'root' && n !== 'services' && n !== 'transforms';
+                });
+                throw new Error('Unknown children in REST source: ' + unknown);
+            }
+            // deploy `root/*`
+            const root = dir + '/root';
+            if ( pf.exists(root) ) {
+                this.loadPlain(actions.ctxt, display, matches, flush, root);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', root);
+            }
+            // extract mime type from extension
+            const type = (ext) => {
+                if ( ext === 'xqy' ) {
+                    return 'application/xquery';
+                }
+                else if ( ext === 'sjs' ) {
+                    return 'application/javascript';
+                }
+                else {
+                    throw new Error('Extension is neither xqy or sjs: ' + ext);
+                }
+            };
+            // install `services/*`
+            const services = dir + '/services';
+            if ( pf.exists(services) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    let kind = 'resources';
+                    let [ name, ext ] = uri.slice(1).split('.');
+                    actions.add(
+                        new act.ServerRestDeploy(kind, name, path, type(ext), port));
+                }, services);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', services);
+            }
+            // install `transforms/*`
+            const transforms = dir + '/transforms';
+            if ( pf.exists(transforms) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    let kind = 'transforms';
+                    let [ name, ext ] = uri.slice(1).split('.');
+                    actions.add(
+                        new act.ServerRestDeploy(kind, name, path, type(ext), port));
+                }, transforms);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', transforms);
+            }
+        }
+
+        loadPlain(ctxt, display, matches, flush, dir)
+        {
+            this.walk(ctxt, display, (path, uri) => {
+                matches.push({ uri: uri, path: path });
+                if ( matches.length >= INSERT_LENGTH ) {
+                    flush();
+                }
+            }, dir);
+        }
+
+        walk(ctxt, display, onMatch, dir)
         {
             // from one array of strings, return two arrays:
             // - first one with all strings ending with '/', removed
@@ -731,9 +798,9 @@
             compile('exclude');
             compile('garbage');
 
-            const dir  = this.prop('dir');
-            const path = ctxt.platform.resolve(dir);
-            this.walkDir(onMatch, '', dir, path, path, patterns, ctxt, display);
+            const _dir = dir || this.prop('dir');
+            const path = ctxt.platform.resolve(_dir);
+            this.walkDir(onMatch, '', _dir, path, path, patterns, ctxt, display);
         }
 
         walkDir(onMatch, path, dir, full, base, patterns, ctxt, display)
