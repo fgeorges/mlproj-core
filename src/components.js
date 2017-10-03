@@ -567,6 +567,9 @@
 
     /*~
      * A named source set.
+     *
+     * TODO: Should we refactor to have different subclasses for different
+     * source set types?
      */
     class SourceSet extends Component
     {
@@ -698,6 +701,32 @@
             else if ( display.verbose ) {
                 display.check(0, 'dir, not exist', root);
             }
+            // install `services/*`
+            const services = dir + '/services';
+            if ( pf.exists(services) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    actions.add(
+                        this.installRestThing(port, 'resources', uri.slice(1), path));
+                }, services);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', services);
+            }
+            // install `transforms/*`
+            const transforms = dir + '/transforms';
+            if ( pf.exists(transforms) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    actions.add(
+                        this.installRestThing(port, 'transforms', uri.slice(1), path));
+                }, transforms);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', transforms);
+            }
+        }
+
+        installRestThing(port, kind, filename, path)
+        {
             // extract mime type from extension
             const type = (ext) => {
                 if ( ext === 'xqy' ) {
@@ -710,32 +739,10 @@
                     throw new Error('Extension is neither xqy or sjs: ' + ext);
                 }
             };
-            // install `services/*`
-            const services = dir + '/services';
-            if ( pf.exists(services) ) {
-                this.walk(actions.ctxt, display, (path, uri) => {
-                    let kind = 'resources';
-                    let [ name, ext ] = uri.slice(1).split('.');
-                    actions.add(
-                        new act.ServerRestDeploy(kind, name, path, type(ext), port));
-                }, services);
-            }
-            else if ( display.verbose ) {
-                display.check(0, 'dir, not exist', services);
-            }
-            // install `transforms/*`
-            const transforms = dir + '/transforms';
-            if ( pf.exists(transforms) ) {
-                this.walk(actions.ctxt, display, (path, uri) => {
-                    let kind = 'transforms';
-                    let [ name, ext ] = uri.slice(1).split('.');
-                    actions.add(
-                        new act.ServerRestDeploy(kind, name, path, type(ext), port));
-                }, transforms);
-            }
-            else if ( display.verbose ) {
-                display.check(0, 'dir, not exist', transforms);
-            }
+            // the basename and extension
+            let [ name, ext ] = filename.split('.');
+            // return the actual action
+            return new act.ServerRestDeploy(kind, name, path, type(ext), port);
         }
 
         loadPlain(ctxt, display, matches, flush, dir)
