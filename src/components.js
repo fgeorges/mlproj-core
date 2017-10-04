@@ -660,9 +660,6 @@
             else {
                 throw new Error('Unknown source set type: ' + this.type);
             }
-            if ( matches.length ) {
-                flush();
-            }
         }
 
         loadRestSrc(actions, db, port, display, matches, flush)
@@ -700,6 +697,9 @@
             }
             else if ( display.verbose ) {
                 display.check(0, 'dir, not exist', root);
+            }
+            if ( matches.length ) {
+                flush();
             }
             // install `services/*`
             const services = dir + '/services';
@@ -753,6 +753,9 @@
                     flush();
                 }
             }, dir);
+            if ( matches.length ) {
+                flush();
+            }
         }
 
         walk(ctxt, display, onMatch, dir)
