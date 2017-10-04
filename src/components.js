@@ -345,8 +345,14 @@
                 if ( this.type === 'http' ) {
                     this.createHttp(actions, display);
                 }
-                else {
+                else if ( this.type === 'xdbc' ) {
+                    this.createHttp(actions, display);
+                }
+                else if ( this.type === 'rest' ) {
                     this.createRest(actions, display);
+                }
+                else {
+                    throw new Error('Unknown app server type: ' + this.type);
                 }
             }
             // if AS already exists
@@ -459,7 +465,8 @@
         //
         updateHttp(actions, display, actual)
         {
-            if ( 'http' !== actual['server-type'] ) {
+            let type = this.type === 'rest' ? 'http' : this.type;
+            if ( type !== actual['server-type'] ) {
                 throw new Error('Server type cannot change, from '
                                 + actual['server-type'] + ' to ' + this.type);
             }

@@ -719,7 +719,7 @@
         // .add('modules',  false, new Database('modules-database'))
         .add('content',  true,  new Ignore())
         .add('modules',  false, new Ignore())
-        .add('type',     true,  new    Enum('server-type',   'type', [ 'http', 'rest' ]).freeze())
+        .add('type',     true,  new    Enum('server-type',   'type', [ 'http', 'rest', 'xdbc' ]).freeze())
         .add('port',     true,  new Integer('port',          'port'))
         .add('root',     false, new  String('root',          'root'))
         .add('rewriter', false, new  String('url-rewriter',  'url rewriter'))
