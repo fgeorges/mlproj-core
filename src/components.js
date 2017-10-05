@@ -585,6 +585,7 @@
             super();
             this.dflt    = dflt;
             this.name    = json && json.name;
+            this.filter  = json && json.filter;
             // extract the configured properties
             this.props   = json ? props.source.parse(json) : {};
             this.type    = this.props.type && this.props.type.value;
@@ -860,7 +861,7 @@
                         mm_include : pats.mm_include,
                         mm_exclude : pats.mm_exclude
                     };
-                    let resp = this.filter(desc);
+                    let resp = this.doFilter(desc);
                     if ( resp ) {
                         if ( child.isdir ) {
                             let d = dir + '/' + child.name;
@@ -883,8 +884,11 @@
             });
         }
 
-        filter(desc) {
-            if ( desc.isIncluded && ! desc.isExcluded ) {
+        doFilter(desc) {
+            if ( this.filter ) {
+                return this.filter(desc);
+            }
+            else if ( desc.isIncluded && ! desc.isExcluded ) {
                 return desc;
             }
         }

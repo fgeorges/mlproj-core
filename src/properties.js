@@ -756,6 +756,7 @@
         .add('compose',  false, new Ignore())
         .add('comment',  false, new Ignore())
         .add('name',     true,  new Ignore())
+        .add('filter',   false, new Ignore())
         .add('dir',      false, new     String('dir',     'directory'))
         .add('type',     false, new       Enum('type',    'type',                      [ 'plain', 'rest-src' ]))
         .add('garbage',  false, new StringList('garbage', 'garbage patterns',          /\s*,\s*/))
