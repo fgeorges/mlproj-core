@@ -1,7 +1,7 @@
 {
     "mlproj": {
         "format": "0.1",
-        "import": "base.json",
+        "import": "base.js",
         "connect": {
             "host": "prod.server",
             "user": "admin"
