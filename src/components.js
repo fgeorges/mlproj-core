@@ -583,12 +583,13 @@
         constructor(json, environ, dflt)
         {
             super();
-            this.dflt    = dflt;
-            this.name    = json && json.name;
-            this.filter  = json && json.filter;
+            this.dflt        = dflt;
+            this.name        = json && json.name;
+            this.filter      = json && json.filter;
             // extract the configured properties
-            this.props   = json ? props.source.parse(json) : {};
-            this.type    = this.props.type && this.props.type.value;
+            this.props       = json ? props.source.parse(json) : {};
+            this.type        = this.props.type && this.props.type.value;
+            this.collections = this.props.collections ? this.props.collections.value.sort() : [];
             // resolve targets (dbs and srvs)
             // TODO: Provide the other way around, `source` on dbs and srvs?
             this.targets = [];
@@ -651,12 +652,14 @@
         //
         load(actions, db, srv, display)
         {
-            let   matches = [];
+            let matches = [{ body: { collections: this.collections } }];
+            matches.count = 0;
             const flush = () => {
                 actions.add(
                     new act.MultiDocInsert(db, matches));
                 // empty the array
                 matches.splice(0);
+                matches.push({ body: { collections: this.collections } });
             };
             if ( ! this.type || this.type === 'plain' ) {
                 this.loadPlain(actions.ctxt, display, matches, flush);
@@ -706,7 +709,7 @@
             else if ( display.verbose ) {
                 display.check(0, 'dir, not exist', root);
             }
-            if ( matches.length ) {
+            if ( matches.count ) {
                 flush();
             }
             // install `services/*`
@@ -755,13 +758,18 @@
 
         loadPlain(ctxt, display, matches, flush, dir)
         {
-            this.walk(ctxt, display, (path, uri) => {
+            this.walk(ctxt, display, (path, uri, meta) => {
+                if ( meta ) {
+                    // metadata, if any, must be before the doc content
+                    matches.push({ uri: uri, body: meta });
+                }
                 matches.push({ uri: uri, path: path });
-                if ( matches.length >= INSERT_LENGTH ) {
+                ++ matches.count;
+                if ( matches.count >= INSERT_LENGTH ) {
                     flush();
                 }
             }, dir);
-            if ( matches.length ) {
+            if ( matches.count ) {
                 flush();
             }
         }
@@ -849,17 +857,18 @@
                 let pats = child.isdir ? patterns.dir : patterns.notdir;
                 if ( ! match(p, pats.mm_garbage, false, 'Throwing') ) {
                     let desc = {
-                        base       : base,
-                        path       : p,
-                        full       : child.path,
-                        name       : child.name,
-                        isdir      : child.isdir,
-                        isIncluded : match(p, pats.mm_include, true,  'Including'),
-                        isExcluded : match(p, pats.mm_exclude, false, 'Excluding'),
-                        include    : pats.include,
-                        exclude    : pats.exclude,
-                        mm_include : pats.mm_include,
-                        mm_exclude : pats.mm_exclude
+                        base        : base,
+                        path        : p,
+                        full        : child.path,
+                        name        : child.name,
+                        isdir       : child.isdir,
+                        isIncluded  : match(p, pats.mm_include, true,  'Including'),
+                        isExcluded  : match(p, pats.mm_exclude, false, 'Excluding'),
+                        include     : pats.include,
+                        exclude     : pats.exclude,
+                        collections : this.collections.slice(),
+                        mm_include  : pats.mm_include,
+                        mm_exclude  : pats.mm_exclude
                     };
                     let resp = this.doFilter(desc);
                     if ( resp ) {
@@ -877,7 +886,25 @@
                             if ( ! full ) {
                                 throw new Error('Impossible to compute full path for ' + resp);
                             }
-                            onMatch(full, uri);
+                            let overrideColls = false;
+                            // is `collections` set, and different than the default array?
+                            if ( resp.collections ) {
+                                let colls = resp.collections.sort();
+                                if ( this.collections.length !== colls.length ) {
+                                    overrideColls = true;
+                                }
+                                for ( let i = 0; ! overrideColls && i < colls.length; ++ i ) {
+                                    if ( this.collections[i] !== colls[i] ) {
+                                        overrideColls = true;
+                                    }
+                                }
+                            }
+                            if ( overrideColls ) {
+                                onMatch(full, uri, { collections: resp.collections });
+                            }
+                            else {
+                                onMatch(full, uri);
+                            }
                         }
                     }
                 }
