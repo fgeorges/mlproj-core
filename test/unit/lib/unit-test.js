@@ -76,7 +76,7 @@
                     this.fail(msg + ': got an array, should got: ' + typeof expected);
                 }
                 else if ( actual.length !== expected.length ) {
-                    this.fail(msg + ': arrays of different lengths: ' + actual.expected + '/' + expected.length);
+                    this.fail(msg + ': arrays of different lengths: ' + actual.length + '/' + expected.length);
                 }
                 else {
                     actual.forEach((act, i) => {

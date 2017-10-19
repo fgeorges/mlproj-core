@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing impala (prod) - source sets', ass => {
     let path = t.spaceFile(ctxt, 'simple-impala', 'prod');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, { port: '7090' });
@@ -49,7 +49,7 @@ t.test('Parsing impala (prod) - source sets', ass => {
 t.test('Parsing impala (extended) - source sets inheritence', ass => {
     ctxt.platform.environ = undefined; // reset
     let path = t.spaceFile(ctxt, 'simple-impala', 'extended');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, { port: '7090' });

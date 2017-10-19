@@ -150,10 +150,17 @@
         }
         // continue with expected result
         if ( call.response === 'OK' ) {
-            return call.body;
+            return {
+                status  : 200,
+                headers : {},
+                body    : call.body
+            };
         }
         else if ( call.response === 'Not found' ) {
-            return;
+            return {
+                status  : 404,
+                headers : {}
+            };
         }
         else {
             runner.fail(call, 'Unknown return');
@@ -163,20 +170,23 @@
     };
 
     // the main processing
-    function test(runner, file, cmd, calls) {
+    function test(runner, file, name, cmd, calls) {
         // set the expected calls on the runner object
         runner.calls = calls;
         // the platform instance
         let ctxt = new c.Context(new c.Display(), new c.Platform(process.cwd()));
         // override the http functions
-        ctxt.platform.get = function(api, url) {
-            return assertCall(runner, 'get', api, url);
+        ctxt.platform.get = function(params, url) {
+            // TODO: Don't we want to check other params than only api?
+            return assertCall(runner, 'get', params.api, url);
         };
-        ctxt.platform.post = function(api, url, data) {
-            return assertCall(runner, 'post', api, url, data);
+        ctxt.platform.post = function(params, url, data) {
+            // TODO: Don't we want to check other params than only api?
+            return assertCall(runner, 'post', params.api, url, data);
         };
-        ctxt.platform.put = function(api, url, data) {
-            return assertCall(runner, 'put', api, url, data);
+        ctxt.platform.put = function(params, url, data) {
+            // TODO: Don't we want to check other params than only api?
+            return assertCall(runner, 'put', params.api, url, data);
         };
         // various functions on the platform object to load the project file
         ctxt.platform.resolve = function(href, base) {
@@ -209,9 +219,9 @@
         ctxt.display.check = function(indent, msg, arg) {
         };
         // launch processing
-        let env = new e.Environ(ctxt, file);
+        let env = new e.Environ(ctxt, ctxt.platform.json(file), file);
         env.compile();
-        let command = new cmd({}, {}, ctxt, env);
+        let command = new cmd(name, {}, {}, ctxt, env);
         let actions = command.prepare();
         actions.execute();
     }
