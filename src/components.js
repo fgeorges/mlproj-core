@@ -707,10 +707,31 @@
     {
         constructor(json, environ, dflt)
         {
+            const readPerms = (perms) => {
+                let res = {};
+                if ( perms ) {
+                    Object.keys(perms).forEach(role => {
+                        let val = perms[role];
+                        // TODO: Check the values (update, insert, read, execute...)
+                        if ( Array.isArray(val) ) {
+                            res[role] = val;
+                        }
+                        else if ( 'string' === typeof val ) {
+                            res[role] = val.split(/\s*,\s*/);
+                        }
+                        else {
+                            throw new Error('Permission capabilities neither a string or an array for role '
+                                            + role + ': ' + val);
+                        }
+                    });
+                }
+                return res;
+            };
             super();
             this.dflt        = dflt;
             this.name        = json && json.name;
             this.filter      = json && json.filter;
+            this.permissions = readPerms(json && json.permissions);
             // extract the configured properties
             this.props       = json ? props.source.parse(json) : {};
             this.type        = this.props.type && this.props.type.value;
@@ -777,14 +798,25 @@
         //
         load(actions, db, srv, display)
         {
-            let matches = [{ body: { collections: this.collections } }];
+            let meta  = { body: { collections: this.collections } };
+            let perms = Object.keys(this.permissions).map(role => {
+                return {
+                    "role-name"    : role,
+                    "capabilities" : this.permissions[role]
+                };
+            });
+            if ( perms.length ) {
+                meta.body.permissions = perms;
+            }
+            let matches = [ meta ];
             matches.count = 0;
             const flush = () => {
                 actions.add(
                     new act.MultiDocInsert(db, matches));
                 // empty the array
                 matches.splice(0);
-                matches.push({ body: { collections: this.collections } });
+                matches.push(meta);
+                matches.count = 0;
             };
             if ( ! this.type || this.type === 'plain' ) {
                 this.loadPlain(actions.ctxt, display, matches, flush);
@@ -1049,7 +1081,19 @@
     SourceSet.kind = 'source set';
 
     SourceSet.merge = (name, derived, base) => {
-        return derived;
+        if ( name === 'permissions' ) {
+            for ( let role in base ) {
+                if ( ! derived[role] ) {
+                    derived[role] = base[role];
+                }
+            }
+            return derived;
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
     };
 
     // TODO: Set another, real-world length, or based on the size...

@@ -763,7 +763,8 @@
         .add('include',     false, new StringList('include',     'include patterns',          /\s*,\s*/))
         .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
         .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
-        .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/));
+        .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
+        .add('permissions', false, new Ignore());
 
     /*~
      * The mime properties and config format.
