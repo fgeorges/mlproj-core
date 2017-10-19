@@ -224,6 +224,125 @@
         }
     }
 
+    Database.kind = 'database';
+
+    Database.merge = (name, derived, base) => {
+        if ( name === 'indexes' ) {
+
+            // TODO: Implement and document merging of indexes...  Only 'ranges'
+            // are supported for now...  The equality function between two range
+            // index takes several params into account (its type first,
+            // depending on the properties set, path or parent or nothing): type
+            // + path/name (incl. ns) + parent name if any (incl. ns.)
+            //throw new Error('Merging of indexes is not implemented yet!');
+
+            // check derived index properties
+            if ( ! derived.ranges ) {
+                throw new Error('No range index in property indexes in derived object');
+            }
+            if ( Object.keys(derived).length !== 1 ) {
+                throw new Error('Unknown properties on indexes in derived object: '
+                                + Object.keys(derived).filter(k => k !== 'ranges'));
+            }
+            // check base index properties
+            if ( ! base.ranges ) {
+                throw new Error('No range index in property indexes in base object');
+            }
+            if ( Object.keys(base).length !== 1 ) {
+                throw new Error('Unknown properties on indexes in base object: '
+                                + Object.keys(base).filter(k => k !== 'ranges'));
+            }
+            // copy a range, with a given name
+            const copy = (name, range) => {
+                let r = { name: name };
+                for ( let p in range ) {
+                    if ( p !== 'name' ) {
+                        r[p] = range[p];
+                    }
+                }
+                return r;
+            }
+            // provision result array with range indexes from derived
+            let res = [];
+            derived.ranges.forEach(range => {
+                if ( Array.isArray(range.name) ) {
+                    range.name.forEach(n => {
+                        res.push(copy(n, range));
+                    });
+                }
+                else {
+                    res.push(range);
+                }
+            });
+            // add the range indexes from base not already in res
+            base.ranges.forEach(range => {
+                const handle = r => {
+                    let existing = res.find(b => {
+                        // namespaces must be both not there, or both there and equal
+                        const nsDiff = (lhs, rhs) => {
+                            if ( lhs ) {
+                                if ( ! rhs || lhs !== rhs ) {
+                                    return true;
+                                }
+                            }
+                            else if ( rhs ) {
+                                return true;
+                            }
+                        };
+                        // for all, if type differ...
+                        if ( r.type !== b.type ) {
+                            return false;
+                        }
+                        // at least one is a path range
+                        if ( r.path || b.path ) {
+                            if ( ! r.path || ! b.path || r.path !== b.path ) {
+                                return false;
+                            }
+                        }
+                        else {
+                            // at least one is an attribute range
+                            if ( r.parent || b.parent ) {
+                                if ( ! r.parent || ! b.parent || r.parent.name !== b.parent.name ) {
+                                    return false;
+                                }
+                                if ( nsDiff(r.parent.namespace, b.parent.namespace) ) {
+                                    return false;
+                                }
+                            }
+                            // for both attribute and element ranges
+                            if ( r.name !== b.name ) {
+                                return false;
+                            }
+                            if ( nsDiff(r.namespace, b.namespace) ) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+                    if ( ! existing ) {
+                        res.push(r);
+                    }
+                };
+                if ( Array.isArray(range.name) ) {
+                    range.name.forEach(n => {
+                        handle(copy(n, range));
+                    });
+                }
+                else {
+                    handle(range);
+                }
+            });
+            return {
+                ranges: res
+            };
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
+    };
+
     /*~
      * A forest.
      */
@@ -571,6 +690,12 @@
             }
         }
     }
+
+    Server.kind = 'server';
+
+    Server.merge = (name, derived, base) => {
+        return derived;
+    };
 
     /*~
      * A named source set.
@@ -921,6 +1046,12 @@
         }
     }
 
+    SourceSet.kind = 'source set';
+
+    SourceSet.merge = (name, derived, base) => {
+        return derived;
+    };
+
     // TODO: Set another, real-world length, or based on the size...
     // TODO: And of course, be able to set this (these) from the environs.
     const INSERT_LENGTH = 10;
@@ -1018,6 +1149,12 @@
             });
         }
     }
+
+    MimeType.kind = 'mimetype';
+
+    MimeType.merge = (name, derived, base) => {
+        return derived;
+    };
 
     module.exports = {
         SysDatabase : SysDatabase,

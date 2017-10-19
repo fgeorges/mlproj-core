@@ -838,7 +838,7 @@
             var impl = (comp, cache, ids, names, kind) => {
                 // at least one of ID and name mandatory
                 if ( ! comp.name && ! comp.id ) {
-                    throw new Error('No ID and no name on ' + kind + ' in ' + cache.href);
+                    throw new Error('No ID and no name on ' + kind.kind + ' in ' + cache.href);
                 }
                 // default value for compose
                 if ( ! comp.compose ) {
@@ -851,12 +851,12 @@
                 // if it does, perform the "compose" action..
                 if ( derived ) {
                     if ( derived.compose !== comp.compose ) {
-                        throw new Error('Different compose actions for ' + kind + 's: derived:'
+                        throw new Error('Different compose actions for ' + kind.kind + 's: derived:'
                                         + _(derived) + '|compose=' + derived.compose + ' and base:'
                                         + _(comp) + '|compose=' + comp.compose);
                     }
                     else if ( derived.compose === 'merge' ) {
-                        this.ctxt.display.info('Merge ' + kind + 's derived:' + _(derived) + ' and base:' + _(comp));
+                        this.ctxt.display.info('Merge ' + kind.kind + 's derived:' + _(derived) + ' and base:' + _(comp));
                         var overriden = Object.keys(derived);
                         for ( var p in comp ) {
                             if ( overriden.indexOf(p) === -1 ) {
@@ -868,13 +868,16 @@
                                     names[derived.name] = derived;
                                 }
                             }
+                            else {
+                                derived[p] = kind.merge(p, derived[p], comp[p]);
+                            }
                         }
                     }
                     else if ( derived.compose === 'hide' ) {
-                        this.ctxt.platform.info('Hide ' + kind + ' base:' + _(comp) + ' by derived:' + _(derived));
+                        this.ctxt.platform.info('Hide ' + kind.kind + ' base:' + _(comp) + ' by derived:' + _(derived));
                     }
                     else {
-                        throw new Error('Unknown compose on ' + kind + ': ' + _(derived) + '|compose=' + derived.compose);
+                        throw new Error('Unknown compose on ' + kind.kind + ': ' + _(derived) + '|compose=' + derived.compose);
                     }
                 }
                 // ...if it does not, just add it
@@ -892,25 +895,25 @@
             // compile databases
             if ( this.json.databases ) {
                 this.json.databases.forEach(db => {
-                    impl(db, cache.dbs, cache.dbIds, cache.dbNames, 'database');
+                    impl(db, cache.dbs, cache.dbIds, cache.dbNames, cmp.Database);
                 });
             }
             // compile servers
             if ( this.json.servers ) {
                 this.json.servers.forEach(srv => {
-                    impl(srv, cache.srvs, cache.srvIds, cache.srvNames, 'server');
+                    impl(srv, cache.srvs, cache.srvIds, cache.srvNames, cmp.Server);
                 });
             }
             // compile sources
             if ( this.json.sources ) {
                 this.json.sources.forEach(src => {
-                    impl(src, cache.srcs, null, cache.srcNames, 'source');
+                    impl(src, cache.srcs, null, cache.srcNames, cmp.SourceSet);
                 });
             }
             // compile mime types
             if ( this.json['mime-types'] ) {
                 this.json['mime-types'].forEach(mime => {
-                    impl(mime, cache.mimes, null, cache.mimeNames, 'mime');
+                    impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
                 });
             }
             // recurse on imports

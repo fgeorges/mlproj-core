@@ -11,16 +11,21 @@ function run(tests, callback)
 {
     if ( ! tests.length ) {
         // nothing else to do
+        return;
     }
-    else if ( tests[0].msg ) {
-        let test = tests.shift();
-        console.log();
+    // the current test
+    const test = tests.shift();
+    // is there a message to display?
+    if ( test.msg ) {
         console.log(test.msg);
+    }
+    // is there a dir to go to...?
+    if ( test.cwd ) {
         proc.chdir(test.cwd);
         run(tests);
     }
-    else {
-        let test    = tests.shift();
+    // ...or a script to execute?
+    else if ( test.script ) {
         // keep track of whether callback has been invoked to prevent multiple invocations
         var invoked = false;
         var process = chproc.fork(test.script);
@@ -52,18 +57,19 @@ function run(tests, callback)
 proc.chdir('./test/');
 
 run([
-    { msg: 'Run unit tests', cwd: './unit/' },
-    { script: './parse/parse-simple-ape.js'      },
-    { script: './parse/parse-simple-bear.js'     },
-    { script: './parse/parse-simple-cat.js'      },
-    { script: './parse/parse-simple-dog.js'      },
-    { script: './parse/parse-simple-elephant.js' },
-    { script: './parse/parse-simple-frog.js'     },
-    { script: './parse/parse-simple-goat.js'     },
-    { script: './parse/parse-simple-hen.js'      },
-    { script: './parse/parse-simple-impala.js'   },
-    { script: './parse/parse-simple-jaguar.js'   },
-    { script: './parse/parse-simple-achel.js'    },
-    { msg: 'Run test scenarii', cwd: '../scenarii/' },
+    { msg: '## Run unit tests', cwd: './unit/' },
+    { msg: '\nParse ape',      script: './parse/parse-simple-ape.js'      },
+    { msg: '\nParse bear',     script: './parse/parse-simple-bear.js'     },
+    { msg: '\nParse cat',      script: './parse/parse-simple-cat.js'      },
+    { msg: '\nParse dog',      script: './parse/parse-simple-dog.js'      },
+    { msg: '\nParse elephant', script: './parse/parse-simple-elephant.js' },
+    { msg: '\nParse frog',     script: './parse/parse-simple-frog.js'     },
+    { msg: '\nParse goat',     script: './parse/parse-simple-goat.js'     },
+    { msg: '\nParse hen',      script: './parse/parse-simple-hen.js'      },
+    { msg: '\nParse impala',   script: './parse/parse-simple-impala.js'   },
+    { msg: '\nParse jaguar',   script: './parse/parse-simple-jaguar.js'   },
+    { msg: '\nParse achel',    script: './parse/parse-simple-achel.js'    },
+    { msg: '\nMerge indexes',  script: './parse/merge-indexes.js'         },
+    { msg: '\n## Run test scenarii\n', cwd: '../scenarii/' },
     { script: './run-scenario.js' }
 ]);
