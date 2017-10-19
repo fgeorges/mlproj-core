@@ -298,6 +298,8 @@
                 imports.forEach(i => {
                     let b = this.ctxt.platform.dirname(this.path);
                     let p = this.ctxt.platform.resolve(i, b);
+                    // TODO: Catch errors from require() and json() to display a
+                    // proper message (esp. with the correct path to the file...)
                     let j = p.endsWith('.js')
                         ? require(p)()
                         : this.ctxt.platform.json(p);
@@ -305,6 +307,20 @@
                     this.imports.push(m);
                     m.loadImports(this.ctxt);
                 });
+            }
+        }
+
+        source(name) {
+            let res = this._sources.filter(src => src.name === name);
+            if ( ! res.length ) {
+                return;
+            }
+            else if ( res.length === 1 ) {
+                return res[0];
+            }
+            else {
+                let list = res.map(src => src.name).join(', ');
+                throw new Error('More than one source with name "' + name + '": ' + list);
             }
         }
 
@@ -815,7 +831,7 @@
         {
             // small helper to format info and error messages
             var _ = (c) => {
-                return 'id=' + c.id + '|name=' + c.name;
+                return 'id=' + (c.id || '') + '|name=' + (c.name || '');
             };
 
             // the common implementation for databases and servers
