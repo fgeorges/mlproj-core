@@ -42,16 +42,20 @@
      */
     class FunAction extends Action
     {
-        constructor(msg, fun) {
+        constructor(msg, fun, cmd) {
             super(msg);
             this.fun = fun;
+            this.cmd = cmd;
         }
 
         execute(ctxt) {
             if ( ctxt.verbose ) {
                 ctxt.platform.warn('Execute: ' + this.msg);
             }
-            return this.fun(ctxt);
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            if ( ! ctxt.dry ) {
+                return this.fun(ctxt);
+            }
         }
     }
 
@@ -103,6 +107,12 @@
             return this.data;
         }
 
+        connect(api) {
+            return {
+                api: api
+            };
+        }
+
         execute(ctxt) {
             if ( ctxt.verbose ) {
                 ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] '
@@ -112,10 +122,10 @@
                     ctxt.platform.warn(this.data);
                 }
             }
-            if ( ctxt.dry && this.verb !== 'GET' ) {
+            if ( ! ctxt.dry || this.verb !== 'GET' ) {
                 ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             }
-            else {
+            if ( ! ctxt.dry || this.verb === 'GET' ) {
                 return this.send(ctxt, this.api, this.url, this.getData(ctxt));
             }
         }
@@ -133,11 +143,24 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             if ( data ) {
                 throw new Error('Data in a GET: ' + url + ', ' + data);
             }
-            return ctxt.platform.get(api, url);
+            let resp = ctxt.platform.get(this.connect(api), url);
+            if ( resp.status === 200 ) {
+                return this.onOk(resp);
+            }
+            else if ( resp.status === 404 ) {
+                return;
+            }
+            else {
+                throw new Error('Error retrieving entity: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
+        }
+
+        onOk(resp) {
+            return resp.body;
         }
     }
 
@@ -151,8 +174,23 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
-            return ctxt.platform.post(api, url, data, this.type);
+            let resp = ctxt.platform.post(this.connect(api), url, data, this.type);
+            if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
+                // nothing
+            }
+            // when operation needs a server restart
+            else if ( resp.status === 202 ) {
+                let body = resp.body.restart;
+                if ( ! body ) {
+                    throw new Error('202 returned NOT for a restart reason?!?');
+                }
+                let time = Date.parse(body['last-startup'][0].value);
+                ctxt.platform.restart(time);
+            }
+            else {
+                throw new Error('Entity not created: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
         }
     }
 
@@ -166,8 +204,155 @@
         }
 
         send(ctxt, api, url, data) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
-            return ctxt.platform.put(api, url, data, this.type);
+            let resp = ctxt.platform.put(this.connect(api), url, data, this.type);
+            // XDBC PUT /insert returns 200
+            if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
+                // nothing
+            }
+            // when operation needs a server restart
+            else if ( resp.status === 202 ) {
+                let body = resp.body.restart;
+                if ( ! body ) {
+                    throw new Error('202 returned NOT for a restart reason?!?');
+                }
+                let time = Date.parse(body['last-startup'][0].value);
+                ctxt.platform.restart(time);
+            }
+            else {
+                throw new Error('Entity not updated: ' + (resp.body.errorResponse
+                                ? resp.body.errorResponse.message : resp.body));
+            }
+        }
+    }
+
+    /*~
+     * REST server: retrieve server properties.
+     */
+    class ServerRestProps extends Get
+    {
+        constructor(srv, port) {
+            var name = srv && srv.name;
+            super(null,
+                  '/v1/config/properties',
+                  'Retrieve REST server props: \t' + name);
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port
+            };
+        }
+    }
+
+    /*~
+     * REST server: update server properties.
+     */
+    class ServerRestUpdate extends Put
+    {
+        constructor(srv, body, port) {
+            var name = srv && srv.name;
+            super(null,
+                  '/v1/config/properties',
+                  body,
+                  'Update REST server props: \t' + name);
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port
+            };
+        }
+    }
+
+    /*~
+     * REST server: deploy service or transform.
+     */
+    class ServerRestDeploy extends Put
+    {
+        constructor(kind, name, path, type, port) {
+            super(null,
+                  '/v1/config/' + kind + '/' + name,
+                  path,
+                  'Deploy REST ' + kind + ': \t' + name);
+            this.type = type;
+            this.port = port;
+        }
+
+        connect(api) {
+            return {
+                port: this.port,
+                type: this.type
+            };
+        }
+
+        getData(ctxt) {
+            return ctxt.platform.read(this.data);
+        }
+    }
+
+    /*~~~~~ REST API actions. */
+
+    /*~
+     * A REST API GET action.
+     */
+    class RestGet extends Get
+    {
+        constructor(url, msg) {
+            super('rest', url, msg);
+        }
+    }
+
+    /*~
+     * A REST API POST action.
+     */
+    class RestPost extends Post
+    {
+        constructor(url, data, msg) {
+            super('rest', url, data, msg);
+        }
+    }
+
+    /*~
+     * REST API: create a server.
+     */
+    class ServerRestCreate extends RestPost
+    {
+        constructor(srv, body) {
+            var name = srv && srv.name;
+            super('',
+                  body,
+                  'Create REST server: \t\t' + name);
+        }
+    }
+
+    /*~
+     * REST API: get server creation properties.
+     */
+    class ServerRestCreationProps extends RestGet
+    {
+        constructor(srv) {
+            var name = srv && srv.name;
+            super('/' + name,
+                  'Retrieve REST config props: \t' + name);
+        }
+
+        /*
+         * There is a bug on GET /v1/rest-apis/{name}, where it returns Content-
+         * Type as text/plain instead of application/json.  At least MarkLogic
+         * 9.1.1: http://marklogic.markmail.org/thread/7mstpjktts6j56pq.
+         */
+        onOk(resp) {
+            if ( resp.headers
+                 && resp.headers['content-type']
+                 // TODO: Parse it properly, e.g. "text/plain; charset=UTF-8"
+                 && resp.headers['content-type'].startsWith('text/plain') ) {
+                return JSON.parse(resp.body);
+            }
+            else {
+                return resp.body;
+            }
         }
     }
 
@@ -251,7 +436,7 @@
     class ManageGet extends Get
     {
         constructor(url, msg) {
-            super('management', url, msg);
+            super('manage', url, msg);
         }
     }
 
@@ -261,7 +446,7 @@
     class ManagePost extends Post
     {
         constructor(url, data, msg) {
-            super('management', url, data, msg);
+            super('manage', url, data, msg);
         }
     }
 
@@ -271,7 +456,7 @@
     class ManagePut extends Put
     {
         constructor(url, data, msg) {
-            super('management', url, data, msg);
+            super('manage', url, data, msg);
         }
     }
 
@@ -389,6 +574,25 @@
             super('/servers?group-id=' + group,
                   body,
                   'Create server: \t\t' + name);
+            this.name = name;
+            this.port = body && body.port;
+        }
+
+        send(ctxt, api, url, data) {
+            try {
+                super.send(ctxt, api, url, data);
+            }
+            catch ( e ) {
+                const msg    = e.message;
+                const code   = 'MANAGE-INVALIDPAYLOAD';
+                const phrase = 'Port is currently in use';
+                if ( msg.includes(code) && msg.endsWith(phrase) ) {
+                    throw err.serverPortUsed(this.name, this.port);
+                }
+                else {
+                    throw e;
+                }
+            }
         }
     }
 
@@ -400,19 +604,33 @@
         constructor(srv, name, value) {
             var group   = srv && srv.group;
             var srvname = srv && srv.name;
-            var body    = name && { [name]: value };
+            var body    = name;
+            var what    = 'properties';
+            if ( typeof name !== 'object' ) {
+                body = name && { [name]: value };
+                what = name;
+            }
             super('/servers/' + srvname + '/properties?group-id=' + group,
                   body,
-                  'Update ' + name + ':  \t' + srvname);
+                  'Update ' + what + ':  \t\t' + srvname);
+            this.name = srvname;
+            this.port = body && body.port;
         }
 
         send(ctxt, api, url, data) {
-            var res = super.send(ctxt, api, url, data);
-            if ( res ) {
-                // TODO: Do NOT use console.log() directly here...!
-                // Use the display instead...
-                console.log('MarkLogic is restarting, waiting for it to be back up...');
-                ctxt.platform.restart(res);
+            try {
+                super.send(ctxt, api, url, data);
+            }
+            catch ( e ) {
+                const msg    = e.message;
+                const code   = 'ADMIN-INVALIDPORT';
+                const phrase = 'is not valid or bindable';
+                if ( msg.includes(code) && msg.endsWith(phrase) ) {
+                    throw err.serverPortUsed(this.name, this.port);
+                }
+                else {
+                    throw e;
+                }
             }
         }
     }
@@ -491,7 +709,7 @@
             var copy = docs && docs.slice();
             super('/documents?database=' + name,
                   copy,
-                  'Insert documents: \t' + len + ' document' + (len === 1 ? '' : 's'));
+                  'Insert documents: \t\t' + len + ' document' + (len === 1 ? '' : 's'));
         }
 
         getData(ctxt) {
@@ -532,18 +750,7 @@
         }
 
         getData(ctxt) {
-            try {
-                // TODO: read() uses utf-8, cannot handle binary
-                return ctxt.platform.read(this.data);
-            }
-            catch (e) {
-                if ( e.name === 'no-such-file' ) {
-                    throw err.noSuchFile(this.data);
-                }
-                else {
-                    throw e;
-                }
-            }
+            return ctxt.platform.read(this.data);
         }
     }
 
@@ -585,25 +792,30 @@
     }
 
     module.exports = {
-        ActionList     : ActionList,
-        Action         : Action,
-        FunAction      : FunAction,
-        AdminInit      : AdminInit,
-        AdminInstance  : AdminInstance,
-        ForestList     : ForestList,
-        ForestCreate   : ForestCreate,
-        ForestAttach   : ForestAttach,
-        ForestDetach   : ForestDetach,
-        DatabaseProps  : DatabaseProps,
-        DatabaseCreate : DatabaseCreate,
-        DatabaseUpdate : DatabaseUpdate,
-        ServerProps    : ServerProps,
-        ServerCreate   : ServerCreate,
-        ServerUpdate   : ServerUpdate,
-        MimeProps      : MimeProps,
-        MimeCreate     : MimeCreate,
-        MultiDocInsert : MultiDocInsert,
-        DocInsert      : DocInsert
+        ActionList              : ActionList,
+        Action                  : Action,
+        FunAction               : FunAction,
+        AdminInit               : AdminInit,
+        AdminInstance           : AdminInstance,
+        ForestList              : ForestList,
+        ForestCreate            : ForestCreate,
+        ForestAttach            : ForestAttach,
+        ForestDetach            : ForestDetach,
+        DatabaseProps           : DatabaseProps,
+        DatabaseCreate          : DatabaseCreate,
+        DatabaseUpdate          : DatabaseUpdate,
+        ServerProps             : ServerProps,
+        ServerCreate            : ServerCreate,
+        ServerUpdate            : ServerUpdate,
+        ServerRestProps         : ServerRestProps,
+        ServerRestCreate        : ServerRestCreate,
+        ServerRestUpdate        : ServerRestUpdate,
+        ServerRestCreationProps : ServerRestCreationProps,
+        ServerRestDeploy        : ServerRestDeploy,
+        MimeProps               : MimeProps,
+        MimeCreate              : MimeCreate,
+        MultiDocInsert          : MultiDocInsert,
+        DocInsert               : DocInsert
     }
 }
 )();

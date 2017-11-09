@@ -644,16 +644,18 @@
      * The server properties and config format.
      */
     var server = new ConfigObject('server')
-        .add('compose',  false, new Ignore())
-        .add('comment',  false, new Ignore())
-        .add('id',       false, new Ignore())
-        .add('name',     true,  new Ignore())
-        .add('group',    false, new Ignore())
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('id',          false, new Ignore())
+        .add('name',        true,  new Ignore())
+        .add('group',       false, new Ignore())
+        .add('properties',  false, new Ignore())
+        .add('rest-config', false, new Ignore())
         // .add('content',  true,  new Database('content-database'))
         // .add('modules',  false, new Database('modules-database'))
         .add('content',  true,  new Ignore())
         .add('modules',  false, new Ignore())
-        .add('type',     true,  new    Enum('server-type',   'type', [ 'http' ]).freeze())
+        .add('type',     true,  new    Enum('server-type',   'type', [ 'http', 'rest' ]).freeze())
         .add('port',     true,  new Integer('port',          'port'))
         .add('root',     false, new  String('root',          'root'))
         .add('rewriter', false, new  String('url-rewriter',  'url rewriter'))
@@ -691,9 +693,11 @@
         .add('comment',  false, new Ignore())
         .add('name',     true,  new Ignore())
         .add('dir',      false, new     String('dir',     'directory'))
-        .add('garbage',  false, new StringList('garbage', 'garbage patterns', /\s*,\s*/))
-        .add('include',  false, new StringList('include', 'include patterns', /\s*,\s*/))
-        .add('exclude',  false, new StringList('exclude', 'exclude patterns', /\s*,\s*/));
+        .add('type',     false, new       Enum('type',    'type',                      [ 'rest-src' ]))
+        .add('garbage',  false, new StringList('garbage', 'garbage patterns',          /\s*,\s*/))
+        .add('include',  false, new StringList('include', 'include patterns',          /\s*,\s*/))
+        .add('exclude',  false, new StringList('exclude', 'exclude patterns',          /\s*,\s*/))
+        .add('target',   false, new StringList('target',  'target database or server', /\s*,\s*/));
 
     /*~
      * The mime properties and config format.

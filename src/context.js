@@ -42,7 +42,11 @@
             throw err.abstractFun('Display.database');
         }
 
-        server(name, id, group, content, modules, props) {
+        sysDatabase(name) {
+            throw err.abstractFun('Display.sysDatabase');
+        }
+
+        server(name, id, type, group, content, modules, props) {
             throw err.abstractFun('Display.server');
         }
 
@@ -58,7 +62,7 @@
             throw err.abstractFun('Display.project');
         }
 
-        environ(envipath, title, desc, host, user, password, params, apis, imports) {
+        environ(envipath, title, desc, host, user, password, params, apis, commands, imports) {
             throw err.abstractFun('Display.environ');
         }
 
@@ -161,30 +165,49 @@
             throw err.abstractFun('Platform.bold');
         }
 
-        url(api, url) {
-            // set in Environ ctor, find a nicer way to pass the info
-            if ( ! this.environ ) {
-                throw new Error('No environ set on the platform for host');
+        url(params, url) {
+            let environ = () => {
+                // set in Environ ctor, find a nicer way to pass the info
+                if ( ! this.environ ) {
+                    throw new Error('No environ set on the platform');
+                }
+                return this.environ;
+            };
+            if ( params.url ) {
+                return params.url;
             }
-            var host = this.environ.param('@host');
+            let host = params.host || environ().param('@host');
             if ( ! host ) {
                 throw new Error('No host in environ');
             }
-            var decl   = this.environ.api(api);
-            var scheme = decl.ssl ? 'https' : 'http';
-            var root   = decl.root.length ? '/' + decl.root : decl.root;
-            return scheme + '://' + host + ':' + decl.port + root + url;
+            let ssl;
+            let port;
+            let path;
+            if ( params.api ) {
+                let api = environ().api(params.api);
+                ssl  = params.ssl === undefined ? api.ssl : params.ssl;
+                port = params.port || api.port;
+                path = api.root + (url || params.path || '');
+            }
+            else {
+                ssl  = params.ssl;
+                port = params.port;
+                path = url || params.path || '/';
+            }
+            let res = (ssl ? 'https' : 'http') + '://' + host + ':' + port + path;
+            //console.log(res);
+            return res;
         }
 
-        get(api, url, error, success) {
+        get(params, url) {
             throw err.abstractFun('Platform.get');
         }
 
-        post(api, url, data, error, success) {
+        post(params, url, data, type) {
             throw err.abstractFun('Platform.post');
         }
 
-        put(api, url, data, error, success) {
+        put(params, url, data, type) {
             throw err.abstractFun('Platform.put');
         }
 
@@ -195,6 +218,10 @@
 
         restart(last) {
             throw err.abstractFun('Platform.restart');
+        }
+
+        exists(path) {
+            throw err.abstractFun('Platform.exists');
         }
 
         isDirectory(path) {

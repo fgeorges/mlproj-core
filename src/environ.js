@@ -31,12 +31,28 @@
                 path = ctxt.platform.resolve('xproject/mlenvs/@' + name.replace('/', '+'), base);
                 json = { "mlproj": {
                     "format": '0.1',
-                    "import": name.split('/').map(n => n + '.json')
+                    "import": name.split('/').map(n => {
+                        let pjson = ctxt.platform.resolve(n + '.json', 'xproject/mlenvs');
+                        let pjs   = ctxt.platform.resolve(n + '.js',   'xproject/mlenvs');
+                        // return .js only if .json does not exist and .js does exist
+                        return (! ctxt.platform.exists(pjson) && ctxt.platform.exists(pjs))
+                            ? n + '.js'
+                            : n + '.json';
+                    })
                 }};
             }
             else {
-                path = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
-                json = ctxt.platform.json(path);
+                let pjson = ctxt.platform.resolve('xproject/mlenvs/' + name + '.json', base);
+                let pjs   = ctxt.platform.resolve('xproject/mlenvs/' + name + '.js',   base);
+                // use .js only if .json does not exist and .js does exist
+                if ( ! ctxt.platform.exists(pjson) && ctxt.platform.exists(pjs) ) {
+                    path = pjs;
+                    json = require(path)();
+                }
+                else {
+                    path = pjson;
+                    json = ctxt.platform.json(path);
+                }
             }
             let env = new Environ(ctxt, json, path, proj);
             env.name = name;
@@ -80,35 +96,26 @@
             }
         }
 
-        // TODO: The API list should be "compiled" as well (why do it on the fly
-        // and not for the components...?)
+        commands() {
+            return this.module.commands();
+        }
+
+        // TODO: Define the exact type/structure of the command values:
         //
-        api(name, dflt) {
-            // "flatten" the import graph in a single array
-            // most priority at index 0, least priority at the end
-            var imports = [];
-            var flatten = mod => {
-                if ( ! imports.includes(mod) ) {
-                    imports.push(mod);
-                    mod.imports.forEach(i => flatten(i));
-                }
-            };
-            flatten(this.module);
-            // overrides lhs props with those in rhs, if any
-            var collapse = (lhs, rhs) => {
-                if ( rhs ) {
-                    Object.keys(rhs).forEach(k => lhs[k] = rhs[k]);
-                }
-            };
-            // start with the default
-            var res = dflt || DEFAULT_APIS[name];
+        // - function
+        // - string/array of strings
+        // - object with different properties
+        //
+        // Then should we do some normalization here?  Or let the caller do it?
+        //
+        command(name) {
+            return this.module.command(name);
+        }
+
+        api(name) {
+            let res = this._apis[name];
             if ( ! res ) {
                 throw new Error('Unknown API: ' + name);
-            }
-            // walk the flatten import graph
-            while ( imports.length ) {
-                let apis = imports.pop().json.apis;
-                collapse(res, apis && apis[name]);
             }
             return res;
         }
@@ -140,6 +147,21 @@
             return this._servers;
         }
 
+        // ref is either ID or name
+        server(ref) {
+            let res = this.servers().filter(srv => srv.id === ref || srv.name === ref);
+            if ( ! res.length ) {
+                return;
+            }
+            else if ( res.length === 1 ) {
+                return res[0];
+            }
+            else {
+                let list = res.map(srv => 'id:' + srv.id + '/name:' + srv.name).join(', ');
+                throw new Error('More than one server with ID or name "' + ref + '": ' + list);
+            }
+        }
+
         sources() {
             return this._sources;
         }
@@ -160,6 +182,10 @@
                 let list = res.map(src => src.name).join(', ');
                 throw new Error('More than one source with name "' + name + '": ' + list);
             }
+        }
+
+        substitute(val) {
+            return this.module.resolveThing(this, val);
         }
 
         compile(params, force, defaults) {
@@ -183,7 +209,8 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers and source sets (with import priority)
+            // compile databses, servers, source sets, mime types and apis (with
+            // import priority)
             this.module.compile(this);
         }
 
@@ -197,8 +224,8 @@
             const imports = [];
             addImports(this.module, 1);
             let apis = {};
-            ['management', 'admin', 'client', 'xdbc'].forEach(a => {
-                let api = this.api(a, {});
+            ['manage', 'admin', 'client', 'xdbc'].forEach(a => {
+                let api = this._overridenApis[a];
                 if ( Object.keys(api).length ) {
                     apis[a] = api;
                 }
@@ -214,6 +241,7 @@
                     return { name: p, value: this.param(p) };
                 }),
                 apis,
+                this.commands(),
                 imports);
         }
     }
@@ -245,9 +273,18 @@
             if ( this.json.format !== '0.1' ) {
                 throw new Error('Invalid file, `format` not 0.1: ' + this.json.format);
             }
-            this.resolved = JSON.parse(JSON.stringify(this.json));
-            // the params hash, empty by default
-            this._params = this.resolved.params || {};
+
+            // TODO: FIXME: Why serializing then parsing again?  Copy?  This
+            // silently ignore function objects, so not suitabke for our needs!
+            // Why do we want to make a copy in the first place...?  Do we
+            // really access the non-resolved JSON anytime after resolution?
+            //
+            this.resolved = this.json;
+            //this.resolved = JSON.parse(JSON.stringify(this.json));
+
+            // the params and commands hashes, empty by default
+            this._params   = this.resolved.params   || {};
+            this._commands = this.resolved.commands || {};
             // extract defined values from `obj` and put them in `this._params`
             var extract = (obj, props) => {
                 props.forEach(p => {
@@ -273,7 +310,9 @@
                 imports.forEach(i => {
                     let b = this.ctxt.platform.dirname(this.path);
                     let p = this.ctxt.platform.resolve(i, b);
-                    let j = this.ctxt.platform.json(p);
+                    let j = p.endsWith('.js')
+                        ? require(p)()
+                        : this.ctxt.platform.json(p);
                     let m = new Module(this.ctxt, j, p);
                     this.imports.push(m);
                     m.loadImports(this.ctxt);
@@ -313,9 +352,8 @@
             if ( value === undefined ) {
                 var v = this._params[name];
                 if ( name !== '@title' && name !== '@desc' ) {
-                    var i = this.imports.length;
-                    while ( v === undefined && i > 0 ) {
-                        v = this.imports[--i].param(name);
+                    for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
+                        v = this.imports[i].param(name);
                     }
                 }
                 return v;
@@ -323,6 +361,24 @@
             else {
                 this._params[name] = value;
             }
+        }
+
+        commands() {
+            var names = Object.keys(this._commands);
+            this.imports.forEach(i => {
+                i.commands()
+                    .filter(n => ! names.includes(n))
+                    .forEach(n => names.push(n));
+            });
+            return names;
+        }
+
+        command(name) {
+            var cmd = this._commands[name];
+            for ( let i = this.imports.length - 1; cmd === undefined && i >= 0; --i ) {
+                cmd = this.imports[i].command(name);
+            }
+            return cmd;
         }
 
         // `root` can be the root module, or the environ itself
@@ -423,10 +479,11 @@
         // this function sets the _hosts, _databases, _servers, _sources and _mimetypes on it
         compile(root)
         {
-            // start by resolving the param references (TODO: Should be done on
-            // the fly whilst compiling...)
+            // start by resolving the param references (could it be done on the
+            // fly whilst compiling?)
             this.resolve(root);
 
+            // resolve the connection infos
             [ 'host', 'user', 'password' ].forEach(name => {
                 var val = this.param('@' + name);
                 if ( ! val ) {
@@ -457,6 +514,65 @@
             };
             this.compileImpl(cache);
 
+            // compile databases and servers
+            this.compileDbsSrvs(root, cache);
+
+            // instantiate all mime types now
+            root._mimetypes = cache.mimes.map(m => {
+                return new cmp.MimeType(m);
+            });
+
+            // instantiate all sources now
+            let dfltSrc = cache.srcs.find(s => s.name === '@default');
+            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
+            root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
+                return new cmp.SourceSet(s, root, dflt);
+            });
+
+            // compile apis
+            this.compileApis(root, cache);
+        }
+
+        compileApis(root, cache)
+        {
+            // "flatten" the import graph in a single array
+            // most priority at index 0, least priority at the end
+            var imports = [];
+            var flatten = mod => {
+                if ( ! imports.includes(mod) ) {
+                    imports.push(mod);
+                    mod.imports.forEach(i => flatten(i));
+                }
+            };
+            flatten(this);
+            // overrides lhs props with those in rhs, if any
+            var collapse = (lhs, rhs) => {
+                if ( rhs ) {
+                    Object.keys(rhs).forEach(k => lhs[k] = rhs[k]);
+                }
+            };
+            root._overridenApis = {};
+            root._apis          = {};
+            // loop over all known apis
+            Object.keys(DEFAULT_APIS).forEach(name => {
+                // start with nothing
+                root._overridenApis[name] = {};
+                root._apis[name]          = {};
+                // walk the flatten import graph
+                for ( let i = imports.length - 1; i >= 0; --i ) {
+                    let apis = imports[i].json.apis;
+                    collapse(root._overridenApis[name], apis && apis[name]);
+                }
+                Object.keys(DEFAULT_APIS[name]).forEach(p => {
+                    root._apis[name][p] =
+                        root._overridenApis[name][p]
+                        || DEFAULT_APIS[name][p];
+                });
+            });
+        }
+
+        compileDbsSrvs(root, cache)
+        {
             // build the array of database and server objects
             // the order of the database array guarantees there is no broken dependency
             var res = {
@@ -826,18 +942,23 @@
     }
 
     const DEFAULT_APIS = {
-        management: {
-            root : 'manage/v2',
+        manage: {
+            root : '/manage/v2',
+            port : 8002,
+            ssl  : false
+        },
+        rest: {
+            root : '/v1/rest-apis',
             port : 8002,
             ssl  : false
         },
         admin: {
-            root : 'admin/v1',
+            root : '/admin/v1',
             port : 8001,
             ssl  : false
         },
         client: {
-            root : 'v1',
+            root : '/v1',
             port : 8000,
             ssl  : false
         },

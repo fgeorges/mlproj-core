@@ -7,7 +7,7 @@
             "port": "7010"
         },
         "apis": {
-            "management": {
+            "manage": {
                 "root": "manage/v2",
                 "port": 8002,
                 "ssl": false

@@ -29,6 +29,21 @@
             super();
             this.name = name;
         }
+
+        show(display)
+        {
+            display.sysDatabase(this.name);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the database', this.name);
+            const body = new act.DatabaseProps(this).execute(actions.ctxt);
+            // if DB does not exist
+            if ( ! body ) {
+                display.remove(0, 'be created', 'outside', this.name);
+            }
+        }
     }
 
     /*~
@@ -39,14 +54,15 @@
         constructor(json, schema, security, triggers)
         {
             super();
-            this.id       = json.id;
-            this.name     = json.name;
-            this.schema   = schema   === 'self' ? this : schema;
-            this.security = security === 'self' ? this : security;
-            this.triggers = triggers === 'self' ? this : triggers;
-            this.forests  = {};
+            this.id         = json.id;
+            this.name       = json.name;
+            this.properties = json.properties;
+            this.schema     = schema   === 'self' ? this : schema;
+            this.security   = security === 'self' ? this : security;
+            this.triggers   = triggers === 'self' ? this : triggers;
+            this.forests    = {};
             // extract the configured properties
-            this.props    = props.database.parse(json);
+            this.props      = props.database.parse(json);
             // the forests
             var forests = json.forests;
             if ( forests === null || forests === undefined ) {
@@ -120,6 +136,15 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( obj[p] ) {
+                        throw new Error('Explicit property already set on database: name='
+                                        + this.name + ',id=' + this.id + ' - ' + p);
+                    }
+                    obj[p] = this.properties[p];
+                });
+            }
             // enqueue the "create db" action
             actions.add(new act.DatabaseCreate(this, obj));
             display.check(1, 'forests');
@@ -157,12 +182,19 @@
             display.check(1, 'properties');
             Object.keys(this.props).forEach(p => {
                 let res = this.props[p];
-                // TODO: Rather fix the "_type" setting mechanism, AKA the root cause...
+                // TODO: Rather fix the "_type" setting mechanism, AKA the "root cause"...
                 if ( ! res.prop._type ) {
                     res.prop._type = 'database';
                 }
                 res.update(actions, display, body, this);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( this.properties[p] !== actual[p] ) {
+                        actions.add(new act.DatabaseUpdate(this, p, this.properties[p]));
+                    }
+                });
+            }
         }
 
         updateDb(actions, display, db, body, prop, dflt)
@@ -233,20 +265,50 @@
      */
     class Server extends Component
     {
+        /* TODO: If no modules DB and no root, and if there is a source set
+         * attached to this server, use its directory as the root of the server,
+         * to have the modules on disk.  When attaching source sets to servers
+         * and databases is supported...
+         */
         constructor(json, content, modules)
         {
             super();
-            this.group   = json.group || 'Default';
-            this.id      = json.id;
-            this.name    = json.name;
-            this.content = content;
-            this.modules = modules;
+            this.type       = json.type;
+            this.group      = json.group || 'Default';
+            this.id         = json.id;
+            this.name       = json.name;
+            this.properties = json.properties;
+            this.content    = content;
+            this.modules    = modules;
             // extract the configured properties
-            this.props   = props.server.parse(json);
-            // TODO: If no modules DB and no root, and if there is a source set
-            // attached to this server, use its directory as the root of the
-            // server, to have the modules on disk.  When attaching source sets
-            // to servers and databases is supported...
+            this.props      = props.server.parse(json);
+            // some validation
+            const error = msg => {
+                throw new Error(msg + ': ' + this.type + ' - ' + this.id + '/' + this.name);
+            };
+            if ( ! content ) {
+                error('App server with no content database');
+            }
+            // validation specific to REST servers
+            if ( json.type === 'rest' ) {
+                this.rest = json['rest-config'];
+                if ( ! modules ) {
+                    error('REST server has no modules database');
+                }
+                if ( json.root ) {
+                    error('REST server has root (' + json.root + ')');
+                }
+                if ( json.rewriter ) {
+                    error('REST server has rewriter (' + json.rewriter + ')');
+                }
+                if ( json.properties && json.properties['rewrite-resolves-globally'] ) {
+                    error('REST server has rewrite-resolves-globally ('
+                          + json.properties['rewrite-resolves-globally'] + ')');
+                }
+            }
+            else if ( json['rest-config'] ) {
+                error('REST config on a non-REST server');
+            }
         }
 
         show(display)
@@ -254,6 +316,7 @@
             display.server(
                 this.name,
                 this.id,
+                this.type,
                 this.group,
                 this.content,
                 this.modules,
@@ -262,34 +325,128 @@
 
         setup(actions, display)
         {
-            display.check(0, 'the ' + this.props['server-type'].value + ' server', this.name);
+            display.check(0, 'the ' + this.type + ' server', this.name);
             const body = new act.ServerProps(this).execute(actions.ctxt);
             // if AS does not exist yet
             if ( ! body ) {
-                this.create(actions, display);
+                if ( this.type === 'http' ) {
+                    this.createHttp(actions, display);
+                }
+                else {
+                    this.createRest(actions, display);
+                }
             }
             // if AS already exists
             else {
-                this.update(actions, display, body);
+                if ( this.type === 'rest' ) {
+                    this.updateRest(actions, display, body);
+                }
+                this.updateHttp(actions, display, body);
             }
         }
 
-        create(actions, display)
+        createAddProps(obj)
         {
-            display.add(0, 'create', 'server', this.name);
-            var obj = {
-                "server-name":      this.name,
-                "content-database": this.content.name
-            };
-            this.modules && ( obj['modules-database'] = this.modules.name );
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( obj[p] ) {
+                        throw new Error('Explicit property already set on server: name='
+                                        + this.name + ',id=' + this.id + ' - ' + p);
+                    }
+                    obj[p] = this.properties[p];
+                });
+            }
+        }
+
+        createHttp(actions, display)
+        {
+            display.add(0, 'create', 'http server', this.name);
+            // the base server object
+            var obj = {
+                "server-name":      this.name,
+                "server-type":      this.type,
+                "content-database": this.content.name
+            };
+            // its modules DB
+            this.modules && ( obj['modules-database'] = this.modules.name );
+            // its properties
+            this.createAddProps(obj);
+            // enqueue the "create server" action
             actions.add(new act.ServerCreate(this, obj));
         }
 
-        update(actions, display, actual)
+        createRest(actions, display)
         {
+            display.add(0, 'create', 'rest server', this.name);
+            let obj = {
+                "name":             this.name,
+                "group":            this.group,
+                "database":         this.content.name,
+                "modules-database": this.modules.name
+            };
+            this.props.port.create(obj);
+            if ( this.rest ) {
+                if ( this.rest['error-format'] ) {
+                    obj['error-format'] = this.rest['error-format'];
+                }
+                if ( this.rest['xdbc'] ) {
+                    obj['xdbc-enabled'] = this.rest['xdbc'];
+                }
+            }
+            // enqueue the "create rest server" action
+            actions.add(new act.ServerRestCreate(this, { "rest-api": obj }));
+            // its other properties
+            let extra = {};
+            this.createAddProps(extra);
+            // port is handled at creation
+            delete extra['port'];
+            delete extra['server-type'];
+            if ( Object.keys(extra).length ) {
+                // enqueue the "update server" action
+                actions.add(new act.ServerUpdate(this, extra));
+            }
+            if ( this.rest ) {
+                let keys = Object.keys(this.rest).filter(k => {
+                    return k !== 'error-format' && k !== 'xdbc';
+                });
+                if ( keys.length ) {
+                    const map = {
+                        "debug":            'debug',
+                        "tranform-all":     'document-transform-all',
+                        "tranform-out":     'document-transform-out',
+                        "update-policy":    'update-policy',
+                        "validate-options": 'validate-options',
+                        "validate-queries": 'validate-queries'
+                    };
+                    let props = {};
+                    keys.forEach(k => {
+                        let p = map[k];
+                        if ( ! p ) {
+                            throw new Error('Unknown property on server.rest: ' + k);
+                        }
+                        props[p] = this.rest[k];
+                    });
+                    // enqueue the "update rest server props" action
+                    actions.add(new act.ServerRestUpdate(this, props, this.props.port.value));
+                }
+            }
+        }
+
+        // TODO: It should not be hard to make it possible to add more and more
+        // property/value pairs to the server update action, and send them all
+        // in one request.  That would have an impact on displaying the action
+        // though, as we would probably want to keep multiple lines for multiple
+        // properties, as it is clearer.
+        //
+        updateHttp(actions, display, actual)
+        {
+            if ( 'http' !== actual['server-type'] ) {
+                throw new Error('Server type cannot change, from '
+                                + actual['server-type'] + ' to ' + this.type);
+            }
             // the content and modules databases
             if ( this.content.name !== actual['content-database'] ) {
                 display.add(0, 'update', 'content-database');
@@ -305,9 +462,90 @@
 
             // check properties
             display.check(1, 'properties');
-            Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, display, actual, this);
-            });
+            Object.keys(this.props)
+                .filter(p => p !== 'server-type')
+                .forEach(p => {
+                    this.props[p].update(actions, display, actual, this);
+                });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( this.properties[p] !== actual[p] ) {
+                        actions.add(new act.ServerUpdate(this, p, this.properties[p]));
+                    }
+                });
+            }
+        }
+
+        /*~
+         * For a REST server, check REST-specific config items (its "creation
+         * properties", the values passed to the endpoint when creating the REST
+         * server), like `xdbc-enabled`.  These properties are to be retrieved
+         * from `:8002/v1/rest-apis/[name]`.
+         *
+         * There seems to be no way to change the value of such a creation
+         * property (they are used at creation only).
+         *
+         * In addition, there are properties specific to REST servers (not for
+         * HTTP), like `debug` and `update-policy`.  These properties are to be
+         * retrieved from `:[port]/v1/config/properties`.
+         *
+         * 1) retrieve creation properties, if anything differs, -> error
+         * 2) retrieve properties, and update them, as for any component
+         */
+        updateRest(actions, display, actual)
+        {
+            // 1) check creation properties for any difference
+            const check = (name, old, current) => {
+                if ( old !== current ) {
+                    throw new Error('Cannot update REST server ' + name + ', from ' + old + ' to ' + current);
+                }
+            };
+            const bool = val => {
+                var type = typeof val;
+                if ( 'boolean' === type ) {
+                    return val;
+                }
+                else if ( 'string' === type ) {
+                    if ( 'false' === val ) {
+                        return false;
+                    }
+                    else if ( 'true' === val ) {
+                        return true;
+                    }
+                    else {
+                        throw new Error('Invalid boolean value: ' + val);
+                    }
+                }
+                else {
+                    throw new Error('Boolean value neither a string or a boolean: ' + type);
+                }
+            };
+            const cprops = new act.ServerRestCreationProps(this).execute(actions.ctxt);
+            check('name',             cprops.name,                  this.name);
+            check('group',            cprops.group,                 this.group);
+            check('database',         cprops.database,              this.content && this.content.name);
+            check('modules-database', cprops['modules-database'],   this.modules && this.modules.name);
+            check('port',             parseInt(cprops.port, 10),    this.props.port && this.props.port.value);
+            check('error-format',     cprops['error-format'],       this.rest && this.rest['error-format']);
+            check('xdbc-enabled',     bool(cprops['xdbc-enabled']), bool(this.rest && this.rest.xdbc));
+
+            // 2) update all properties with different value
+            let obj = {};
+            const update = (name, old, current, dflt) => {
+                if ( old !== (current === undefined ? dflt : current) ) {
+                    obj[name] = current;
+                }
+            };
+            const props = new act.ServerRestProps(this, this.props.port.value).execute(actions.ctxt);
+            update('debug',                  bool(props['debug']),                  this.rest && this.rest['debug'],               false);
+            update('document-transform-all', bool(props['document-transform-all']), this.rest && this.rest['transform-all'],       true);
+            update('document-transform-out', props['document-transform-out'],       this.rest && this.rest['transform-out'] || '', '');
+            update('update-policy',          props['update-policy'],                this.rest && this.rest['update-policy'],       'merge-metadata');
+            update('validate-options',       bool(props['validate-options']),       this.rest && this.rest['validate-options'],    true);
+            update('validate-queries',       bool(props['validate-queries']),       this.rest && this.rest['validate-queries'],    false);
+            if ( Object.keys(obj).length ) {
+                actions.add(new act.ServerRestUpdate(this, obj, this.props.port.value));
+            }
         }
     }
 
@@ -316,13 +554,47 @@
      */
     class SourceSet extends Component
     {
-        constructor(json, dflt)
+        constructor(json, environ, dflt)
         {
             super();
-            this.dflt  = dflt;
-            this.name  = json && json.name;
+            this.dflt    = dflt;
+            this.name    = json && json.name;
             // extract the configured properties
-            this.props = json ? props.source.parse(json) : {};
+            this.props   = json ? props.source.parse(json) : {};
+            this.type    = this.props.type && this.props.type.value;
+            // resolve targets (dbs and srvs)
+            // TODO: Provide the other way around, `source` on dbs and srvs?
+            this.targets = [];
+            this.environ = environ;
+            if ( this.props.target ) {
+                if ( ! environ ) {
+                    const msg = 'Source set has target(s) but no environ provided for resolving: ';
+                    throw new Error(msg + this.name);
+                }
+                this.props.target.value.forEach(t => {
+                    this.targets.push(environ.database(t) || environ.server(t));
+                });
+            }
+        }
+
+        restTarget()
+        {
+            if ( this.type === 'rest-src' ) {
+                let rests = this.targets.filter(t => {
+                    return t instanceof Server && t.type === 'rest';
+                });
+                if ( ! rests.length ) {
+                    rests = root.servers().filter(s => s.type === 'rest');
+                }
+                if ( rests.length > 1 ) {
+                    throw new Error('More than one REST servers for resolving the REST source set '
+                                    + this.name + ': ' + rests.map(s => s.id + '/' + s.name));
+                }
+                if ( ! rests.length ) {
+                    throw new Error('No REST server for resolving the REST source set: ' + this.name);
+                }
+                return rests[0];
+            }
         }
 
         show(display)
@@ -347,10 +619,51 @@
             }
         }
 
-        load(actions, db, display)
+        // TODO: Resolve the `db` here, to take targets into account?  Or at least
+        // take them into account where `db` is resolved (in LoadCommand...)
+        //
+        load(actions, db, srv, display)
         {
-            const pf = actions.ctxt.platform;
+            let   matches = [];
+            const flush = () => {
+                actions.add(
+                    new act.MultiDocInsert(db, matches));
+                // empty the array
+                matches.splice(0);
+            };
+            const onMatch = (path, uri) => {
+                if ( this.type === 'rest-src' && (
+                         uri.startsWith('/services/')
+                      || uri.startsWith('/transforms/') ) ) {
+                    let kind = 'resources';
+                    let file = uri.slice(10);
+                    if ( uri.startsWith('/transforms/') ) {
+                        kind = 'transforms';
+                        file = uri.slice(12);
+                    }
+                    let [ name, ext ] = file.split('.');
+                    let type = ext === 'xqy'
+                        ? 'application/xquery'
+                        : 'application/javascript';
+                    let port = (srv || this.restTarget()).props.port.value;
+                    actions.add(
+                        new act.ServerRestDeploy(kind, name, path, type, port));
+                }
+                else {
+                    matches.push({ uri: uri, path: path });
+                    if ( matches.length >= INSERT_LENGTH ) {
+                        flush();
+                    }
+                }
+            };
+            this.walk(actions.ctxt, display, onMatch);
+            if ( matches.length ) {
+                flush();
+            }
+        }
 
+        walk(ctxt, display, onMatch)
+        {
             // from one array of strings, return two arrays:
             // - first one with all strings ending with '/', removed
             // - second one with all strings not ending with '/'
@@ -381,6 +694,15 @@
                 patterns.notdir['mm_' + name] = res[1].map(p => new match.Minimatch(p, options));
             };
 
+            // Both `dir` and `notdir` are pupolated with the following properties:
+            //
+            //     include: [...], mm_include: [...],
+            //     exclude: [...], mm_exclude: [...],
+            //     garbage: [...], mm_garbage: [...]
+            //
+            // Properties `include`, `exclude` and `garbage` contain the original
+            // string patterns, the corresponding `mm_*` are the minimatch compiled
+            // patterns.
             let patterns = {
                 dir    : {},
                 notdir : {}
@@ -390,18 +712,14 @@
             compile('exclude');
             compile('garbage');
 
-            const dir   = this.prop('dir');
-            const path  = pf.resolve(dir);
-            let matches = [];
-            this.walkDir(matches, '', dir, path, path, patterns, actions, db, display);
-            if ( matches.length ) {
-                this.flush(matches, actions, db);
-            }
+            const dir  = this.prop('dir');
+            const path = ctxt.platform.resolve(dir);
+            this.walkDir(onMatch, '', dir, path, path, patterns, ctxt, display);
         }
 
-        walkDir(matches, path, dir, full, base, patterns, actions, db, display)
+        walkDir(onMatch, path, dir, full, base, patterns, ctxt, display)
         {
-            const pf = actions.ctxt.platform;
+            const pf = ctxt.platform;
 
             const match = (path, compiled, ifNone, msg) => {
                 if ( ! compiled.length ) {
@@ -410,7 +728,7 @@
                 for ( let i = 0; i < compiled.length; ++i ) {
                     let c = compiled[i];
                     if ( c.match(path) ) {
-                        if ( actions.ctxt.verbose ) {
+                        if ( ctxt.verbose ) {
                             pf.warn('[' + pf.bold('verbose') + '] ' + msg
                                     + ' ' + path + ', matching ' + c.pattern);
                         }
@@ -443,7 +761,7 @@
                     if ( resp ) {
                         if ( child.isdir ) {
                             let d = dir + '/' + child.name;
-                            this.walkDir(matches, p, d, desc.full, base, patterns, actions, db, display);
+                            this.walkDir(onMatch, p, d, desc.full, base, patterns, ctxt, display);
                         }
                         else {
                             let uri = resp.uri || resp.path;
@@ -455,7 +773,7 @@
                             if ( ! full ) {
                                 throw new Error('Impossible to compute full path for ' + resp);
                             }
-                            this.addMatch(matches, actions, db, uri, full);
+                            onMatch(full, uri);
                         }
                     }
                 }
@@ -466,20 +784,6 @@
             if ( desc.isIncluded && ! desc.isExcluded ) {
                 return desc;
             }
-        }
-
-        addMatch(matches, actions, db, uri, full) {
-            matches.push({ uri: uri, path: full });
-            if ( matches.length >= INSERT_LENGTH ) {
-                this.flush(matches, actions, db);
-            }
-        }
-
-        flush(matches, actions, db) {
-            actions.add(
-                new act.MultiDocInsert(db, matches));
-            // empty the array
-            matches.splice(0);
         }
     }
 
@@ -509,7 +813,7 @@
             this.doc = doc;
         }
 
-        load(actions, db, display)
+        load(actions, db, srv, display)
         {
             display.check(0, 'the file', this.doc);
             actions.add(
