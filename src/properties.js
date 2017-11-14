@@ -436,7 +436,7 @@
                 // return { "prefix": p, "namespace-uri": value[p] };
                 return {
                     "prefix"        : new Result(prefix, p),
-                    "namespace-uri" : new Result(prefix, value[p])
+                    "namespace-uri" : new Result(uri, value[p])
                 };
             });
             result[this.name] = new Result(this, v);
