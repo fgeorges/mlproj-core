@@ -32,6 +32,10 @@
             // ignore
         }
 
+        exists(path) {
+            return fs.existsSync(path);
+        }
+
         read(path) {
             try {
                 return fs.readFileSync(path, 'utf8');

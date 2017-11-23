@@ -10,7 +10,7 @@
     /*~
      * APIs object for invoking user commands.
      *
-     * The command argument is the `UserCommand` object, holding the context,
+     * The command argument is the `RunCommand` object, holding the context,
      * environ and command arguments.
      */
     class Apis

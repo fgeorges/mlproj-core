@@ -25,7 +25,8 @@ t.test('Parsing achel (base) - parameters and typical topology', ass => {
     ass.equal('The @code param', env.param('@code'),  'simple-achel');
     // the source sets
     const srcs = env.sources();
-    ass.equal('There must be no source set', srcs.length, 0);
+    ass.equal('There must be 1 source set', srcs.length, 1);
+    ass.source('The src source', srcs[0], 'src', { dir: 'src' });
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
@@ -36,7 +37,8 @@ t.test('Parsing achel (base) - parameters and typical topology', ass => {
     ass.server('The server', srvs[0], 'app', 'simple-achel', 'Default',
                'simple-achel-content', null, {
                    "server-type": 'http',
-                   port:          6010
+                   port:          6010,
+                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
                });
 });
 
@@ -51,7 +53,8 @@ t.test('Parsing achel (dev) - inheritence and connection info', ass => {
     ass.equal('The @password param', env.param('@password'), 'admin');
     // the source sets
     const srcs = env.sources();
-    ass.equal('There must be no source set', srcs.length, 0);
+    ass.equal('There must be 1 source set', srcs.length, 1);
+    ass.source('The src source', srcs[0], 'src', { dir: 'src' });
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
@@ -62,7 +65,8 @@ t.test('Parsing achel (dev) - inheritence and connection info', ass => {
     ass.server('The server', srvs[0], 'app', 'simple-achel', 'Default',
                'simple-achel-content', null, {
                    "server-type": 'http',
-                   port:          6010
+                   port:          6010,
+                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
                });
 });
 
@@ -76,7 +80,8 @@ t.test('Parsing achel (prod) - inheritence and connection info', ass => {
     ass.equal('The @user param', env.param('@user'), 'admin');
     // the source sets
     const srcs = env.sources();
-    ass.equal('There must be no source set', srcs.length, 0);
+    ass.equal('There must be 1 source set', srcs.length, 1);
+    ass.source('The src source', srcs[0], 'src', { dir: 'src' });
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 2);

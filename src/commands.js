@@ -95,14 +95,43 @@
     {
         prepare() {
             // the action list
-            var actions = new act.ActionList(this.ctxt);
-            // add all components
-            var dbs   = this.environ.databases();
-            var srvs  = this.environ.servers();
-            var mimes = this.environ.mimetypes();
-            for ( let comp of dbs.concat(srvs, mimes) ) {
-                comp.setup(actions, this.ctxt.display);
+            let actions = new act.ActionList(this.ctxt);
+            // setup a specific component?
+            let what  = this.args.what;
+            let comps = [];
+            if ( what === 'databases' ) {
+                comps = this.environ.databases();
             }
+            else if ( what === 'servers' ) {
+                comps = this.environ.servers();
+            }
+            else if ( what === 'mimetypes' ) {
+                comps = this.environ.mimetypes();
+            }
+            else if ( what ) {
+                let db  = this.environ.database(what);
+                let srv = this.environ.server(what);
+                // make sure there is exactly one
+                if ( ! db && ! srv ) {
+                    throw new Error('No such component: ' + what);
+                }
+                if ( db && srv ) {
+                    throw new Error('More than one such component: ' + what);
+                }
+                // setup the one
+                comps.push(db || srv);
+            }
+            else {
+                // add all components
+                var dbs   = this.environ.databases();
+                var srvs  = this.environ.servers();
+                var mimes = this.environ.mimetypes();
+                comps = dbs.concat(srvs, mimes);
+            }
+            // do it
+            comps.forEach(comp => {
+                comp.setup(actions, this.ctxt.display);
+            });
             return actions;
         }
     }
@@ -123,11 +152,11 @@
 
             // utility: resolve the target db from args
             const target = (args, isDeploy, src) => {
-                var as    = args.server;
-                var db    = args.database;
-                var force = args.forceDb;
+                var as     = args.server;
+                var db     = args.database;
+                var system = args.systemDb;
                 // if no explicit target, try...
-                if ( ! as && ! db && ! force ) {
+                if ( ! as && ! db && ! system ) {
                     // ...source target(s)
                     if ( src.targets.length > 1 ) {
                         throw new Error('Several targets attached to the source set: ' + src.name);
@@ -168,8 +197,8 @@
                     }
                 }
                 // if more than one explicit
-                if ( (as && db) || (as && force) || (db && force) ) {
-                    throw new Error('Both target options --db and --as provided');
+                if ( (as && db) || (as && system) || (db && system) ) {
+                    throw new Error('More than one option provided for --as, --db and --sys');
                 }
                 // resolve from server if set
                 else if ( srv ) {
@@ -191,7 +220,7 @@
                 }
                 // force the db name, e.g. for system databases
                 else {
-                    return new cmp.SysDatabase(force);
+                    return new cmp.SysDatabase(system);
                 }
             };
 
@@ -261,22 +290,31 @@
     }
 
     /*~
-     * User-provided command.
+     * Run user command.
      */
-    class UserCommand extends Command
+    class RunCommand extends Command
     {
         prepare() {
-            var pf      = this.ctxt.platform;
-            var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Apply the user command: ' + this.name, ctxt => {
-                let cmd = this.environ.command(this.name);
-                if ( ! cmd ) {
-                    throw new Error('Unknown user command: ' + this.name);
-                }
-                let impl = this.getImplem(cmd);
-                let apis = new api.Apis(this);
-                impl.call(this, apis, this.ctxt.environ, this.ctxt);
-            }));
+            let actions = new act.ActionList(this.ctxt);
+            let name    = this.args.cmd;
+            if ( name ) {
+                actions.add(new act.FunAction('Apply the user command: ' + name, ctxt => {
+                    let cmd = this.environ.command(name);
+                    if ( ! cmd ) {
+                        throw new Error('Unknown user command: ' + name);
+                    }
+                    let impl = this.getImplem(cmd);
+                    let apis = new api.Apis(this);
+                    impl.call(this, apis, this.ctxt.environ, this.ctxt);
+                }));
+            }
+            else {
+                actions.add(new act.FunAction('List user commands', ctxt => {
+                    this.environ.commands().forEach(c => {
+                        ctxt.platform.log('- ' + c);
+                    });
+                }));
+            }
             return actions;
         }
 
@@ -408,7 +446,7 @@
         SetupCommand  : SetupCommand,
         LoadCommand   : LoadCommand,
         DeployCommand : DeployCommand,
-        UserCommand   : UserCommand
+        RunCommand    : RunCommand
     }
 }
 )();

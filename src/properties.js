@@ -347,7 +347,14 @@
             all.forEach(one => result[this.name].value.push(one));
         }
 
+        // undefined compares equal to the empty array
         compare(lhs, rhs) {
+            if ( lhs === undefined ) {
+                lhs = [];
+            }
+            if ( rhs === undefined ) {
+                rhs = [];
+            }
             if ( ! Array.isArray(lhs) ) {
                 throw new Error('lhs is not an array');
             }
@@ -403,6 +410,71 @@
 
         type(type) {
             this.prop.type(type);
+        }
+    }
+
+    /*~
+     * An object, to represent an array of 2 properties (as key and value).
+     */
+    class CouplesAsMap extends ConfigItem
+    {
+        constructor(name, label, key, value) {
+            super();
+            this.name    = name;
+            this.label   = label;
+            this.keyProp = key;
+            this.valProp = value;
+        }
+
+        handle(result, value, key) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const prefix = new String('prefix',        'namespace prefix');
+            const uri    = new String('namespace-uri', 'namespace uri');
+            let v = Object.keys(value).map(p => {
+                // return { "prefix": p, "namespace-uri": value[p] };
+                return {
+                    "prefix"        : new Result(prefix, p),
+                    "namespace-uri" : new Result(uri, value[p])
+                };
+            });
+            result[this.name] = new Result(this, v);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined ) {
+                lhs = [];
+            }
+            if ( rhs === undefined ) {
+                rhs = [];
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            let lhs_obj = {};
+            let rhs_obj = {};
+            lhs.forEach(item => lhs_obj[item.prefix] = item["namespace-uri"]);
+            rhs.forEach(item => rhs_obj[item.prefix] = item["namespace-uri"]);
+            let lhs_keys = Object.keys(lhs_obj).sort();
+            let rhs_keys = Object.keys(rhs_obj).sort();
+            if ( lhs_keys.length !== rhs_keys.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs_keys.length; ++i ) {
+                let key = lhs_keys[i];
+                if ( key !== rhs_keys[i] || lhs_obj[key] !== rhs_obj[key] ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
         }
     }
 
@@ -589,11 +661,12 @@
      * The database properties and config format.
      */
     var database = new ConfigObject('database')
-        .add('compose',  false, new Ignore())
-        .add('comment',  false, new Ignore())
-        .add('id',       false, new Ignore())
-        .add('name',     true,  new Ignore())
-        .add('forests',  false, new Ignore())
+        .add('compose',    false, new Ignore())
+        .add('comment',    false, new Ignore())
+        .add('id',         false, new Ignore())
+        .add('name',       true,  new Ignore())
+        .add('properties', false, new Ignore())
+        .add('forests',    false, new Ignore())
         // .add('schema',   false, new Database('schema-database'))
         // .add('security', false, new Database('security-database'))
         // .add('triggers', false, new Database('triggers-database'))
@@ -601,9 +674,10 @@
         .add('security', false, new Ignore())
         .add('triggers', false, new Ignore())
         .add('indexes',  false, new ConfigObject(/*'db.indexes'*/)
+             .add('namespaces', false, new CouplesAsMap('path-namespace', 'path namespaces', 'prefix', 'namespace-uri'))
              .add('ranges', false, new MultiArray()
                   .add(item => item.path, new ObjectArray('range-path-index', 'path range index', rangeBase()
-                       .add('path',      true,  new String('path-expression', 'path'))))
+                       .add('path',      true,  new Multiplexer(new String('path-expression', 'path')))))
                   .add(item => item.parent, new ObjectArray('range-element-attribute-index', 'Attribute range index', rangeBase()
                        .add('name',      true,  new Multiplexer(new String('localname', 'name')))
                        .add('namespace', false, new String('namespace-uri', 'ns'))
@@ -645,7 +719,7 @@
         // .add('modules',  false, new Database('modules-database'))
         .add('content',  true,  new Ignore())
         .add('modules',  false, new Ignore())
-        .add('type',     true,  new    Enum('server-type',   'type', [ 'http', 'rest' ]).freeze())
+        .add('type',     true,  new    Enum('server-type',   'type', [ 'http', 'rest', 'xdbc' ]).freeze())
         .add('port',     true,  new Integer('port',          'port'))
         .add('root',     false, new  String('root',          'root'))
         .add('rewriter', false, new  String('url-rewriter',  'url rewriter'))
@@ -679,15 +753,18 @@
      * The source properties and config format.
      */
     var source = new ConfigObject('source')
-        .add('compose',  false, new Ignore())
-        .add('comment',  false, new Ignore())
-        .add('name',     true,  new Ignore())
-        .add('dir',      false, new     String('dir',     'directory'))
-        .add('type',     false, new       Enum('type',    'type',                      [ 'rest-src' ]))
-        .add('garbage',  false, new StringList('garbage', 'garbage patterns',          /\s*,\s*/))
-        .add('include',  false, new StringList('include', 'include patterns',          /\s*,\s*/))
-        .add('exclude',  false, new StringList('exclude', 'exclude patterns',          /\s*,\s*/))
-        .add('target',   false, new StringList('target',  'target database or server', /\s*,\s*/));
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new Ignore())
+        .add('filter',      false, new Ignore())
+        .add('dir',         false, new     String('dir',         'directory'))
+        .add('type',        false, new       Enum('type',        'type',                      [ 'plain', 'rest-src' ]))
+        .add('garbage',     false, new StringList('garbage',     'garbage patterns',          /\s*,\s*/))
+        .add('include',     false, new StringList('include',     'include patterns',          /\s*,\s*/))
+        .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
+        .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
+        .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
+        .add('permissions', false, new Ignore());
 
     /*~
      * The mime properties and config format.

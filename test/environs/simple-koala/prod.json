@@ -1,0 +1,66 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "code": "simple-koala",
+        "title": "Example with all app server types: HTTP, REST, Webdav, XDBC and ODBC.",
+        "connect": {
+            "host": "ml9ea3",
+            "user": "admin",
+            "password": "admin"
+        },
+        "params": {
+            "port-base": "711"
+        },
+        "sources": [{
+            "name": "plain",
+            "dir":  "src"
+        }, {
+            "name": "rest",
+            "dir":  "rest",
+            "type": "rest-src"
+        }],
+        "databases": [{
+            "id":   "content",
+            "name": "@{code}-content"
+        }, {
+            "id":   "modules",
+            "name": "@{code}-modules"
+        }],
+        "servers": [{
+            "id":   "http",
+            "name": "@{code}-http",
+            "type": "http",
+            "port": "${port-base}1",
+            "content": {
+                "idref": "content"
+            },
+            "modules": {
+                "idref": "modules"
+            },
+            "root": "/"
+        }, {
+            "id":   "rest",
+            "name": "@{code}-rest",
+            "type": "rest",
+            "port": "${port-base}2",
+            "content": {
+                "idref": "content"
+            },
+            "modules": {
+                "idref": "modules"
+            }
+        }, {
+            "id":   "xdbc",
+            "name": "@{code}-xdbc",
+            "type": "xdbc",
+            "port": "${port-base}3",
+            "content": {
+                "idref": "content"
+            },
+            "modules": {
+                "idref": "modules"
+            },
+            "root": "/"
+        }]
+    }
+}

@@ -158,12 +158,12 @@
             }
         }
 
-        sources() {
-            return this._sources;
-        }
-
         mimetypes() {
             return this._mimetypes;
+        }
+
+        sources() {
+            return this._sources;
         }
 
         source(name) {
@@ -270,17 +270,9 @@
                 throw new Error('Invalid file, `format` not 0.1: ' + this.json.format);
             }
 
-            // TODO: FIXME: Why serializing then parsing again?  Copy?  This
-            // silently ignore function objects, so not suitabke for our needs!
-            // Why do we want to make a copy in the first place...?  Do we
-            // really access the non-resolved JSON anytime after resolution?
-            //
-            this.resolved = this.json;
-            //this.resolved = JSON.parse(JSON.stringify(this.json));
-
             // the params and commands hashes, empty by default
-            this._params   = this.resolved.params   || {};
-            this._commands = this.resolved.commands || {};
+            this._params   = this.json.params   || {};
+            this._commands = this.json.commands || {};
             // extract defined values from `obj` and put them in `this._params`
             var extract = (obj, props) => {
                 props.forEach(p => {
@@ -290,9 +282,9 @@
                     }
                 });
             };
-            extract(this.resolved, ['code', 'title', 'desc']);
-            if ( this.resolved.connect ) {
-                extract(this.resolved.connect, ['host', 'user', 'password']);
+            extract(this.json, ['code', 'title', 'desc']);
+            if ( this.json.connect ) {
+                extract(this.json.connect, ['host', 'user', 'password']);
             }
         }
 
@@ -306,6 +298,8 @@
                 imports.forEach(i => {
                     let b = this.ctxt.platform.dirname(this.path);
                     let p = this.ctxt.platform.resolve(i, b);
+                    // TODO: Catch errors from require() and json() to display a
+                    // proper message (esp. with the correct path to the file...)
                     let j = p.endsWith('.js')
                         ? require(p)()
                         : this.ctxt.platform.json(p);
@@ -316,8 +310,22 @@
             }
         }
 
+        source(name) {
+            let res = this._sources.filter(src => src.name === name);
+            if ( ! res.length ) {
+                return;
+            }
+            else if ( res.length === 1 ) {
+                return res[0];
+            }
+            else {
+                let list = res.map(src => src.name).join(', ');
+                throw new Error('More than one source with name "' + name + '": ' + list);
+            }
+        }
+
         configs() {
-            let names = this.resolved.config ? Object.keys(this.resolved.config) : [];
+            let names = this.json.config ? Object.keys(this.json.config) : [];
             for ( let i = this.imports.length - 1; i >= 0; --i ) {
                 this.imports[i].configs()
                     .filter(n => ! names.includes(n))
@@ -327,7 +335,7 @@
         }
 
         config(name) {
-            let v = this.resolved.config && this.resolved.config[name];
+            let v = this.json.config && this.json.config[name];
             for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
                 v = this.imports[i].config(name);
             }
@@ -379,14 +387,11 @@
 
         // `root` can be the root module, or the environ itself
         //
-        // TODO: Instead of using `this.resolved`, resolve $* and @* references
-        // on the fly, when "compiling" params and databses, servers and source
-        // sets.
         resolve(root) {
-            this.resolveObject(root, this.resolved.params, true);
-            this.resolveArray(root, this.resolved.databases);
-            this.resolveArray(root, this.resolved.servers);
-            this.resolveArray(root, this.resolved.sources);
+            this.resolveObject(root, this.json.params, true);
+            this.resolveArray(root, this.json.databases);
+            this.resolveArray(root, this.json.servers);
+            this.resolveArray(root, this.json.sources);
             this.imports.forEach(i => i.resolve(root));
         }
 
@@ -512,9 +517,6 @@
             };
             this.compileImpl(cache);
 
-            // compile databases and servers
-            this.compileDbsSrvs(root, cache);
-
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
@@ -526,6 +528,9 @@
             root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
                 return new cmp.SourceSet(s, root, dflt);
             });
+
+            // compile databases and servers
+            this.compileDbsSrvs(root, cache, root.source('src'));
 
             // compile apis
             this.compileApis(root, cache);
@@ -569,7 +574,7 @@
             });
         }
 
-        compileDbsSrvs(root, cache)
+        compileDbsSrvs(root, cache, src)
         {
             // build the array of database and server objects
             // the order of the database array guarantees there is no broken dependency
@@ -817,7 +822,7 @@
                         return res.names[db.sysref] = new cmp.SysDatabase(db.sysref);
                     }
                 };
-                return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules));
+                return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules), src, this.ctxt.platform);
             });
         }
 
@@ -826,14 +831,14 @@
         {
             // small helper to format info and error messages
             var _ = (c) => {
-                return 'id=' + c.id + '|name=' + c.name;
+                return 'id=' + (c.id || '') + '|name=' + (c.name || '');
             };
 
             // the common implementation for databases and servers
             var impl = (comp, cache, ids, names, kind) => {
                 // at least one of ID and name mandatory
                 if ( ! comp.name && ! comp.id ) {
-                    throw new Error('No ID and no name on ' + kind + ' in ' + cache.href);
+                    throw new Error('No ID and no name on ' + kind.kind + ' in ' + cache.href);
                 }
                 // default value for compose
                 if ( ! comp.compose ) {
@@ -846,12 +851,12 @@
                 // if it does, perform the "compose" action..
                 if ( derived ) {
                     if ( derived.compose !== comp.compose ) {
-                        throw new Error('Different compose actions for ' + kind + 's: derived:'
+                        throw new Error('Different compose actions for ' + kind.kind + 's: derived:'
                                         + _(derived) + '|compose=' + derived.compose + ' and base:'
                                         + _(comp) + '|compose=' + comp.compose);
                     }
                     else if ( derived.compose === 'merge' ) {
-                        this.ctxt.display.info('Merge ' + kind + 's derived:' + _(derived) + ' and base:' + _(comp));
+                        this.ctxt.display.info('Merge ' + kind.kind + 's derived:' + _(derived) + ' and base:' + _(comp));
                         var overriden = Object.keys(derived);
                         for ( var p in comp ) {
                             if ( overriden.indexOf(p) === -1 ) {
@@ -863,13 +868,16 @@
                                     names[derived.name] = derived;
                                 }
                             }
+                            else {
+                                derived[p] = kind.merge(p, derived[p], comp[p]);
+                            }
                         }
                     }
                     else if ( derived.compose === 'hide' ) {
-                        this.ctxt.platform.info('Hide ' + kind + ' base:' + _(comp) + ' by derived:' + _(derived));
+                        this.ctxt.platform.info('Hide ' + kind.kind + ' base:' + _(comp) + ' by derived:' + _(derived));
                     }
                     else {
-                        throw new Error('Unknown compose on ' + kind + ': ' + _(derived) + '|compose=' + derived.compose);
+                        throw new Error('Unknown compose on ' + kind.kind + ': ' + _(derived) + '|compose=' + derived.compose);
                     }
                 }
                 // ...if it does not, just add it
@@ -885,27 +893,27 @@
             };
 
             // compile databases
-            if ( this.resolved.databases ) {
-                this.resolved.databases.forEach(db => {
-                    impl(db, cache.dbs, cache.dbIds, cache.dbNames, 'database');
+            if ( this.json.databases ) {
+                this.json.databases.forEach(db => {
+                    impl(db, cache.dbs, cache.dbIds, cache.dbNames, cmp.Database);
                 });
             }
             // compile servers
-            if ( this.resolved.servers ) {
-                this.resolved.servers.forEach(srv => {
-                    impl(srv, cache.srvs, cache.srvIds, cache.srvNames, 'server');
+            if ( this.json.servers ) {
+                this.json.servers.forEach(srv => {
+                    impl(srv, cache.srvs, cache.srvIds, cache.srvNames, cmp.Server);
                 });
             }
             // compile sources
-            if ( this.resolved.sources ) {
-                this.resolved.sources.forEach(src => {
-                    impl(src, cache.srcs, null, cache.srcNames, 'source');
+            if ( this.json.sources ) {
+                this.json.sources.forEach(src => {
+                    impl(src, cache.srcs, null, cache.srcNames, cmp.SourceSet);
                 });
             }
             // compile mime types
-            if ( this.resolved['mime-types'] ) {
-                this.resolved['mime-types'].forEach(mime => {
-                    impl(mime, cache.mimes, null, cache.mimeNames, 'mime');
+            if ( this.json['mime-types'] ) {
+                this.json['mime-types'].forEach(mime => {
+                    impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
                 });
             }
             // recurse on imports

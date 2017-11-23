@@ -3,6 +3,7 @@
 (function() {
 
     const err = require('./error');
+    const pkg = require('../package.json');
 
     class Context
     {
@@ -22,6 +23,10 @@
         configs() {
             return this.mlproj ? Object.keys(this.mlproj) : [];
         }
+
+        coreVersion() {
+            return pkg.version;
+        }
     }
 
     /*~
@@ -35,7 +40,7 @@
     class Display
     {
         constructor(verbose) {
-            this.verbose  = verbose;
+            this.verbose = verbose;
         }
 
         database(name, id, schema, security, triggers, forests, props) {

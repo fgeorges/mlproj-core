@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing cat - schema, security and triggers dbs', ass => {
     let path = t.spaceFile(ctxt, 'simple-cat', 'prod');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, {});
