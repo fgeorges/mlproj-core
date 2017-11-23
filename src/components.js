@@ -813,27 +813,36 @@
             }
             let matches = [ meta ];
             matches.count = 0;
-            const flush = () => {
-                actions.add(
-                    new act.MultiDocInsert(db, matches));
-                // empty the array
-                matches.splice(0);
-                matches.push(meta);
-                matches.count = 0;
+            matches.flush = function() {
+                if ( this.count ) {
+                    actions.add(
+                        new act.MultiDocInsert(db, this));
+                    // empty the array
+                    this.splice(0);
+                    this.push(meta);
+                    this.count = 0;
+                }
+            };
+            matches.add = function(item) {
+                this.push(item);
+                ++ this.count;
+                if ( this.count >= INSERT_LENGTH ) {
+                    this.flush();
+                }
             };
             if ( ! this.type || this.type === 'plain' ) {
-                this.loadPlain(actions.ctxt, display, matches, flush);
+                this.loadPlain(actions.ctxt, display, matches);
             }
             else if ( this.type === 'rest-src' ) {
                 const port = (srv || this.restTarget()).props.port.value;
-                this.loadRestSrc(actions, db, port, display, matches, flush);
+                this.loadRestSrc(actions, db, port, display, matches);
             }
             else {
                 throw new Error('Unknown source set type: ' + this.type);
             }
         }
 
-        loadRestSrc(actions, db, port, display, matches, flush)
+        loadRestSrc(actions, db, port, display, matches)
         {
             const pf       = actions.ctxt.platform;
             const dir      = this.prop('dir');
@@ -864,13 +873,10 @@
             // deploy `root/*`
             const root = dir + '/root';
             if ( pf.exists(root) ) {
-                this.loadPlain(actions.ctxt, display, matches, flush, root);
+                this.loadPlain(actions.ctxt, display, matches, root);
             }
             else if ( display.verbose ) {
                 display.check(0, 'dir, not exist', root);
-            }
-            if ( matches.count ) {
-                flush();
             }
             // install `services/*`
             const services = dir + '/services';
@@ -916,22 +922,16 @@
             return new act.ServerRestDeploy(kind, name, path, type(ext), port);
         }
 
-        loadPlain(ctxt, display, matches, flush, dir)
+        loadPlain(ctxt, display, matches, dir)
         {
             this.walk(ctxt, display, (path, uri, meta) => {
                 if ( meta ) {
                     // metadata, if any, must be before the doc content
                     matches.push({ uri: uri, body: meta });
                 }
-                matches.push({ uri: uri, path: path });
-                ++ matches.count;
-                if ( matches.count >= INSERT_LENGTH ) {
-                    flush();
-                }
+                matches.add({ uri: uri, path: path });
             }, dir);
-            if ( matches.count ) {
-                flush();
-            }
+            matches.flush();
         }
 
         walk(ctxt, display, onMatch, dir)
@@ -1101,7 +1101,7 @@
 
     // TODO: Set another, real-world length, or based on the size...
     // TODO: And of course, be able to set this (these) from the environs.
-    const INSERT_LENGTH = 10;
+    const INSERT_LENGTH = 25;
 
     /*~
      * A source set wrapping just a plain dir.
