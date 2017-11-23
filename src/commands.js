@@ -63,6 +63,51 @@
     }
 
     /*~
+     * Migrate an existing project using mlGradle.
+     */
+    class MigrateGradleCommand extends Command
+    {
+        prepare() {
+            var pf      = this.ctxt.platform;
+            var actions = new act.ActionList(this.ctxt);
+            actions.add(new act.FunAction('Migrate an mlGradle project', ctxt => {
+                var pf       = ctxt.platform;
+                var payloads = {};
+
+                pf.dirChildren('src/main/ml-config').forEach(top => {
+                    if ( top.name === 'rest-api.json' ) {
+                        let content = pf.read(top.path, 'utf-8')
+                            .replace('%%PORT%%',             '"${port}"')
+                            .replace('%%NAME%%',             '@{code}')
+                            .replace('%%DATABASE%%',         '@{code}-content')
+                            .replace('%%MODULES_DATABASE%%', '@{code}-modules');
+                        payloads.restApis = [ JSON.parse(content) ];
+                    }
+                    else if ( top.name === 'databases' ) {
+                        payloads.databases = [];
+                        pf.dirChildren(top.path).forEach(file => {
+                            if ( file.name.endsWith('.json') ) {
+                                payloads.databases.push(pf.json(file.path));
+                            }
+                            else {
+                                // TOOD: Use the display...
+                                console.log('Ignore non-JSON file in ml-config/databases: %s', file.name);
+                            }
+                        });
+                    }
+                    else {
+                        let kind = top.isdir ? 'directory' : 'file';
+                        console.log('Ignore ' + kind + ' in ml-config: %s', top.name);
+                    }
+                });
+
+console.log(payloads);
+            }));
+            return actions;
+        }
+    }
+
+    /*~
      * Display the resolved environ.
      */
     class ShowCommand extends Command
@@ -350,6 +395,13 @@
 `;
     }
 
+    // ************
+    // - Move these NEW_*() to files in a sub-dir, and load them.
+    // - Transform them to give them a chance to inject some data,
+    //   asked for on the command line.
+    // - Use different sub-dirs for different scaffoldings.
+    // ************
+
     // helper function for the command `new`, to create xproject/mlenvs/base.json
     function NEW_BASE_ENV(vars)
     {
@@ -441,12 +493,13 @@
     }
 
     module.exports = {
-        NewCommand    : NewCommand,
-        ShowCommand   : ShowCommand,
-        SetupCommand  : SetupCommand,
-        LoadCommand   : LoadCommand,
-        DeployCommand : DeployCommand,
-        RunCommand    : RunCommand
+        NewCommand           : NewCommand,
+        MigrateGradleCommand : MigrateGradleCommand,
+        ShowCommand          : ShowCommand,
+        SetupCommand         : SetupCommand,
+        LoadCommand          : LoadCommand,
+        DeployCommand        : DeployCommand,
+        RunCommand           : RunCommand
     }
 }
 )();
