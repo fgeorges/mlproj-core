@@ -200,7 +200,6 @@
                 path = url || params.path || '/';
             }
             let res = (ssl ? 'https' : 'http') + '://' + host + ':' + port + path;
-            //console.log(res);
             return res;
         }
 

@@ -90,8 +90,6 @@
 
     /*~
      * Initialize a new MarkLogic instance or cluster.
-     *
-     * TOSO: Support licensee and license-key from this.cmdArgs...
      */
     class InitCommand extends Command
     {
@@ -104,8 +102,8 @@
             if ( ! pwd ) {
                 throw new Error('No password in environ');
             }
-            let key      = this.cmdArgs.key;
-            let licensee = this.cmdArgs.licensee
+            let key      = this.args.key;
+            let licensee = this.args.licensee
             // the action list
             let actions = new act.ActionList(this.ctxt);
             let hosts   = this.environ.hosts();
@@ -114,12 +112,11 @@
                 let master = hosts[0];
                 let extras = hosts.slice(1);
                 master.init(actions, user, pwd, key, licensee);
-                extras.forEach(e => e.init(actions, master));
+                extras.forEach(e => e.join(actions, key, licensee, master));
             }
             // if no explicit host, init the implicit single node
             else {
-                actions.add(new act.AdminInit(key, licensee));
-                actions.add(new act.AdminInstance(user, pwd));
+                cmp.Host.init(actions, user, pwd, key, licensee);
             }
             return actions;
         }

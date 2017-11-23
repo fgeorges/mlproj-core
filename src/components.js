@@ -1155,28 +1155,36 @@
             this.props = props.host.parse(json);
         }
 
-        init(actions, master)
+        init(actions, user, pwd, key, licensee)
         {
-            if ( master ) {
-                this.extraNode(actions, master);
-            }
-            else {
-                this.bootstrap(actions);
-            }
+            let host = this.props.host && this.props.host.value;
+            Host.init(actions, user, pwd, key, licensee, host);
         }
 
-        bootstrap(actions)
+        join(actions, key, licensee, master)
         {
-            let msg = 'TODO: Initialize the first node in the cluster';
-            actions.add(new act.FunAction(msg, () => console.log(msg)));
-        }
-
-        extraNode(actions, master)
-        {
-            let msg = 'TODO: Initialize an extra node in the cluster';
-            actions.add(new act.FunAction(msg, () => console.log(msg)));
+            let host  = this.props.host.value;
+            let ctxt  = actions.ctxt;
+            let admin = this.apis && this.apis.admin;
+            // /init
+            actions.add(new act.AdminInit(key, licensee, host, admin));
+            // joining sequence
+            actions.add(new act.FunAction('Join cluster', () => {
+                // /server-config
+                let config = new act.ServerConfig(host, admin).execute(ctxt);
+                // /cluster-config
+                let group   = this.props.group && this.props.group.value;
+                let cluster = new act.ClusterConfig(config, group).execute(ctxt);
+                // /cluster-config
+                new act.ClusterConfigZip(cluster, host, admin).execute(ctxt);
+            }));
         }
     }
+
+    Host.init = (actions, user, pwd, key, licensee, host) => {
+        actions.add(new act.AdminInit(key, licensee, host));
+        actions.add(new act.AdminInstance(user, pwd, host));
+    };
 
     /*~
      * A MIME type.

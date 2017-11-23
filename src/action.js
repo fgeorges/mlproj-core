@@ -175,22 +175,34 @@
 
         send(ctxt, api, url, data) {
             let resp = ctxt.platform.post(this.connect(api), url, data, this.type);
-            if ( resp.status === 200 || resp.status === 201 || resp.status === 204 ) {
+            if ( resp.status === 200 ) {
+                return this.onOk(resp);
+            }
+            else if ( resp.status === 201 || resp.status === 204 ) {
                 // nothing
             }
             // when operation needs a server restart
             else if ( resp.status === 202 ) {
                 let body = resp.body.restart;
-                if ( ! body ) {
-                    throw new Error('202 returned NOT for a restart reason?!?');
+                let time;
+                if ( body ) {
+                    time = Date.parse(body['last-startup'][0].value);
                 }
-                let time = Date.parse(body['last-startup'][0].value);
+                else {
+                    time = Date();
+                    console.log('202 returned for a restart, but there is no body?!?');
+                    // throw new Error('202 returned NOT for a restart reason?!?');
+                }
                 ctxt.platform.restart(time);
             }
             else {
-                throw new Error('Entity not created: ' + (resp.body.errorResponse
-                                ? resp.body.errorResponse.message : resp.body));
+                let b = resp.body.errorResponse ? resp.body.errorResponse.message : resp.body;
+                throw new Error('Entity not created (' + resp.status + '): ' + b);
             }
+        }
+
+        onOk(resp) {
+            // nothing
         }
     }
 
@@ -239,9 +251,9 @@
         }
 
         connect(api) {
-            return {
-                port: this.port
-            };
+            let res = super.connect(api);
+            res.port = this.port;
+            return res;
         }
     }
 
@@ -260,9 +272,9 @@
         }
 
         connect(api) {
-            return {
-                port: this.port
-            };
+            let res = super.connect(api);
+            res.port = this.port;
+            return res;
         }
     }
 
@@ -281,10 +293,10 @@
         }
 
         connect(api) {
-            return {
-                port: this.port,
-                type: this.type
-            };
+            let res = super.connect(api);
+            res.port = this.port;
+            res.type = this.type;
+            return res;
         }
 
         getData(ctxt) {
@@ -394,7 +406,7 @@
     class AdminInit extends AdminPost
     {
         // TOSO: Support licensee and license-key...
-        constructor(key, licensee) {
+        constructor(key, licensee, host, api) {
             let body = {};
             if ( key ) {
                 body['license-key'] = key;
@@ -403,6 +415,21 @@
                 body['licensee'] = licensee;
             }
             super('/init', body, 'Initialize host');
+            this.host     = host;
+            this.adminApi = api;
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( this.adminApi ) {
+                for ( let p in this.adminApi ) {
+                    res[p] = this.adminApi[p];
+                }
+            }
+            if ( this.host ) {
+                res.host = this.host;
+            }
+            return res;
         }
 
         send(ctxt, api, url, data) {
@@ -417,14 +444,112 @@
     }
 
     /*~
-     * Admin API: instance admin.
+     * Admin API: init instance admin.
      */
     class AdminInstance extends AdminPost
     {
-        constructor(user, pwd) {
+        constructor(user, pwd, host) {
             super('/instance-admin',
                   { "admin-username": user, "admin-password": pwd },
                   'Set admin username and password');
+            this.host = host;
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( this.host ) {
+                res.host = this.host;
+            }
+            return res;
+        }
+    }
+
+    /*~
+     * Admin API: new node config.
+     */
+    class ServerConfig extends AdminGet
+    {
+        // `api`, if passed, must be an API JSON desc, for the Admin API
+        constructor(host, api) {
+            super('/server-config', 'Get the server configuration');
+            this.host     = host;
+            this.adminApi = api;
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( this.adminApi ) {
+                for ( let p in this.adminApi ) {
+                    res[p] = this.adminApi[p];
+                }
+            }
+            if ( this.host ) {
+                res.host = this.host;
+            }
+            if ( ! res.headers ) {
+                res.headers = {};
+            }
+            if ( ! res.headers.accept ) {
+                res.headers.accept = 'application/xml';
+            }
+            return res;
+        }
+    }
+
+    /*~
+     * Admin API: cluster config.
+     */
+    class ClusterConfig extends AdminPost
+    {
+        constructor(config, group) {
+            const cfg = encodeURIComponent(config);
+            const grp = encodeURIComponent(group || 'Default');
+            super('/cluster-config',
+                  'group=' + grp + '&server-config=' + cfg,
+                  'Add a node to the cluster and get the cluster config');
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( ! res.type ) {
+                res.type = 'application/x-www-form-urlencoded';
+            }
+            return res;
+        }
+
+        onOk(resp) {
+            return resp.body;
+        }
+    }
+
+    /*~
+     * Admin API: cluster config ZIP.
+     */
+    class ClusterConfigZip extends AdminPost
+    {
+        // `api`, if passed, must be an API JSON desc, for the Admin API
+        constructor(zip, host, api) {
+            super('/cluster-config',
+                  zip,
+                  'Send the cluster config to a joining host');
+            this.host     = host;
+            this.adminApi = api;
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( this.adminApi ) {
+                for ( let p in this.adminApi ) {
+                    res[p] = this.adminApi[p];
+                }
+            }
+            if ( this.host ) {
+                res.host = this.host;
+            }
+            if ( ! res.type ) {
+                res.type = 'application/zip';
+            }
+            return res;
         }
     }
 
@@ -797,6 +922,9 @@
         FunAction               : FunAction,
         AdminInit               : AdminInit,
         AdminInstance           : AdminInstance,
+        ServerConfig            : ServerConfig,
+        ClusterConfig           : ClusterConfig,
+        ClusterConfigZip        : ClusterConfigZip,
         ForestList              : ForestList,
         ForestCreate            : ForestCreate,
         ForestAttach            : ForestAttach,
