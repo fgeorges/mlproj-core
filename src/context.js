@@ -83,7 +83,7 @@
             throw err.abstractFun('Display.remove');
         }
 
-        error(e, verbose) {
+        error(err) {
             throw err.abstractFun('Display.error');
         }
     }
