@@ -912,8 +912,8 @@
             };
 
             // compile hosts
-            if ( this.resolved.hosts ) {
-                this.resolved.hosts.forEach(host => {
+            if ( this.json.hosts ) {
+                this.json.hosts.forEach(host => {
                     impl(host, cache.hosts, null, cache.hostNames, 'host');
                 });
             }
