@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing hen - fast searches and output parameters', ass => {
     let path = t.spaceFile(ctxt, 'simple-hen', 'prod');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, { port: '7080' });

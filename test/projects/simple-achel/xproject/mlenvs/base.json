@@ -4,6 +4,10 @@
         "params": {
             "port": "6010"
         },
+        "sources": [{
+            "name": "src",
+            "dir":  "src"
+        }],
         "databases": [{
             "id": "content",
             "name": "@{code}-content"

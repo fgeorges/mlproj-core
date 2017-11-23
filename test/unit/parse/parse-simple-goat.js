@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing goat - url rewriter and error handler', ass => {
     let path = t.spaceFile(ctxt, 'simple-goat', 'dev');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, { port: '7070' });

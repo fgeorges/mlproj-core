@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing ape (base module) - parameters and typical topology', ass => {
     let path = t.spaceFile(ctxt, 'simple-ape', 'base');
-    let mod  = new e.Module(ctxt, path);
+    let mod  = new e.Module(ctxt, ctxt.platform.json(path), path);
     mod.loadImports();
     mod.compile(mod);
     // the $* and @* params
@@ -38,7 +38,7 @@ t.test('Parsing ape (base module) - parameters and typical topology', ass => {
 
 t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
     let path = t.spaceFile(ctxt, 'simple-ape', 'dev');
-    let mod  = new e.Module(ctxt, path);
+    let mod  = new e.Module(ctxt, ctxt.platform.json(path), path);
     mod.loadImports();
     mod.compile(mod);
     // the $* and @* params
@@ -47,7 +47,8 @@ t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
     ass.empty('The @title param', mod.param('@title'));
     // the source sets
     const srcs = mod._sources;
-    ass.equal('There must be no source set', srcs.length, 0);
+    ass.equal('There must be 1 source set', srcs.length, 1);
+    ass.source('The src source', srcs[0], 'src', { dir: 'src' });
     // the databases
     const dbs = mod._databases;
     ass.equal('There must be 2 databases', dbs.length, 1);
@@ -56,12 +57,16 @@ t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
     const srvs = mod._servers;
     ass.equal('There must be 1 app server', srvs.length, 1);
     ass.server('The server', srvs[0], 'server', 'simple-ape', 'Default',
-               'simple-ape-content', null, { "server-type": 'http', port: 7010 });
+               'simple-ape-content', null, {
+                   "server-type": 'http',
+                   port:          7010,
+                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
+               });
 });
 
 t.test('Parsing ape (base) - parameters and typical topology', ass => {
     let path = t.spaceFile(ctxt, 'simple-ape', 'base');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters',  env, { port: '7010' });
@@ -93,7 +98,7 @@ t.test('Parsing ape (base) - parameters and typical topology', ass => {
 t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     ctxt.platform.environ = undefined; // reset
     let path = t.spaceFile(ctxt, 'simple-ape', 'dev');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters',  env, { port: '7010' });
@@ -105,7 +110,8 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     ass.api('xdbc',   env.api('xdbc'),   '',          8000, false);
     // the source sets
     const srcs = env.sources();
-    ass.equal('There must be no source set', srcs.length, 0);
+    ass.equal('There must be 1 source set', srcs.length, 1);
+    ass.source('The src source', srcs[0], 'src', { dir: 'src' });
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 1);
@@ -114,5 +120,9 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
     ass.server('The server', srvs[0], 'server', 'simple-ape', 'Default',
-               'simple-ape-content', null, { "server-type": 'http', port: 7010 });
+               'simple-ape-content', null, {
+                   "server-type": 'http',
+                   port:          7010,
+                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
+               });
 });

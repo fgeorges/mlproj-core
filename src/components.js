@@ -190,7 +190,7 @@
             });
             if ( this.properties ) {
                 Object.keys(this.properties).forEach(p => {
-                    if ( this.properties[p] !== actual[p] ) {
+                    if ( this.properties[p] !== body[p] ) {
                         actions.add(new act.DatabaseUpdate(this, p, this.properties[p]));
                     }
                 });
@@ -226,6 +226,125 @@
             }
         }
     }
+
+    Database.kind = 'database';
+
+    Database.merge = (name, derived, base) => {
+        if ( name === 'indexes' ) {
+
+            // TODO: Implement and document merging of indexes...  Only 'ranges'
+            // are supported for now...  The equality function between two range
+            // index takes several params into account (its type first,
+            // depending on the properties set, path or parent or nothing): type
+            // + path/name (incl. ns) + parent name if any (incl. ns.)
+            //throw new Error('Merging of indexes is not implemented yet!');
+
+            // check derived index properties
+            if ( ! derived.ranges ) {
+                throw new Error('No range index in property indexes in derived object');
+            }
+            if ( Object.keys(derived).length !== 1 ) {
+                throw new Error('Unknown properties on indexes in derived object: '
+                                + Object.keys(derived).filter(k => k !== 'ranges'));
+            }
+            // check base index properties
+            if ( ! base.ranges ) {
+                throw new Error('No range index in property indexes in base object');
+            }
+            if ( Object.keys(base).length !== 1 ) {
+                throw new Error('Unknown properties on indexes in base object: '
+                                + Object.keys(base).filter(k => k !== 'ranges'));
+            }
+            // copy a range, with a given name
+            const copy = (name, range) => {
+                let r = { name: name };
+                for ( let p in range ) {
+                    if ( p !== 'name' ) {
+                        r[p] = range[p];
+                    }
+                }
+                return r;
+            }
+            // provision result array with range indexes from derived
+            let res = [];
+            derived.ranges.forEach(range => {
+                if ( Array.isArray(range.name) ) {
+                    range.name.forEach(n => {
+                        res.push(copy(n, range));
+                    });
+                }
+                else {
+                    res.push(range);
+                }
+            });
+            // add the range indexes from base not already in res
+            base.ranges.forEach(range => {
+                const handle = r => {
+                    let existing = res.find(b => {
+                        // namespaces must be both not there, or both there and equal
+                        const nsDiff = (lhs, rhs) => {
+                            if ( lhs ) {
+                                if ( ! rhs || lhs !== rhs ) {
+                                    return true;
+                                }
+                            }
+                            else if ( rhs ) {
+                                return true;
+                            }
+                        };
+                        // for all, if type differ...
+                        if ( r.type !== b.type ) {
+                            return false;
+                        }
+                        // at least one is a path range
+                        if ( r.path || b.path ) {
+                            if ( ! r.path || ! b.path || r.path !== b.path ) {
+                                return false;
+                            }
+                        }
+                        else {
+                            // at least one is an attribute range
+                            if ( r.parent || b.parent ) {
+                                if ( ! r.parent || ! b.parent || r.parent.name !== b.parent.name ) {
+                                    return false;
+                                }
+                                if ( nsDiff(r.parent.namespace, b.parent.namespace) ) {
+                                    return false;
+                                }
+                            }
+                            // for both attribute and element ranges
+                            if ( r.name !== b.name ) {
+                                return false;
+                            }
+                            if ( nsDiff(r.namespace, b.namespace) ) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+                    if ( ! existing ) {
+                        res.push(r);
+                    }
+                };
+                if ( Array.isArray(range.name) ) {
+                    range.name.forEach(n => {
+                        handle(copy(n, range));
+                    });
+                }
+                else {
+                    handle(range);
+                }
+            });
+            return {
+                ranges: res
+            };
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
+    };
 
     /*~
      * A forest.
@@ -265,12 +384,7 @@
      */
     class Server extends Component
     {
-        /* TODO: If no modules DB and no root, and if there is a source set
-         * attached to this server, use its directory as the root of the server,
-         * to have the modules on disk.  When attaching source sets to servers
-         * and databases is supported...
-         */
-        constructor(json, content, modules)
+        constructor(json, content, modules, src, platform)
         {
             super();
             this.type       = json.type;
@@ -306,8 +420,29 @@
                           + json.properties['rewrite-resolves-globally'] + ')');
                 }
             }
-            else if ( json['rest-config'] ) {
-                error('REST config on a non-REST server');
+            // for plain HTTP servers
+            else {
+                if ( json['rest-config'] ) {
+                    error('REST config on a non-REST server');
+                }
+                // use a source set as filesystem modules if no modules DB and no root
+                if ( ! this.modules && ! this.props.root ) {
+                    // TODO: For now, only try the default `src`.  Once
+                    // implmented the links from databses and servers to source
+                    // sets, check if there is one on this server then.
+                    if ( ! src ) {
+                        throw new Error(
+                            'The app server has no modules db, no root, and there is no default src: ',
+                            this.name);
+                    }
+                    if ( ! src.props.dir ) {
+                        throw new Error(
+                            'The app server has no modules db, no root, and default src has no dir: ',
+                            this.name);
+                    }
+                    var dir = platform.resolve(src.props.dir.value) + '/';
+                    this.props.root = new props.Result(props.server.props.root, dir);
+                }
             }
         }
 
@@ -332,8 +467,14 @@
                 if ( this.type === 'http' ) {
                     this.createHttp(actions, display);
                 }
-                else {
+                else if ( this.type === 'xdbc' ) {
+                    this.createHttp(actions, display);
+                }
+                else if ( this.type === 'rest' ) {
                     this.createRest(actions, display);
+                }
+                else {
+                    throw new Error('Unknown app server type: ' + this.type);
                 }
             }
             // if AS already exists
@@ -363,7 +504,7 @@
 
         createHttp(actions, display)
         {
-            display.add(0, 'create', 'http server', this.name);
+            display.add(0, 'create', this.type + ' server', this.name);
             // the base server object
             var obj = {
                 "server-name":      this.name,
@@ -441,9 +582,13 @@
         // though, as we would probably want to keep multiple lines for multiple
         // properties, as it is clearer.
         //
+        // This is actually required for scenarii where on property depends on
+        // another, like path range index on path namespaces...
+        //
         updateHttp(actions, display, actual)
         {
-            if ( 'http' !== actual['server-type'] ) {
+            let type = this.type === 'rest' ? 'http' : this.type;
+            if ( type !== actual['server-type'] ) {
                 throw new Error('Server type cannot change, from '
                                 + actual['server-type'] + ' to ' + this.type);
             }
@@ -549,19 +694,51 @@
         }
     }
 
+    Server.kind = 'server';
+
+    Server.merge = (name, derived, base) => {
+        return derived;
+    };
+
     /*~
      * A named source set.
+     *
+     * TODO: Should we refactor to have different subclasses for different
+     * source set types?
      */
     class SourceSet extends Component
     {
         constructor(json, environ, dflt)
         {
+            const readPerms = (perms) => {
+                let res = {};
+                if ( perms ) {
+                    Object.keys(perms).forEach(role => {
+                        let val = perms[role];
+                        // TODO: Check the values (update, insert, read, execute...)
+                        if ( Array.isArray(val) ) {
+                            res[role] = val;
+                        }
+                        else if ( 'string' === typeof val ) {
+                            res[role] = val.split(/\s*,\s*/);
+                        }
+                        else {
+                            throw new Error('Permission capabilities neither a string or an array for role '
+                                            + role + ': ' + val);
+                        }
+                    });
+                }
+                return res;
+            };
             super();
-            this.dflt    = dflt;
-            this.name    = json && json.name;
+            this.dflt        = dflt;
+            this.name        = json && json.name;
+            this.filter      = json && json.filter;
+            this.permissions = readPerms(json && json.permissions);
             // extract the configured properties
-            this.props   = json ? props.source.parse(json) : {};
-            this.type    = this.props.type && this.props.type.value;
+            this.props       = json ? props.source.parse(json) : {};
+            this.type        = this.props.type && this.props.type.value;
+            this.collections = this.props.collections ? this.props.collections.value.sort() : [];
             // resolve targets (dbs and srvs)
             // TODO: Provide the other way around, `source` on dbs and srvs?
             this.targets = [];
@@ -624,45 +801,140 @@
         //
         load(actions, db, srv, display)
         {
-            let   matches = [];
+            let meta  = { body: { collections: this.collections } };
+            let perms = Object.keys(this.permissions).map(role => {
+                return {
+                    "role-name"    : role,
+                    "capabilities" : this.permissions[role]
+                };
+            });
+            if ( perms.length ) {
+                meta.body.permissions = perms;
+            }
+            let matches = [ meta ];
+            matches.count = 0;
             const flush = () => {
                 actions.add(
                     new act.MultiDocInsert(db, matches));
                 // empty the array
                 matches.splice(0);
+                matches.push(meta);
+                matches.count = 0;
             };
-            const onMatch = (path, uri) => {
-                if ( this.type === 'rest-src' && (
-                         uri.startsWith('/services/')
-                      || uri.startsWith('/transforms/') ) ) {
-                    let kind = 'resources';
-                    let file = uri.slice(10);
-                    if ( uri.startsWith('/transforms/') ) {
-                        kind = 'transforms';
-                        file = uri.slice(12);
-                    }
-                    let [ name, ext ] = file.split('.');
-                    let type = ext === 'xqy'
-                        ? 'application/xquery'
-                        : 'application/javascript';
-                    let port = (srv || this.restTarget()).props.port.value;
-                    actions.add(
-                        new act.ServerRestDeploy(kind, name, path, type, port));
+            if ( ! this.type || this.type === 'plain' ) {
+                this.loadPlain(actions.ctxt, display, matches, flush);
+            }
+            else if ( this.type === 'rest-src' ) {
+                const port = (srv || this.restTarget()).props.port.value;
+                this.loadRestSrc(actions, db, port, display, matches, flush);
+            }
+            else {
+                throw new Error('Unknown source set type: ' + this.type);
+            }
+        }
+
+        loadRestSrc(actions, db, port, display, matches, flush)
+        {
+            const pf       = actions.ctxt.platform;
+            const dir      = this.prop('dir');
+            // check there is nothing outside of `root/`, `services/` and `transforms/`
+            const children = pf.dirChildren(dir);
+            let   count    = 0;
+            const filter   = (name) => {
+                let match = children.find(c => c.name === name);
+                if ( ! match ) {
+                    // nothing
+                }
+                else if ( ! match.isdir ) {
+                    throw new Error('REST source child not a dir: ' + name);
                 }
                 else {
-                    matches.push({ uri: uri, path: path });
-                    if ( matches.length >= INSERT_LENGTH ) {
-                        flush();
-                    }
+                    ++ count;
                 }
             };
-            this.walk(actions.ctxt, display, onMatch);
-            if ( matches.length ) {
+            filter('root');
+            filter('services');
+            filter('transforms');
+            if ( count !== children.length ) {
+                let unknown = children.map(c => c.name).filter(n => {
+                    return n !== 'root' && n !== 'services' && n !== 'transforms';
+                });
+                throw new Error('Unknown children in REST source: ' + unknown);
+            }
+            // deploy `root/*`
+            const root = dir + '/root';
+            if ( pf.exists(root) ) {
+                this.loadPlain(actions.ctxt, display, matches, flush, root);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', root);
+            }
+            if ( matches.count ) {
+                flush();
+            }
+            // install `services/*`
+            const services = dir + '/services';
+            if ( pf.exists(services) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    actions.add(
+                        this.installRestThing(port, 'resources', uri.slice(1), path));
+                }, services);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', services);
+            }
+            // install `transforms/*`
+            const transforms = dir + '/transforms';
+            if ( pf.exists(transforms) ) {
+                this.walk(actions.ctxt, display, (path, uri) => {
+                    actions.add(
+                        this.installRestThing(port, 'transforms', uri.slice(1), path));
+                }, transforms);
+            }
+            else if ( display.verbose ) {
+                display.check(0, 'dir, not exist', transforms);
+            }
+        }
+
+        installRestThing(port, kind, filename, path)
+        {
+            // extract mime type from extension
+            const type = (ext) => {
+                if ( ext === 'xqy' ) {
+                    return 'application/xquery';
+                }
+                else if ( ext === 'sjs' ) {
+                    return 'application/javascript';
+                }
+                else {
+                    throw new Error('Extension is neither xqy or sjs: ' + ext);
+                }
+            };
+            // the basename and extension
+            let [ name, ext ] = filename.split('.');
+            // return the actual action
+            return new act.ServerRestDeploy(kind, name, path, type(ext), port);
+        }
+
+        loadPlain(ctxt, display, matches, flush, dir)
+        {
+            this.walk(ctxt, display, (path, uri, meta) => {
+                if ( meta ) {
+                    // metadata, if any, must be before the doc content
+                    matches.push({ uri: uri, body: meta });
+                }
+                matches.push({ uri: uri, path: path });
+                ++ matches.count;
+                if ( matches.count >= INSERT_LENGTH ) {
+                    flush();
+                }
+            }, dir);
+            if ( matches.count ) {
                 flush();
             }
         }
 
-        walk(ctxt, display, onMatch)
+        walk(ctxt, display, onMatch, dir)
         {
             // from one array of strings, return two arrays:
             // - first one with all strings ending with '/', removed
@@ -712,9 +984,9 @@
             compile('exclude');
             compile('garbage');
 
-            const dir  = this.prop('dir');
-            const path = ctxt.platform.resolve(dir);
-            this.walkDir(onMatch, '', dir, path, path, patterns, ctxt, display);
+            const _dir = dir || this.prop('dir');
+            const path = ctxt.platform.resolve(_dir);
+            this.walkDir(onMatch, '', _dir, path, path, patterns, ctxt, display);
         }
 
         walkDir(onMatch, path, dir, full, base, patterns, ctxt, display)
@@ -745,19 +1017,20 @@
                 let pats = child.isdir ? patterns.dir : patterns.notdir;
                 if ( ! match(p, pats.mm_garbage, false, 'Throwing') ) {
                     let desc = {
-                        base       : base,
-                        path       : p,
-                        full       : child.path,
-                        name       : child.name,
-                        isdir      : child.isdir,
-                        isIncluded : match(p, pats.mm_include, true,  'Including'),
-                        isExcluded : match(p, pats.mm_exclude, false, 'Excluding'),
-                        include    : pats.include,
-                        exclude    : pats.exclude,
-                        mm_include : pats.mm_include,
-                        mm_exclude : pats.mm_exclude
+                        base        : base,
+                        path        : p,
+                        full        : child.path,
+                        name        : child.name,
+                        isdir       : child.isdir,
+                        isIncluded  : match(p, pats.mm_include, true,  'Including'),
+                        isExcluded  : match(p, pats.mm_exclude, false, 'Excluding'),
+                        include     : pats.include,
+                        exclude     : pats.exclude,
+                        collections : this.collections.slice(),
+                        mm_include  : pats.mm_include,
+                        mm_exclude  : pats.mm_exclude
                     };
-                    let resp = this.filter(desc);
+                    let resp = this.doFilter(desc);
                     if ( resp ) {
                         if ( child.isdir ) {
                             let d = dir + '/' + child.name;
@@ -773,19 +1046,58 @@
                             if ( ! full ) {
                                 throw new Error('Impossible to compute full path for ' + resp);
                             }
-                            onMatch(full, uri);
+                            let overrideColls = false;
+                            // is `collections` set, and different than the default array?
+                            if ( resp.collections ) {
+                                let colls = resp.collections.sort();
+                                if ( this.collections.length !== colls.length ) {
+                                    overrideColls = true;
+                                }
+                                for ( let i = 0; ! overrideColls && i < colls.length; ++ i ) {
+                                    if ( this.collections[i] !== colls[i] ) {
+                                        overrideColls = true;
+                                    }
+                                }
+                            }
+                            if ( overrideColls ) {
+                                onMatch(full, uri, { collections: resp.collections });
+                            }
+                            else {
+                                onMatch(full, uri);
+                            }
                         }
                     }
                 }
             });
         }
 
-        filter(desc) {
-            if ( desc.isIncluded && ! desc.isExcluded ) {
+        doFilter(desc) {
+            if ( this.filter ) {
+                return this.filter(desc);
+            }
+            else if ( desc.isIncluded && ! desc.isExcluded ) {
                 return desc;
             }
         }
     }
+
+    SourceSet.kind = 'source set';
+
+    SourceSet.merge = (name, derived, base) => {
+        if ( name === 'permissions' ) {
+            for ( let role in base ) {
+                if ( ! derived[role] ) {
+                    derived[role] = base[role];
+                }
+            }
+            return derived;
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
+    };
 
     // TODO: Set another, real-world length, or based on the size...
     // TODO: And of course, be able to set this (these) from the environs.
@@ -921,6 +1233,12 @@
             });
         }
     }
+
+    MimeType.kind = 'mimetype';
+
+    MimeType.merge = (name, derived, base) => {
+        return derived;
+    };
 
     module.exports = {
         SysDatabase : SysDatabase,

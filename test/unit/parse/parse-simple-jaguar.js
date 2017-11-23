@@ -10,7 +10,7 @@ const ctxt = new p.Context();
 
 t.test('Parsing jaguar - mime types', ass => {
     let path = t.spaceFile(ctxt, 'simple-jaguar', 'prod');
-    let env  = new e.Environ(ctxt, path);
+    let env  = new e.Environ(ctxt, ctxt.platform.json(path), path);
     env.compile();
     // the $* and @* params
     ass.params('The parameters', env, {});

@@ -704,7 +704,7 @@
          */
         constructor(db, docs) {
             var name = db   && db.name;
-            var len  = docs && docs.length;
+            var len  = docs && (docs.count || docs.length);
             // make a copy
             var copy = docs && docs.slice();
             super('/documents?database=' + name,

@@ -6,6 +6,7 @@
         return scenario.test(
             runner,
             base + '../environs/simple-hen/prod.json',
+            'setup',
             cmd.SetupCommand,
             [
                 scenario.dbProps('simple-hen-content'),
