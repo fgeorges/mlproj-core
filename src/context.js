@@ -63,6 +63,10 @@
             throw err.abstractFun('Display.mimetype');
         }
 
+        user(props) {
+            throw err.abstractFun('Display.user');
+        }
+
         project(abbrev, configs, title, name, version) {
             throw err.abstractFun('Display.project');
         }

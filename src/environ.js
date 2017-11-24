@@ -166,6 +166,10 @@
             return this._mimetypes;
         }
 
+        users() {
+            return this._users;
+        }
+
         sources() {
             return this._sources;
         }
@@ -209,8 +213,8 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers, source sets, mime types and apis (with
-            // import priority)
+            // compile databses, servers, source sets, mime types, users and
+            // apis (with import priority)
             this.module.compile(this);
         }
 
@@ -481,7 +485,8 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _hosts, _databases, _servers, _sources and _mimetypes on it
+        // this function sets the _hosts, _databases, _servers, _sources, _mimetypes
+        // and _users on it
         compile(root)
         {
             // start by resolving the param references (could it be done on the
@@ -515,13 +520,20 @@
                 srcs      : [],
                 srcNames  : {},
                 mimes     : [],
-                mimeNames : {}
+                mimeNames : {},
+                users     : [],
+                userNames : {}
             };
             this.compileImpl(cache);
 
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
+            });
+
+            // instantiate all users now
+            root._users = cache.users.map(m => {
+                return new cmp.User(m);
             });
 
             // instantiate all sources now
@@ -843,6 +855,11 @@
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
             });
+
+            // instantiate all users now
+            root._users = cache.users.map(m => {
+                return new cmp.User(m);
+            });
         }
 
         // recursive implementation of compile(), caching databases and servers
@@ -939,6 +956,12 @@
             if ( this.json['mime-types'] ) {
                 this.json['mime-types'].forEach(mime => {
                     impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
+                });
+            }
+            // compile users
+            if ( this.json.users ) {
+                this.json.users.forEach(user => {
+                    impl(user, cache.users, null, cache.userNames, cmp.User);
                 });
             }
             // recurse on imports

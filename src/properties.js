@@ -97,6 +97,9 @@
                 else if ( 'server' === this.prop._type ) {
                     actions.add(new act.ServerUpdate(comp, this.prop.name, val));
                 }
+                else if ( 'user' === this.prop._type ) {
+                    actions.add(new act.UserUpdate(comp, this.prop.name, val));
+                }
                 else {
                     let msg = 'Unsupported component type: ' + this.prop._type;
                     if ( display.verbose ) {
@@ -631,6 +634,12 @@
 
         // compare unordered
         compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
             if ( lhs.length !== rhs.length ) {
                 return false;
             }
@@ -786,12 +795,26 @@
         .add('extensions', true,  new StringList('extensions', 'extensions', /\s*,\s*/).freeze())
         .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
+    /*~
+     * The user properties and config format.
+     */
+    var user = new ConfigObject('user')
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new     String('user-name',   'user name'))
+        .add('password',    true,  new     String('password',    'password'))
+        .add('desc',        false, new     String('description', 'description'))
+        .add('roles',       false, new StringList('role',        'roles',       /\s*,\s*/))
+        .add('collections', false, new StringList('collection',  'collections', /\s*,\s*/))
+        .add('permissions', false, new Ignore());
+
     module.exports = {
         host     : host,
         database : database,
         server   : server,
         source   : source,
         mime     : mime,
+        user     : user,
         Result   : Result
     }
 }

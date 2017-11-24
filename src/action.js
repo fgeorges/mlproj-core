@@ -785,6 +785,51 @@
         }
     }
 
+    /*~
+     * Management API: retrieve properties of a user.
+     */
+    class UserProps extends ManageGet
+    {
+        constructor(user) {
+            var name = user && user.props['user-name'].value;
+            super('/users/' + name + '/properties',
+                  'Retrieve user props: \t' + name);
+        }
+    }
+
+    /*~
+     * Management API: create a user.
+     */
+    class UserCreate extends ManagePost
+    {
+        constructor(user, body) {
+            var name = user && user.props['user-name'].value;
+            super('/users',
+                  body,
+                  'Create user: \t\t' + name);
+        }
+    }
+
+    /*~
+     * Management API: update a user property.
+     */
+    class UserUpdate extends ManagePut
+    {
+        constructor(user, name, value) {
+            var username = user && user.props['user-name'].value;
+            var body     = name;
+            var what     = 'properties';
+            if ( typeof name !== 'object' ) {
+                body = name && { [name]: value };
+                what = name;
+            }
+            super('/users/' + username + '/properties',
+                  body,
+                  'Update ' + what + ':  \t\t' + username);
+            this.name = username;
+        }
+    }
+
     /*~~~~~ Client API actions. */
 
     /*~
@@ -942,6 +987,9 @@
         ServerRestDeploy        : ServerRestDeploy,
         MimeProps               : MimeProps,
         MimeCreate              : MimeCreate,
+        UserProps               : UserProps,
+        UserCreate              : UserCreate,
+        UserUpdate              : UserUpdate,
         MultiDocInsert          : MultiDocInsert,
         DocInsert               : DocInsert
     }

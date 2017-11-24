@@ -83,6 +83,7 @@
                 components(this.environ.servers());
                 components(this.environ.sources());
                 components(this.environ.mimetypes());
+                components(this.environ.users());
             }));
             return actions;
         }
@@ -142,6 +143,9 @@
             else if ( what === 'mimetypes' ) {
                 comps = this.environ.mimetypes();
             }
+            else if ( what === 'users' ) {
+                comps = this.environ.users();
+            }
             else if ( what ) {
                 let db  = this.environ.database(what);
                 let srv = this.environ.server(what);
@@ -160,7 +164,8 @@
                 var dbs   = this.environ.databases();
                 var srvs  = this.environ.servers();
                 var mimes = this.environ.mimetypes();
-                comps = dbs.concat(srvs, mimes);
+                var users = this.environ.users();
+                comps = dbs.concat(srvs, mimes, users);
             }
             // do it
             comps.forEach(comp => {

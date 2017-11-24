@@ -1248,6 +1248,63 @@
         return derived;
     };
 
+    /*~
+     * A user.
+     */
+    class User extends Component
+    {
+        constructor(json)
+        {
+            super();
+            // extract the configured properties
+            this.props = props.user.parse(json);
+        }
+
+        show(display)
+        {
+            display.user(this.props);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the user', this.props['user-name'].value);
+            const body = new act.UserProps(this).execute(actions.ctxt);
+            // if user does not exist yet
+            if ( ! body ) {
+                this.create(actions, display);
+            }
+            // if user already exists
+            else {
+                this.update(actions, display, body);
+            }
+        }
+
+        create(actions, display)
+        {
+            display.add(0, 'create', 'user', this.props['user-name'].value);
+            var obj = {};
+            Object.keys(this.props).forEach(p => {
+                this.props[p].create(obj);
+            });
+            actions.add(new act.UserCreate(this, obj));
+        }
+
+        update(actions, display, actual)
+        {
+            // check properties
+            display.check(1, 'properties');
+            Object.keys(this.props).forEach(p => {
+                this.props[p].update(actions, display, actual, this);
+            });
+        }
+    }
+
+    User.kind = 'user';
+
+    User.merge = (name, derived, base) => {
+        return derived;
+    };
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
@@ -1256,7 +1313,8 @@
         SourceDir   : SourceDir,
         SourceDoc   : SourceDoc,
         Host        : Host,
-        MimeType    : MimeType
+        MimeType    : MimeType,
+        User        : User
     }
 }
 )();
