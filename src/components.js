@@ -715,7 +715,7 @@
                 if ( perms ) {
                     Object.keys(perms).forEach(role => {
                         let val = perms[role];
-                        // TODO: Check the values (update, insert, read, execute...)
+                        // TODO: Check the values (update, insert, read, execute, node-update)
                         if ( Array.isArray(val) ) {
                             res[role] = val;
                         }
@@ -1180,6 +1180,8 @@
             }));
         }
     }
+
+    Host.kind = 'host';
 
     Host.init = (actions, user, pwd, key, licensee, host) => {
         actions.add(new act.AdminInit(key, licensee, host));

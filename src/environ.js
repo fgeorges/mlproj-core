@@ -543,6 +543,11 @@
                 return new cmp.SourceSet(s, root, dflt);
             });
 
+            // instantiate all hosts now
+            root._hosts = cache.hosts.map(h => {
+                return new cmp.Host(h);
+            });
+
             // compile databases and servers
             this.compileDbsSrvs(root, cache, root.source('src'));
 
@@ -838,28 +843,6 @@
                 };
                 return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules), src, this.ctxt.platform);
             });
-
-            // instantiate all sources now
-            let dfltSrc = cache.srcs.find(s => s.name === '@default');
-            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
-            root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
-                return new cmp.SourceSet(s, dflt);
-            });
-
-            // instantiate all hosts now
-            root._hosts = cache.hosts.map(h => {
-                return new cmp.Host(h);
-            });
-
-            // instantiate all mime types now
-            root._mimetypes = cache.mimes.map(m => {
-                return new cmp.MimeType(m);
-            });
-
-            // instantiate all users now
-            root._users = cache.users.map(m => {
-                return new cmp.User(m);
-            });
         }
 
         // recursive implementation of compile(), caching databases and servers
@@ -931,7 +914,7 @@
             // compile hosts
             if ( this.json.hosts ) {
                 this.json.hosts.forEach(host => {
-                    impl(host, cache.hosts, null, cache.hostNames, 'host');
+                    impl(host, cache.hosts, null, cache.hostNames, cmp.Host);
                 });
             }
             // compile databases
