@@ -710,35 +710,13 @@
     {
         constructor(json, environ, dflt)
         {
-            const readPerms = (perms) => {
-                let res = {};
-                if ( perms ) {
-                    Object.keys(perms).forEach(role => {
-                        let val = perms[role];
-                        // TODO: Check the values (update, insert, read, execute, node-update)
-                        if ( Array.isArray(val) ) {
-                            res[role] = val;
-                        }
-                        else if ( 'string' === typeof val ) {
-                            res[role] = val.split(/\s*,\s*/);
-                        }
-                        else {
-                            throw new Error('Permission capabilities neither a string or an array for role '
-                                            + role + ': ' + val);
-                        }
-                    });
-                }
-                return res;
-            };
             super();
-            this.dflt        = dflt;
-            this.name        = json && json.name;
-            this.filter      = json && json.filter;
-            this.permissions = readPerms(json && json.permissions);
+            this.dflt   = dflt;
+            this.name   = json && json.name;
+            this.filter = json && json.filter;
             // extract the configured properties
-            this.props       = json ? props.source.parse(json) : {};
-            this.type        = this.props.type && this.props.type.value;
-            this.collections = this.props.collections ? this.props.collections.value.sort() : [];
+            this.props  = json ? props.source.parse(json) : {};
+            this.type   = this.props.type && this.props.type.value;
             // resolve targets (dbs and srvs)
             // TODO: Provide the other way around, `source` on dbs and srvs?
             this.targets = [];
@@ -801,16 +779,9 @@
         //
         load(actions, db, srv, display)
         {
-            let meta  = { body: { collections: this.collections } };
-            let perms = Object.keys(this.permissions).map(role => {
-                return {
-                    "role-name"    : role,
-                    "capabilities" : this.permissions[role]
-                };
-            });
-            if ( perms.length ) {
-                meta.body.permissions = perms;
-            }
+            let meta  = { body: {} };
+            this.props.collections && this.props.collections.create(meta.body);
+            this.props.permissions && this.props.permissions.create(meta.body);
             let matches = [ meta ];
             matches.count = 0;
             matches.flush = function() {
@@ -1026,7 +997,7 @@
                         isExcluded  : match(p, pats.mm_exclude, false, 'Excluding'),
                         include     : pats.include,
                         exclude     : pats.exclude,
-                        collections : this.collections.slice(),
+                        collections : this.props.collections && this.props.collections.value.slice(),
                         mm_include  : pats.mm_include,
                         mm_exclude  : pats.mm_exclude
                     };
@@ -1049,12 +1020,15 @@
                             let overrideColls = false;
                             // is `collections` set, and different than the default array?
                             if ( resp.collections ) {
-                                let colls = resp.collections.sort();
-                                if ( this.collections.length !== colls.length ) {
+                                let dfltColls = this.props.collections
+                                    ? this.props.collections.value.sort()
+                                    : [];
+                                let respColls = resp.collections.sort();
+                                if ( dfltColls.length !== respColls.length ) {
                                     overrideColls = true;
                                 }
-                                for ( let i = 0; ! overrideColls && i < colls.length; ++ i ) {
-                                    if ( this.collections[i] !== colls[i] ) {
+                                for ( let i = 0; ! overrideColls && i < respColls.length; ++ i ) {
+                                    if ( dfltColls[i] !== respColls[i] ) {
                                         overrideColls = true;
                                     }
                                 }
@@ -1304,7 +1278,19 @@
     User.kind = 'user';
 
     User.merge = (name, derived, base) => {
-        return derived;
+        if ( name === 'permissions' ) {
+            for ( let role in base ) {
+                if ( ! derived[role] ) {
+                    derived[role] = base[role];
+                }
+            }
+            return derived;
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
     };
 
     module.exports = {

@@ -482,6 +482,69 @@
     }
 
     /*~
+     * An object, to represent a list of permissions.
+     */
+    class Perms extends ConfigItem
+    {
+        constructor(name, label) {
+            super();
+            this.name  = name;
+            this.label = label;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
+        }
+
+        handle(result, value, key) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const role = new String('role-name',  'role');
+            const cap  = new StringList('capability', 'capability', /\s*,\s*/);
+            let res = [];
+            Object.keys(value).forEach(p => {
+                cap.value(value[p]).forEach(v => {
+                    if ( v !== 'update' && v !== 'insert' && v !== 'read'
+                         && v !== 'execute' && v !== 'node-update' ) {
+                        throw new Error('Unknwon permission capability: ' + v);
+                    }
+                    res.push({
+                        "role-name"  : new Result(role, p),
+                        "capability" : new Result(cap, v)
+                    });
+                });
+            });
+            result[this.name] = new Result(this, res);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs.length; ++i ) {
+                const equal = item => {
+                    return lhs[i]['role-name'] === item['role-name']
+                        && lhs[i].capability   === item.capability;
+                };
+                if ( ! rhs.find(equal) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    /*~
      * A simple, atomic config item (base for string, integer, etc.)
      */
     class Simple extends ConfigItem
@@ -652,6 +715,16 @@
         }
     }
 
+    /*~
+     * The host properties and config format.
+     */
+    var host = new ConfigObject('host')
+        .add('compose', false, new Ignore())
+        .add('comment', false, new Ignore())
+        .add('name',    true,  new Ignore())
+        .add('apis',    false, new Ignore())
+        .add('host',    false, new String('host', 'host'));
+
     // same base for 3 types of range indexes, below
     function rangeBase() {
         return new ConfigObject(/*'db.range'*/)
@@ -665,16 +738,6 @@
                     : '';
             });
     }
-
-    /*~
-     * The host properties and config format.
-     */
-    var host = new ConfigObject('host')
-        .add('compose', false, new Ignore())
-        .add('comment', false, new Ignore())
-        .add('name',    true,  new Ignore())
-        .add('apis',    false, new Ignore())
-        .add('host',    false, new String('host', 'host'));
 
     /*~
      * The database properties and config format.
@@ -783,7 +846,7 @@
         .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
         .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
         .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
-        .add('permissions', false, new Ignore());
+        .add('permissions', false, new      Perms('permissions', 'permissions'));
 
     /*~
      * The mime properties and config format.
@@ -806,7 +869,7 @@
         .add('desc',        false, new     String('description', 'description'))
         .add('roles',       false, new StringList('role',        'roles',       /\s*,\s*/))
         .add('collections', false, new StringList('collection',  'collections', /\s*,\s*/))
-        .add('permissions', false, new Ignore());
+        .add('permissions', false, new      Perms('permissions', 'permissions'));
 
     module.exports = {
         host     : host,
