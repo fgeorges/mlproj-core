@@ -779,9 +779,24 @@
         //
         load(actions, db, srv, display)
         {
-            let meta  = { body: {} };
-            this.props.collections && this.props.collections.create(meta.body);
-            this.props.permissions && this.props.permissions.create(meta.body);
+            let meta = { body: {} };
+            this.props.collection && this.props.collection.create(meta.body);
+            // TODO: Not the same structure for the Client API than for the
+            // Management API (permissions vs. permission, etc.)
+            //this.props.permission && this.props.permission.create(meta.body);
+            if ( this.props.permission ) {
+                meta.body.permissions = [];
+                this.props.permission.value.forEach(p => {
+                    let role = p['role-name'].value;
+                    let cap  = p.capability.value;
+                    let perm = meta.body.permissions.find(p => p['role-name'] === role);
+                    if ( ! perm ) {
+                        perm = { "role-name": role, capabilities: [] };
+                        meta.body.permissions.push(perm);
+                    }
+                    perm.capabilities.push(cap);
+                });
+            }
             let matches = [ meta ];
             matches.count = 0;
             matches.flush = function() {
@@ -997,7 +1012,7 @@
                         isExcluded  : match(p, pats.mm_exclude, false, 'Excluding'),
                         include     : pats.include,
                         exclude     : pats.exclude,
-                        collections : this.props.collections && this.props.collections.value.slice(),
+                        collections : this.props.collection && this.props.collection.value.slice(),
                         mm_include  : pats.mm_include,
                         mm_exclude  : pats.mm_exclude
                     };
@@ -1020,8 +1035,8 @@
                             let overrideColls = false;
                             // is `collections` set, and different than the default array?
                             if ( resp.collections ) {
-                                let dfltColls = this.props.collections
-                                    ? this.props.collections.value.sort()
+                                let dfltColls = this.props.collection
+                                    ? this.props.collection.value.sort()
                                     : [];
                                 let respColls = resp.collections.sort();
                                 if ( dfltColls.length !== respColls.length ) {

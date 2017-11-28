@@ -842,14 +842,14 @@
         .add('comment',     false, new Ignore())
         .add('name',        true,  new Ignore())
         .add('filter',      false, new Ignore())
-        .add('dir',         false, new     String('dir',         'directory'))
-        .add('type',        false, new       Enum('type',        'type',                      [ 'plain', 'rest-src' ]))
-        .add('garbage',     false, new StringList('garbage',     'garbage patterns',          /\s*,\s*/))
-        .add('include',     false, new StringList('include',     'include patterns',          /\s*,\s*/))
-        .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
-        .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
-        .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
-        .add('permissions', false, new      Perms('permission',  'permissions'));
+        .add('dir',         false, new     String('dir',        'directory'))
+        .add('type',        false, new       Enum('type',       'type',                      [ 'plain', 'rest-src' ]))
+        .add('garbage',     false, new StringList('garbage',    'garbage patterns',          /\s*,\s*/))
+        .add('include',     false, new StringList('include',    'include patterns',          /\s*,\s*/))
+        .add('exclude',     false, new StringList('exclude',    'exclude patterns',          /\s*,\s*/))
+        .add('target',      false, new StringList('target',     'target database or server', /\s*,\s*/))
+        .add('collections', false, new StringList('collection', 'collections',               /\s*,\s*/))
+        .add('permissions', false, new      Perms('permission', 'permissions'));
 
     /*~
      * The mime properties and config format.
