@@ -404,6 +404,8 @@
             this.resolveArray(root, this.json.databases);
             this.resolveArray(root, this.json.servers);
             this.resolveArray(root, this.json.sources);
+            this.resolveArray(root, this.json.roles);
+            this.resolveArray(root, this.json.users);
             this.imports.forEach(i => i.resolve(root));
         }
 
@@ -443,7 +445,11 @@
                 throw new Error('Value not an object: ' + JSON.stringify(obj));
             }
             for ( var p in obj ) {
-                obj[p] = this.resolveThing(root, obj[p], forbid ? p : undefined);
+                let name = this.resolveString(root, p);
+                obj[name] = this.resolveThing(root, obj[p], forbid ? p : undefined);
+                if ( p !== name ) {
+                    delete obj[p];
+                }
             }
             return obj;
         }
@@ -532,6 +538,9 @@
             };
             this.compileImpl(cache);
 
+            // compile apis
+            this.compileApis(root, cache);
+
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
@@ -539,7 +548,7 @@
 
             // instantiate all roles now
             root._roles = cache.roles.map(m => {
-                return new cmp.Role(m);
+                return new cmp.Role(m, this.ctxt);
             });
 
             // instantiate all users now
@@ -561,9 +570,6 @@
 
             // compile databases and servers
             this.compileDbsSrvs(root, cache, root.source('src'));
-
-            // compile apis
-            this.compileApis(root, cache);
         }
 
         compileApis(root, cache)

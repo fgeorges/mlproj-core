@@ -1244,11 +1244,11 @@
      */
     class Role extends Component
     {
-        constructor(json)
+        constructor(json, ctxt)
         {
             super();
             // extract the configured properties
-            this.props = props.role.parse(json);
+            this.props = props.role.parse(json, null, ctxt);
             // TODO: To handle in properties.js...
             // TODO: Value should be a StringList, not necessarily an array...
             let priv = json.privileges || {};
@@ -1292,11 +1292,6 @@
             Object.keys(this.props).forEach(p => {
                 this.props[p].update(actions, display, actual, this);
             });
-            // TODO: ...
-            let priv = [];
-            this.execpriv.forEach(p => priv.push(Role.privilege(actions.ctxt, p, 'execute')));
-            this.uripriv.forEach(p  => priv.push(Role.privilege(actions.ctxt, p, 'uri')));
-            actions.add(new act.RoleUpdate(this, 'privilege', priv));
         }
     }
 
@@ -1316,49 +1311,6 @@
             // the base object
             return derived;
         }
-    };
-
-    // return the action URI from the name
-    Role.privilege = (ctxt, name, kind) => {
-        if ( ! Role._privileges ) {
-            // TODO: Use an action for this, for proper verbose logging...
-            let resp = ctxt.platform.get({ api: 'manage' }, '/privileges');
-            if ( resp.status !== 200 ) {
-                throw new Error('Retrieving privilege list not OK: ' + resp.status);
-            }
-            Role._privileges = {
-                execute: {},
-                uri:     {}
-            };
-            resp.body['privilege-default-list']['list-items']['list-item'].forEach(item => {
-                let target;
-                if ( item.kind === 'execute' ) {
-                    target = Role._privileges.execute;
-                }
-                else if ( item.kind === 'uri' ) {
-                    target = Role._privileges.uri;
-                }
-                else {
-                    throw new Error('Unknown kind in privilege list: ' + item.kind);
-                }
-                target[item.nameref] = item.action;
-            });
-        }
-        let action;
-        if ( kind === 'execute' ) {
-            action = Role._privileges.execute[name];
-        }
-        else if ( kind === 'uri' ) {
-            action = Role._privileges.uri[name];
-        }
-        else {
-            throw new Error('Unknown privilege kind: ' + kind);
-        }
-        return {
-            "privilege-name": name,
-            action: action,
-            kind: kind
-        };
     };
 
     /*~

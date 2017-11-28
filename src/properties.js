@@ -164,7 +164,7 @@
             return this;
         }
 
-        parse(config, result) {
+        parse(config, result, ctxt) {
             // do not provide any when calling top-level
             if ( ! result ) {
                 result = {};
@@ -177,7 +177,7 @@
                 }
                 var value = config[cfg];
                 if ( value !== null ) {
-                    prop.handle(result, value, cfg);
+                    prop.handle(result, value, cfg, ctxt);
                 }
             });
             // chack mandatory properties
@@ -190,7 +190,7 @@
                     if ( 'function' === typeof value ) {
                         value = value(result);
                     }
-                    prop.handle(result, value, dflt);
+                    prop.handle(result, value, dflt, ctxt);
                 }
             });
             // return it
@@ -506,7 +506,7 @@
             if ( result[this.name] !== undefined ) {
                 throw new Error('Property already exists: ' + this.name);
             }
-            const role = new String('role-name',  'role');
+            const role = new String('role-name', 'role');
             const cap  = new StringList('capability', 'capability', /\s*,\s*/);
             let res = [];
             Object.keys(value).forEach(p => {
@@ -546,6 +546,114 @@
             return true;
         }
     }
+
+    /*~
+     * An object, to represent a list of privileges, e.g. for a role.
+     */
+    class Privileges extends ConfigItem
+    {
+        constructor(name, label) {
+            super();
+            this.name  = name;
+            this.label = label;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
+        }
+
+        handle(result, value, key, ctxt) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const nameProp   = new String('privilege-name');
+            const actionProp = new String('action');
+            const kindProp   = new String('kind');
+            const impl = (res, value, kind) => {
+                new StringList(null, null, /\s*,\s*/)
+                    .value(value || [])
+                    .forEach(val => {
+                        let action = Privileges.privilege(ctxt, val, kind);
+                        res.push({
+                            "privilege-name": new Result(nameProp, val),
+                            action: new Result(actionProp, action),
+                            kind: new Result(kindProp, kind)
+                        });
+                    });
+            };
+            let res = [];
+            impl(res, value.execute, 'execute');
+            impl(res, value.uri,     'uri');
+            result[this.name] = new Result(this, res);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs.length; ++i ) {
+                const equal = item => {
+                    return lhs[i]['role-name'] === item['role-name']
+                        && lhs[i].capability   === item.capability;
+                };
+                if ( ! rhs.find(equal) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    // return the action URI resolved from the name
+    Privileges.privilege = (ctxt, name, kind) => {
+        if ( ! Privileges.cache ) {
+            // TODO: Use an action for this, for proper verbose logging...
+            let resp = ctxt.platform.get({ api: 'manage' }, '/privileges');
+            if ( resp.status !== 200 ) {
+                throw new Error('Retrieving privilege list not OK: ' + resp.status);
+            }
+            Privileges.cache = {
+                execute: {},
+                uri:     {}
+            };
+            resp.body['privilege-default-list']['list-items']['list-item'].forEach(item => {
+                let target;
+                if ( item.kind === 'execute' ) {
+                    target = Privileges.cache.execute;
+                }
+                else if ( item.kind === 'uri' ) {
+                    target = Privileges.cache.uri;
+                }
+                else {
+                    throw new Error('Unknown kind in privilege list: ' + item.kind);
+                }
+                target[item.nameref] = item.action;
+            });
+        }
+        let action;
+        if ( kind === 'execute' ) {
+            action = Privileges.cache.execute[name];
+        }
+        else if ( kind === 'uri' ) {
+            action = Privileges.cache.uri[name];
+        }
+        else {
+            throw new Error('Unknown privilege kind: ' + kind);
+        }
+        if ( ! action ) {
+            throw new Error('Unknown privilege: ' + name);
+        }
+        return action;
+    };
 
     /*~
      * A simple, atomic config item (base for string, integer, etc.)
@@ -876,7 +984,7 @@
         .add('roles',       false, new StringList('role',          'roles',          /\s*,\s*/))
         .add('collections', false, new StringList('collection',    'collections',    /\s*,\s*/))
         .add('external',    false, new StringList('external-name', 'external names', /\s*,\s*/))
-        .add('privileges',  false, new Ignore());
+        .add('privileges',  false, new Privileges('privilege',     'privileges'));
 
     /*~
      * The user properties and config format.
