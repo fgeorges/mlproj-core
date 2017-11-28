@@ -846,7 +846,7 @@
         .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
         .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
         .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
-        .add('permissions', false, new      Perms('permissions', 'permissions'));
+        .add('permissions', false, new      Perms('permission',  'permissions'));
 
     /*~
      * The mime properties and config format.
@@ -869,7 +869,7 @@
         .add('desc',        false, new     String('description', 'description'))
         .add('roles',       false, new StringList('role',        'roles',       /\s*,\s*/))
         .add('collections', false, new StringList('collection',  'collections', /\s*,\s*/))
-        .add('permissions', false, new      Perms('permissions', 'permissions'));
+        .add('permissions', false, new      Perms('permission',  'permissions'));
 
     module.exports = {
         host     : host,
