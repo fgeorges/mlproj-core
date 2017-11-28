@@ -786,6 +786,51 @@
     }
 
     /*~
+     * Management API: retrieve properties of a role.
+     */
+    class RoleProps extends ManageGet
+    {
+        constructor(role) {
+            var name = role && role.props['role-name'].value;
+            super('/roles/' + name + '/properties',
+                  'Retrieve role props: \t' + name);
+        }
+    }
+
+    /*~
+     * Management API: create a role.
+     */
+    class RoleCreate extends ManagePost
+    {
+        constructor(role, body) {
+            var name = role && role.props['role-name'].value;
+            super('/roles',
+                  body,
+                  'Create role: \t\t' + name);
+        }
+    }
+
+    /*~
+     * Management API: update a role property.
+     */
+    class RoleUpdate extends ManagePut
+    {
+        constructor(role, name, value) {
+            var rolename = role && role.props['role-name'].value;
+            var body     = name;
+            var what     = 'properties';
+            if ( typeof name !== 'object' ) {
+                body = name && { [name]: value };
+                what = name;
+            }
+            super('/roles/' + rolename + '/properties',
+                  body,
+                  'Update ' + what + ':  \t\t' + rolename);
+            this.name = rolename;
+        }
+    }
+
+    /*~
      * Management API: retrieve properties of a user.
      */
     class UserProps extends ManageGet
@@ -987,6 +1032,9 @@
         ServerRestDeploy        : ServerRestDeploy,
         MimeProps               : MimeProps,
         MimeCreate              : MimeCreate,
+        RoleProps               : RoleProps,
+        RoleCreate              : RoleCreate,
+        RoleUpdate              : RoleUpdate,
         UserProps               : UserProps,
         UserCreate              : UserCreate,
         UserUpdate              : UserUpdate,

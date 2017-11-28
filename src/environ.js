@@ -166,6 +166,10 @@
             return this._mimetypes;
         }
 
+        roles() {
+            return this._roles;
+        }
+
         users() {
             return this._users;
         }
@@ -213,7 +217,7 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers, source sets, mime types, users and
+            // compile databses, servers, source sets, mime types, roles, users and
             // apis (with import priority)
             this.module.compile(this);
         }
@@ -485,8 +489,8 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _hosts, _databases, _servers, _sources, _mimetypes
-        // and _users on it
+        // this function sets the _hosts, _databases, _servers, _sources, _mimetypes,
+        // _roles and _users on it
         compile(root)
         {
             // start by resolving the param references (could it be done on the
@@ -521,6 +525,8 @@
                 srcNames  : {},
                 mimes     : [],
                 mimeNames : {},
+                roles     : [],
+                roleNames : {},
                 users     : [],
                 userNames : {}
             };
@@ -529,6 +535,11 @@
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
+            });
+
+            // instantiate all roles now
+            root._roles = cache.roles.map(m => {
+                return new cmp.Role(m);
             });
 
             // instantiate all users now
@@ -939,6 +950,12 @@
             if ( this.json['mime-types'] ) {
                 this.json['mime-types'].forEach(mime => {
                     impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
+                });
+            }
+            // compile roles
+            if ( this.json.roles ) {
+                this.json.roles.forEach(role => {
+                    impl(role, cache.roles, null, cache.roleNames, cmp.Role);
                 });
             }
             // compile users

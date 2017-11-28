@@ -63,6 +63,10 @@
             throw err.abstractFun('Display.mimetype');
         }
 
+        role(props) {
+            throw err.abstractFun('Display.role');
+        }
+
         user(props) {
             throw err.abstractFun('Display.user');
         }

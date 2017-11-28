@@ -100,6 +100,9 @@
                 else if ( 'user' === this.prop._type ) {
                     actions.add(new act.UserUpdate(comp, this.prop.name, val));
                 }
+                else if ( 'role' === this.prop._type ) {
+                    actions.add(new act.RoleUpdate(comp, this.prop.name, val));
+                }
                 else {
                     let msg = 'Unsupported component type: ' + this.prop._type;
                     if ( display.verbose ) {
@@ -859,6 +862,23 @@
         .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
     /*~
+     * The role properties and config format.
+     *
+     * TODO: Add privileges...
+     */
+    var role = new ConfigObject('role')
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new     String('role-name',     'role name'))
+        .add('desc',        false, new     String('description',   'description'))
+        .add('compartment', false, new     String('compartment',   'compartment'))
+        .add('permissions', false, new      Perms('permission',    'permissions'))
+        .add('roles',       false, new StringList('role',          'roles',          /\s*,\s*/))
+        .add('collections', false, new StringList('collection',    'collections',    /\s*,\s*/))
+        .add('external',    false, new StringList('external-name', 'external names', /\s*,\s*/))
+        .add('privileges',  false, new Ignore());
+
+    /*~
      * The user properties and config format.
      */
     var user = new ConfigObject('user')
@@ -878,6 +898,7 @@
         source   : source,
         mime     : mime,
         user     : user,
+        role     : role,
         Result   : Result
     }
 }

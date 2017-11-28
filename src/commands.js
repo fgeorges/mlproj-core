@@ -164,8 +164,9 @@
                 var dbs   = this.environ.databases();
                 var srvs  = this.environ.servers();
                 var mimes = this.environ.mimetypes();
+                var roles = this.environ.roles();
                 var users = this.environ.users();
-                comps = dbs.concat(srvs, mimes, users);
+                comps = dbs.concat(srvs, mimes, roles, users);
             }
             // do it
             comps.forEach(comp => {
