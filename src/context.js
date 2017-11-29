@@ -17,7 +17,7 @@
         }
 
         config(name) {
-            return this.mlproj[name];
+            return this.mlproj && this.mlproj[name];
         }
 
         configs() {
