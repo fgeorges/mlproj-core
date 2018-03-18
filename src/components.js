@@ -739,7 +739,7 @@
                     return t instanceof Server && t.type === 'rest';
                 });
                 if ( ! rests.length ) {
-                    rests = root.servers().filter(s => s.type === 'rest');
+                    rests = this.environ.servers().filter(s => s.type === 'rest');
                 }
                 if ( rests.length > 1 ) {
                     throw new Error('More than one REST servers for resolving the REST source set '
