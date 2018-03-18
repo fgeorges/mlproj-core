@@ -710,35 +710,13 @@
     {
         constructor(json, environ, dflt)
         {
-            const readPerms = (perms) => {
-                let res = {};
-                if ( perms ) {
-                    Object.keys(perms).forEach(role => {
-                        let val = perms[role];
-                        // TODO: Check the values (update, insert, read, execute...)
-                        if ( Array.isArray(val) ) {
-                            res[role] = val;
-                        }
-                        else if ( 'string' === typeof val ) {
-                            res[role] = val.split(/\s*,\s*/);
-                        }
-                        else {
-                            throw new Error('Permission capabilities neither a string or an array for role '
-                                            + role + ': ' + val);
-                        }
-                    });
-                }
-                return res;
-            };
             super();
-            this.dflt        = dflt;
-            this.name        = json && json.name;
-            this.filter      = json && json.filter;
-            this.permissions = readPerms(json && json.permissions);
+            this.dflt   = dflt;
+            this.name   = json && json.name;
+            this.filter = json && json.filter;
             // extract the configured properties
-            this.props       = json ? props.source.parse(json) : {};
-            this.type        = this.props.type && this.props.type.value;
-            this.collections = this.props.collections ? this.props.collections.value.sort() : [];
+            this.props  = json ? props.source.parse(json) : {};
+            this.type   = this.props.type && this.props.type.value;
             // resolve targets (dbs and srvs)
             // TODO: Provide the other way around, `source` on dbs and srvs?
             this.targets = [];
@@ -761,7 +739,7 @@
                     return t instanceof Server && t.type === 'rest';
                 });
                 if ( ! rests.length ) {
-                    rests = root.servers().filter(s => s.type === 'rest');
+                    rests = this.environ.servers().filter(s => s.type === 'rest');
                 }
                 if ( rests.length > 1 ) {
                     throw new Error('More than one REST servers for resolving the REST source set '
@@ -801,39 +779,56 @@
         //
         load(actions, db, srv, display)
         {
-            let meta  = { body: { collections: this.collections } };
-            let perms = Object.keys(this.permissions).map(role => {
-                return {
-                    "role-name"    : role,
-                    "capabilities" : this.permissions[role]
-                };
-            });
-            if ( perms.length ) {
-                meta.body.permissions = perms;
+            let meta = { body: {} };
+            this.props.collection && this.props.collection.create(meta.body);
+            // TODO: Not the same structure for the Client API than for the
+            // Management API (permissions vs. permission, etc.)
+            //this.props.permission && this.props.permission.create(meta.body);
+            if ( this.props.permission ) {
+                meta.body.permissions = [];
+                this.props.permission.value.forEach(p => {
+                    let role = p['role-name'].value;
+                    let cap  = p.capability.value;
+                    let perm = meta.body.permissions.find(p => p['role-name'] === role);
+                    if ( ! perm ) {
+                        perm = { "role-name": role, capabilities: [] };
+                        meta.body.permissions.push(perm);
+                    }
+                    perm.capabilities.push(cap);
+                });
             }
             let matches = [ meta ];
             matches.count = 0;
-            const flush = () => {
-                actions.add(
-                    new act.MultiDocInsert(db, matches));
-                // empty the array
-                matches.splice(0);
-                matches.push(meta);
-                matches.count = 0;
+            matches.flush = function() {
+                if ( this.count ) {
+                    actions.add(
+                        new act.MultiDocInsert(db, this));
+                    // empty the array
+                    this.splice(0);
+                    this.push(meta);
+                    this.count = 0;
+                }
+            };
+            matches.add = function(item) {
+                this.push(item);
+                ++ this.count;
+                if ( this.count >= INSERT_LENGTH ) {
+                    this.flush();
+                }
             };
             if ( ! this.type || this.type === 'plain' ) {
-                this.loadPlain(actions.ctxt, display, matches, flush);
+                this.loadPlain(actions.ctxt, display, matches);
             }
             else if ( this.type === 'rest-src' ) {
                 const port = (srv || this.restTarget()).props.port.value;
-                this.loadRestSrc(actions, db, port, display, matches, flush);
+                this.loadRestSrc(actions, db, port, display, matches);
             }
             else {
                 throw new Error('Unknown source set type: ' + this.type);
             }
         }
 
-        loadRestSrc(actions, db, port, display, matches, flush)
+        loadRestSrc(actions, db, port, display, matches)
         {
             const pf       = actions.ctxt.platform;
             const dir      = this.prop('dir');
@@ -864,13 +859,10 @@
             // deploy `root/*`
             const root = dir + '/root';
             if ( pf.exists(root) ) {
-                this.loadPlain(actions.ctxt, display, matches, flush, root);
+                this.loadPlain(actions.ctxt, display, matches, root);
             }
             else if ( display.verbose ) {
                 display.check(0, 'dir, not exist', root);
-            }
-            if ( matches.count ) {
-                flush();
             }
             // install `services/*`
             const services = dir + '/services';
@@ -916,22 +908,16 @@
             return new act.ServerRestDeploy(kind, name, path, type(ext), port);
         }
 
-        loadPlain(ctxt, display, matches, flush, dir)
+        loadPlain(ctxt, display, matches, dir)
         {
             this.walk(ctxt, display, (path, uri, meta) => {
                 if ( meta ) {
                     // metadata, if any, must be before the doc content
                     matches.push({ uri: uri, body: meta });
                 }
-                matches.push({ uri: uri, path: path });
-                ++ matches.count;
-                if ( matches.count >= INSERT_LENGTH ) {
-                    flush();
-                }
+                matches.add({ uri: uri, path: path });
             }, dir);
-            if ( matches.count ) {
-                flush();
-            }
+            matches.flush();
         }
 
         walk(ctxt, display, onMatch, dir)
@@ -1026,7 +1012,7 @@
                         isExcluded  : match(p, pats.mm_exclude, false, 'Excluding'),
                         include     : pats.include,
                         exclude     : pats.exclude,
-                        collections : this.collections.slice(),
+                        collections : this.props.collection && this.props.collection.value.slice(),
                         mm_include  : pats.mm_include,
                         mm_exclude  : pats.mm_exclude
                     };
@@ -1049,12 +1035,15 @@
                             let overrideColls = false;
                             // is `collections` set, and different than the default array?
                             if ( resp.collections ) {
-                                let colls = resp.collections.sort();
-                                if ( this.collections.length !== colls.length ) {
+                                let dfltColls = this.props.collection
+                                    ? this.props.collection.value.sort()
+                                    : [];
+                                let respColls = resp.collections.sort();
+                                if ( dfltColls.length !== respColls.length ) {
                                     overrideColls = true;
                                 }
-                                for ( let i = 0; ! overrideColls && i < colls.length; ++ i ) {
-                                    if ( this.collections[i] !== colls[i] ) {
+                                for ( let i = 0; ! overrideColls && i < respColls.length; ++ i ) {
+                                    if ( dfltColls[i] !== respColls[i] ) {
                                         overrideColls = true;
                                     }
                                 }
@@ -1101,7 +1090,7 @@
 
     // TODO: Set another, real-world length, or based on the size...
     // TODO: And of course, be able to set this (these) from the environs.
-    const INSERT_LENGTH = 10;
+    const INSERT_LENGTH = 25;
 
     /*~
      * A source set wrapping just a plain dir.
@@ -1181,6 +1170,8 @@
         }
     }
 
+    Host.kind = 'host';
+
     Host.init = (actions, user, pwd, key, licensee, host) => {
         actions.add(new act.AdminInit(key, licensee, host));
         actions.add(new act.AdminInstance(user, pwd, host));
@@ -1248,6 +1239,149 @@
         return derived;
     };
 
+    /*~
+     * A role.
+     */
+    class Role extends Component
+    {
+        constructor(json, ctxt)
+        {
+            super();
+            // extract the configured properties
+            this.props = props.role.parse(json, null, ctxt);
+            // TODO: To handle in properties.js...
+            // TODO: Value should be a StringList, not necessarily an array...
+            let priv = json.privileges || {};
+            this.execpriv = priv.execute || [];
+            this.uripriv  = priv.uri     || [];
+        }
+
+        show(display)
+        {
+            display.role(this.props);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the role', this.props['role-name'].value);
+            const body = new act.RoleProps(this).execute(actions.ctxt);
+            // if role does not exist yet
+            if ( ! body ) {
+                this.create(actions, display);
+            }
+            // if role already exists
+            else {
+                this.update(actions, display, body);
+            }
+        }
+
+        create(actions, display)
+        {
+            display.add(0, 'create', 'role', this.props['role-name'].value);
+            var obj = {};
+            Object.keys(this.props).forEach(p => {
+                this.props[p].create(obj);
+            });
+            actions.add(new act.RoleCreate(this, obj));
+        }
+
+        update(actions, display, actual)
+        {
+            // check properties
+            display.check(1, 'properties');
+            Object.keys(this.props).forEach(p => {
+                this.props[p].update(actions, display, actual, this);
+            });
+        }
+    }
+
+    Role.kind = 'role';
+
+    Role.merge = (name, derived, base) => {
+        if ( name === 'permissions' ) {
+            for ( let role in base ) {
+                if ( ! derived[role] ) {
+                    derived[role] = base[role];
+                }
+            }
+            return derived;
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
+    };
+
+    /*~
+     * A user.
+     */
+    class User extends Component
+    {
+        constructor(json)
+        {
+            super();
+            // extract the configured properties
+            this.props = props.user.parse(json);
+        }
+
+        show(display)
+        {
+            display.user(this.props);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the user', this.props['user-name'].value);
+            const body = new act.UserProps(this).execute(actions.ctxt);
+            // if user does not exist yet
+            if ( ! body ) {
+                this.create(actions, display);
+            }
+            // if user already exists
+            else {
+                this.update(actions, display, body);
+            }
+        }
+
+        create(actions, display)
+        {
+            display.add(0, 'create', 'user', this.props['user-name'].value);
+            var obj = {};
+            Object.keys(this.props).forEach(p => {
+                this.props[p].create(obj);
+            });
+            actions.add(new act.UserCreate(this, obj));
+        }
+
+        update(actions, display, actual)
+        {
+            // check properties
+            display.check(1, 'properties');
+            Object.keys(this.props).forEach(p => {
+                this.props[p].update(actions, display, actual, this);
+            });
+        }
+    }
+
+    User.kind = 'user';
+
+    User.merge = (name, derived, base) => {
+        if ( name === 'permissions' ) {
+            for ( let role in base ) {
+                if ( ! derived[role] ) {
+                    derived[role] = base[role];
+                }
+            }
+            return derived;
+        }
+        else {
+            // by default, the value in the derived object overrides the one from
+            // the base object
+            return derived;
+        }
+    };
+
     module.exports = {
         SysDatabase : SysDatabase,
         Database    : Database,
@@ -1256,7 +1390,9 @@
         SourceDir   : SourceDir,
         SourceDoc   : SourceDoc,
         Host        : Host,
-        MimeType    : MimeType
+        MimeType    : MimeType,
+        Role        : Role,
+        User        : User
     }
 }
 )();

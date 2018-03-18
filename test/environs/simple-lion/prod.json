@@ -1,0 +1,79 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "code": "simple-lion",
+        "title": "Example with users and roles.",
+        "connect": {
+            "host": "ml911",
+            "user": "admin",
+            "password": "admin"
+        },
+        "params": {
+            "port-base": "712"
+        },
+        "sources": [{
+            "name": "data",
+            "dir": "data",
+            "collections": "/colls/mine",
+            "permissions": {
+                "lion-reader": ["read"],
+                "lion-writer": ["read", "update"]
+            }
+        }, {
+            "name": "src",
+            "dir": "src"
+        }],
+        "databases": [{
+            "id": "content",
+            "name": "@{code}-content"
+        }, {
+            "id": "modules",
+            "name": "@{code}-modules"
+        }],
+        "servers": [{
+            "name": "@{code}",
+            "type": "http",
+            "port": "${port-base}0",
+            "root": "/",
+            "content": {
+                "idref": "content"
+            },
+            "modules": {
+                "idref": "modules"
+            }
+        }],
+        "roles": [{
+            "name": "lion-reader",
+            "desc": "Test role 1."
+        }, {
+            "name": "lion-writer",
+            "desc": "Test role 2.",
+            "permissions": {
+                "lion-reader": "read",
+                "lion-writer": "read, update"
+            },
+            "privileges": {
+                "execute": [
+                    "xdmp:http-get",
+                    "xdmp:http-post",
+                    "xdmp:http-put"
+                ],
+                "uri": [
+                    "domain-uri",
+                    "pipeline-uri"
+                ]
+            }
+        }],
+        "users": [{
+            "name": "lion",
+            "password": "xxx",
+            "desc": "Example user",
+            "roles": ["lion-reader", "lion-writer"],
+            "collections": "/colls/lion",
+            "permissions": {
+                "lion-reader": ["read"],
+                "lion-writer": "read, update"
+            }
+        }]
+    }
+}

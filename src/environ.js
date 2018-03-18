@@ -166,6 +166,14 @@
             return this._mimetypes;
         }
 
+        roles() {
+            return this._roles;
+        }
+
+        users() {
+            return this._users;
+        }
+
         sources() {
             return this._sources;
         }
@@ -209,8 +217,8 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers, source sets, mime types and apis (with
-            // import priority)
+            // compile databses, servers, source sets, mime types, roles, users and
+            // apis (with import priority)
             this.module.compile(this);
         }
 
@@ -396,6 +404,8 @@
             this.resolveArray(root, this.json.databases);
             this.resolveArray(root, this.json.servers);
             this.resolveArray(root, this.json.sources);
+            this.resolveArray(root, this.json.roles);
+            this.resolveArray(root, this.json.users);
             this.imports.forEach(i => i.resolve(root));
         }
 
@@ -435,7 +445,11 @@
                 throw new Error('Value not an object: ' + JSON.stringify(obj));
             }
             for ( var p in obj ) {
-                obj[p] = this.resolveThing(root, obj[p], forbid ? p : undefined);
+                let name = this.resolveString(root, p);
+                obj[name] = this.resolveThing(root, obj[p], forbid ? p : undefined);
+                if ( p !== name ) {
+                    delete obj[p];
+                }
             }
             return obj;
         }
@@ -481,7 +495,8 @@
         // compile databases and servers (resolving import priority) and source sets
         //
         // `root` can be the root module, or the environ itself
-        // this function sets the _hosts, _databases, _servers, _sources and _mimetypes on it
+        // this function sets the _hosts, _databases, _servers, _sources, _mimetypes,
+        // _roles and _users on it
         compile(root)
         {
             // start by resolving the param references (could it be done on the
@@ -515,13 +530,30 @@
                 srcs      : [],
                 srcNames  : {},
                 mimes     : [],
-                mimeNames : {}
+                mimeNames : {},
+                roles     : [],
+                roleNames : {},
+                users     : [],
+                userNames : {}
             };
             this.compileImpl(cache);
+
+            // compile apis
+            this.compileApis(root, cache);
 
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
                 return new cmp.MimeType(m);
+            });
+
+            // instantiate all roles now
+            root._roles = cache.roles.map(m => {
+                return new cmp.Role(m, this.ctxt);
+            });
+
+            // instantiate all users now
+            root._users = cache.users.map(m => {
+                return new cmp.User(m);
             });
 
             // instantiate all sources now
@@ -531,11 +563,13 @@
                 return new cmp.SourceSet(s, root, dflt);
             });
 
+            // instantiate all hosts now
+            root._hosts = cache.hosts.map(h => {
+                return new cmp.Host(h);
+            });
+
             // compile databases and servers
             this.compileDbsSrvs(root, cache, root.source('src'));
-
-            // compile apis
-            this.compileApis(root, cache);
         }
 
         compileApis(root, cache)
@@ -826,23 +860,6 @@
                 };
                 return new cmp.Server(srv, resolve(srv.content), resolve(srv.modules), src, this.ctxt.platform);
             });
-
-            // instantiate all sources now
-            let dfltSrc = cache.srcs.find(s => s.name === '@default');
-            let dflt    = dfltSrc && new cmp.SourceSet(dfltSrc);
-            root._sources = cache.srcs.filter(s => s.name !== '@default').map(s => {
-                return new cmp.SourceSet(s, dflt);
-            });
-
-            // instantiate all hosts now
-            root._hosts = cache.hosts.map(h => {
-                return new cmp.Host(h);
-            });
-
-            // instantiate all mime types now
-            root._mimetypes = cache.mimes.map(m => {
-                return new cmp.MimeType(m);
-            });
         }
 
         // recursive implementation of compile(), caching databases and servers
@@ -914,7 +931,7 @@
             // compile hosts
             if ( this.json.hosts ) {
                 this.json.hosts.forEach(host => {
-                    impl(host, cache.hosts, null, cache.hostNames, 'host');
+                    impl(host, cache.hosts, null, cache.hostNames, cmp.Host);
                 });
             }
             // compile databases
@@ -939,6 +956,18 @@
             if ( this.json['mime-types'] ) {
                 this.json['mime-types'].forEach(mime => {
                     impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
+                });
+            }
+            // compile roles
+            if ( this.json.roles ) {
+                this.json.roles.forEach(role => {
+                    impl(role, cache.roles, null, cache.roleNames, cmp.Role);
+                });
+            }
+            // compile users
+            if ( this.json.users ) {
+                this.json.users.forEach(user => {
+                    impl(user, cache.users, null, cache.userNames, cmp.User);
                 });
             }
             // recurse on imports

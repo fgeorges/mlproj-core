@@ -16,7 +16,8 @@
                 let cpath = pf.resolve('xproject/mlproj.json', path);
                 let json  = pf.json(cpath);
                 // TODO: Add some validation rules? (must exist, format must be there, etc.)
-                this.mlproj = json.mlproj;
+                this.mlproj  = json.mlproj;
+                this._config = json.mlproj && json.mlproj.config;
             }
             catch (e) {
                 // ignore if file does not exist
@@ -34,7 +35,7 @@
         }
 
         configs() {
-            let names = this.mlproj ? Object.keys(this.mlproj) : [];
+            let names = this._config ? Object.keys(this._config) : [];
             this.ctxt.configs()
                 .filter(n => ! names.includes(n))
                 .forEach(n => names.push(n));
@@ -42,7 +43,7 @@
         }
 
         config(name) {
-            let v = this.mlproj && this.mlproj[name];
+            let v = this._config && this._config[name];
             return v !== undefined
                 ? v
                 : this.ctxt.config(name);

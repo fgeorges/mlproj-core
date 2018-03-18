@@ -97,6 +97,12 @@
                 else if ( 'server' === this.prop._type ) {
                     actions.add(new act.ServerUpdate(comp, this.prop.name, val));
                 }
+                else if ( 'user' === this.prop._type ) {
+                    actions.add(new act.UserUpdate(comp, this.prop.name, val));
+                }
+                else if ( 'role' === this.prop._type ) {
+                    actions.add(new act.RoleUpdate(comp, this.prop.name, val));
+                }
                 else {
                     let msg = 'Unsupported component type: ' + this.prop._type;
                     if ( display.verbose ) {
@@ -158,7 +164,7 @@
             return this;
         }
 
-        parse(config, result) {
+        parse(config, result, ctxt) {
             // do not provide any when calling top-level
             if ( ! result ) {
                 result = {};
@@ -171,7 +177,7 @@
                 }
                 var value = config[cfg];
                 if ( value !== null ) {
-                    prop.handle(result, value, cfg);
+                    prop.handle(result, value, cfg, ctxt);
                 }
             });
             // chack mandatory properties
@@ -181,10 +187,13 @@
                 if ( config[dflt] === undefined ) {
                     var prop  = this.props[dflt];
                     var value = this.defaults[dflt];
+                    if ( ! prop ) {
+                        throw new Error('Setting the default value for unknown property: ' + dflt);
+                    }
                     if ( 'function' === typeof value ) {
                         value = value(result);
                     }
-                    prop.handle(result, value, dflt);
+                    prop.handle(result, value, dflt, ctxt);
                 }
             });
             // return it
@@ -280,8 +289,12 @@
         }
 
         handle(result, value, key) {
-            for ( var i = 0; i < value.length; ++i ) {
-                var v = value[i];
+            // make sure all items are initialized to empty list as soon as this
+            // one is encountered
+            this.items.forEach(item => {
+                item.prop.init(result);
+            });
+            value.forEach(v => {
                 var k = 0;
                 var item;
                 do {
@@ -294,7 +307,7 @@
                 else {
                     throw new Error('No predicate matches the value in multi array: ' + key);
                 }
-            }
+            });
         }
     }
 
@@ -314,10 +327,14 @@
             this.prop.type(type);
         }
 
-        handle(result, value, key) {
+        init(result) {
             if ( ! result[this.name] ) {
                 result[this.name] = new Result(this, []);
             }
+        }
+
+        handle(result, value, key) {
+            this.init(result);
             var r     = this.prop.parse(value);
             var all   = [];
             var multi = Object.keys(this.prop.props).filter(p => {
@@ -479,6 +496,177 @@
     }
 
     /*~
+     * An object, to represent a list of permissions.
+     */
+    class Perms extends ConfigItem
+    {
+        constructor(name, label) {
+            super();
+            this.name  = name;
+            this.label = label;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
+        }
+
+        handle(result, value, key) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const role = new String('role-name', 'role');
+            const cap  = new StringList('capability', 'capability', /\s*,\s*/);
+            let res = [];
+            Object.keys(value).forEach(p => {
+                cap.value(value[p]).forEach(v => {
+                    if ( v !== 'update' && v !== 'insert' && v !== 'read'
+                         && v !== 'execute' && v !== 'node-update' ) {
+                        throw new Error('Unknwon permission capability: ' + v);
+                    }
+                    res.push({
+                        "role-name"  : new Result(role, p),
+                        "capability" : new Result(cap, v)
+                    });
+                });
+            });
+            result[this.name] = new Result(this, res);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs.length; ++i ) {
+                const equal = item => {
+                    return lhs[i]['role-name'] === item['role-name']
+                        && lhs[i].capability   === item.capability;
+                };
+                if ( ! rhs.find(equal) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    /*~
+     * An object, to represent a list of privileges, e.g. for a role.
+     */
+    class Privileges extends ConfigItem
+    {
+        constructor(name, label) {
+            super();
+            this.name  = name;
+            this.label = label;
+        }
+
+        type(type) {
+            if ( this._type ) {
+                throw new Error('Type already set on ' + this.name + ': ' + this._type);
+            }
+            this._type = type;
+        }
+
+        handle(result, value, key, ctxt) {
+            if ( result[this.name] !== undefined ) {
+                throw new Error('Property already exists: ' + this.name);
+            }
+            const nameProp   = new String('privilege-name');
+            const actionProp = new String('action');
+            const kindProp   = new String('kind');
+            const impl = (res, value, kind) => {
+                new StringList(null, null, /\s*,\s*/)
+                    .value(value || [])
+                    .forEach(val => {
+                        let action = Privileges.privilege(ctxt, val, kind);
+                        res.push({
+                            "privilege-name": new Result(nameProp, val),
+                            action: new Result(actionProp, action),
+                            kind: new Result(kindProp, kind)
+                        });
+                    });
+            };
+            let res = [];
+            impl(res, value.execute, 'execute');
+            impl(res, value.uri,     'uri');
+            result[this.name] = new Result(this, res);
+        }
+
+        compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
+            if ( lhs.length !== rhs.length ) {
+                return false;
+            }
+            for ( let i = 0; i < lhs.length; ++i ) {
+                const equal = item => {
+                    return lhs[i]['role-name'] === item['role-name']
+                        && lhs[i].capability   === item.capability;
+                };
+                if ( ! rhs.find(equal) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    // return the action URI resolved from the name
+    Privileges.privilege = (ctxt, name, kind) => {
+        if ( ! Privileges.cache ) {
+            // TODO: Use an action for this, for proper verbose logging...
+            let resp = ctxt.platform.get({ api: 'manage' }, '/privileges');
+            if ( resp.status !== 200 ) {
+                throw new Error('Retrieving privilege list not OK: ' + resp.status);
+            }
+            Privileges.cache = {
+                execute: {},
+                uri:     {}
+            };
+            resp.body['privilege-default-list']['list-items']['list-item'].forEach(item => {
+                let target;
+                if ( item.kind === 'execute' ) {
+                    target = Privileges.cache.execute;
+                }
+                else if ( item.kind === 'uri' ) {
+                    target = Privileges.cache.uri;
+                }
+                else {
+                    throw new Error('Unknown kind in privilege list: ' + item.kind);
+                }
+                target[item.nameref] = item.action;
+            });
+        }
+        let action;
+        if ( kind === 'execute' ) {
+            action = Privileges.cache.execute[name];
+        }
+        else if ( kind === 'uri' ) {
+            action = Privileges.cache.uri[name];
+        }
+        else {
+            throw new Error('Unknown privilege kind: ' + kind);
+        }
+        if ( ! action ) {
+            throw new Error('Unknown privilege: ' + name);
+        }
+        return action;
+    };
+
+    /*~
      * A simple, atomic config item (base for string, integer, etc.)
      */
     class Simple extends ConfigItem
@@ -631,6 +819,12 @@
 
         // compare unordered
         compare(lhs, rhs) {
+            if ( lhs === undefined && rhs === undefined ) {
+                return true;
+            }
+            if ( lhs === undefined || rhs === undefined ) {
+                return false;
+            }
             if ( lhs.length !== rhs.length ) {
                 return false;
             }
@@ -642,6 +836,16 @@
             return true;
         }
     }
+
+    /*~
+     * The host properties and config format.
+     */
+    var host = new ConfigObject('host')
+        .add('compose', false, new Ignore())
+        .add('comment', false, new Ignore())
+        .add('name',    true,  new Ignore())
+        .add('apis',    false, new Ignore())
+        .add('host',    false, new String('host', 'host'));
 
     // same base for 3 types of range indexes, below
     function rangeBase() {
@@ -656,16 +860,6 @@
                     : '';
             });
     }
-
-    /*~
-     * The host properties and config format.
-     */
-    var host = new ConfigObject('host')
-        .add('compose', false, new Ignore())
-        .add('comment', false, new Ignore())
-        .add('name',    true,  new Ignore())
-        .add('apis',    false, new Ignore())
-        .add('host',    false, new String('host', 'host'));
 
     /*~
      * The database properties and config format.
@@ -700,7 +894,7 @@
                        .add('name',      true,  new Multiplexer(new String('localname', 'name')))
                        .add('namespace', false, new String('namespace-uri', 'ns'))
                        .dflt('namespace', '')))))
-        .add('searches', false, new ConfigObject(/*'db.indexes'*/)
+        .add('searches', false, new ConfigObject(/*'db.searches'*/)
              .add('fast', false, new ConfigObject()
                   .add('case-sensitive',            false, new Boolean('fast-case-sensitive-searches',            'fast case sensitive searches'))
                   .add('diacritic-sensitive',       false, new Boolean('fast-diacritic-sensitive-searches',       'fast diacritic sensitive searches'))
@@ -767,14 +961,14 @@
         .add('comment',     false, new Ignore())
         .add('name',        true,  new Ignore())
         .add('filter',      false, new Ignore())
-        .add('dir',         false, new     String('dir',         'directory'))
-        .add('type',        false, new       Enum('type',        'type',                      [ 'plain', 'rest-src' ]))
-        .add('garbage',     false, new StringList('garbage',     'garbage patterns',          /\s*,\s*/))
-        .add('include',     false, new StringList('include',     'include patterns',          /\s*,\s*/))
-        .add('exclude',     false, new StringList('exclude',     'exclude patterns',          /\s*,\s*/))
-        .add('target',      false, new StringList('target',      'target database or server', /\s*,\s*/))
-        .add('collections', false, new StringList('collections', 'collections',               /\s*,\s*/))
-        .add('permissions', false, new Ignore());
+        .add('dir',         false, new     String('dir',        'directory'))
+        .add('type',        false, new       Enum('type',       'type',                      [ 'plain', 'rest-src' ]))
+        .add('garbage',     false, new StringList('garbage',    'garbage patterns',          /\s*,\s*/))
+        .add('include',     false, new StringList('include',    'include patterns',          /\s*,\s*/))
+        .add('exclude',     false, new StringList('exclude',    'exclude patterns',          /\s*,\s*/))
+        .add('target',      false, new StringList('target',     'target database or server', /\s*,\s*/))
+        .add('collections', false, new StringList('collection', 'collections',               /\s*,\s*/))
+        .add('permissions', false, new      Perms('permission', 'permissions'));
 
     /*~
      * The mime properties and config format.
@@ -786,12 +980,44 @@
         .add('extensions', true,  new StringList('extensions', 'extensions', /\s*,\s*/).freeze())
         .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
+    /*~
+     * The role properties and config format.
+     *
+     * TODO: Add privileges...
+     */
+    var role = new ConfigObject('role')
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new     String('role-name',     'role name'))
+        .add('desc',        false, new     String('description',   'description'))
+        .add('compartment', false, new     String('compartment',   'compartment'))
+        .add('permissions', false, new      Perms('permission',    'permissions'))
+        .add('roles',       false, new StringList('role',          'roles',          /\s*,\s*/))
+        .add('collections', false, new StringList('collection',    'collections',    /\s*,\s*/))
+        .add('external',    false, new StringList('external-name', 'external names', /\s*,\s*/))
+        .add('privileges',  false, new Privileges('privilege',     'privileges'));
+
+    /*~
+     * The user properties and config format.
+     */
+    var user = new ConfigObject('user')
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new     String('user-name',   'user name'))
+        .add('password',    true,  new     String('password',    'password'))
+        .add('desc',        false, new     String('description', 'description'))
+        .add('roles',       false, new StringList('role',        'roles',       /\s*,\s*/))
+        .add('collections', false, new StringList('collection',  'collections', /\s*,\s*/))
+        .add('permissions', false, new      Perms('permission',  'permissions'));
+
     module.exports = {
         host     : host,
         database : database,
         server   : server,
         source   : source,
         mime     : mime,
+        user     : user,
+        role     : role,
         Result   : Result
     }
 }

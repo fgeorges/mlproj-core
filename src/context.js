@@ -17,7 +17,7 @@
         }
 
         config(name) {
-            return this.mlproj[name];
+            return this.mlproj && this.mlproj[name];
         }
 
         configs() {
@@ -61,6 +61,14 @@
 
         mimetype(name, props) {
             throw err.abstractFun('Display.mimetype');
+        }
+
+        role(props) {
+            throw err.abstractFun('Display.role');
+        }
+
+        user(props) {
+            throw err.abstractFun('Display.user');
         }
 
         project(abbrev, configs, title, name, version) {
