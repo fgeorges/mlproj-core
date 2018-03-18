@@ -187,6 +187,9 @@
                 if ( config[dflt] === undefined ) {
                     var prop  = this.props[dflt];
                     var value = this.defaults[dflt];
+                    if ( ! prop ) {
+                        throw new Error('Setting the default value for unknown property: ' + dflt);
+                    }
                     if ( 'function' === typeof value ) {
                         value = value(result);
                     }
@@ -286,8 +289,12 @@
         }
 
         handle(result, value, key) {
-            for ( var i = 0; i < value.length; ++i ) {
-                var v = value[i];
+            // make sure all items are initialized to empty list as soon as this
+            // one is encountered
+            this.items.forEach(item => {
+                item.prop.init(result);
+            });
+            value.forEach(v => {
                 var k = 0;
                 var item;
                 do {
@@ -300,7 +307,7 @@
                 else {
                     throw new Error('No predicate matches the value in multi array: ' + key);
                 }
-            }
+            });
         }
     }
 
@@ -320,10 +327,14 @@
             this.prop.type(type);
         }
 
-        handle(result, value, key) {
+        init(result) {
             if ( ! result[this.name] ) {
                 result[this.name] = new Result(this, []);
             }
+        }
+
+        handle(result, value, key) {
+            this.init(result);
             var r     = this.prop.parse(value);
             var all   = [];
             var multi = Object.keys(this.prop.props).filter(p => {
@@ -883,7 +894,7 @@
                        .add('name',      true,  new Multiplexer(new String('localname', 'name')))
                        .add('namespace', false, new String('namespace-uri', 'ns'))
                        .dflt('namespace', '')))))
-        .add('searches', false, new ConfigObject(/*'db.indexes'*/)
+        .add('searches', false, new ConfigObject(/*'db.searches'*/)
              .add('fast', false, new ConfigObject()
                   .add('case-sensitive',            false, new Boolean('fast-case-sensitive-searches',            'fast case sensitive searches'))
                   .add('diacritic-sensitive',       false, new Boolean('fast-diacritic-sensitive-searches',       'fast diacritic sensitive searches'))
