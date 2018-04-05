@@ -105,6 +105,10 @@
             this.cwd = cwd;
         }
 
+        newMinimatch(pattern, options) {
+            throw err.abstractFun('Platform.newMinimatch');
+        }
+
         mkdir(path, force) {
             throw err.abstractFun('Platform.mkdir');
         }

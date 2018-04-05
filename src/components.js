@@ -2,7 +2,6 @@
 
 (function() {
 
-    const match = require("minimatch")
     const act   = require('./action');
     const props = require('./properties');
 
@@ -947,9 +946,9 @@
                 let pats = this.prop(name);
                 let res  = dirNotDir(pats);
                 patterns.dir[name]            = res[0];
-                patterns.dir['mm_' + name]    = res[0].map(p => new match.Minimatch(p, options));
+                patterns.dir['mm_' + name]    = res[0].map(p => ctxt.platform.newMinimatch(p, options));
                 patterns.notdir[name]         = res[1];
-                patterns.notdir['mm_' + name] = res[1].map(p => new match.Minimatch(p, options));
+                patterns.notdir['mm_' + name] = res[1].map(p => ctxt.platform.newMinimatch(p, options));
             };
 
             // Both `dir` and `notdir` are pupolated with the following properties:
