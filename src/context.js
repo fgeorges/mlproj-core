@@ -3,7 +3,6 @@
 (function() {
 
     const err = require('./error');
-    const pkg = require('../package.json');
 
     class Context
     {
@@ -25,7 +24,7 @@
         }
 
         coreVersion() {
-            return pkg.version;
+            return this.platform.corePackage().version;
         }
     }
 
@@ -103,6 +102,10 @@
     {
         constructor(cwd) {
             this.cwd = cwd;
+        }
+
+        corePackage() {
+            throw err.abstractFun('Platform.corePackage');
         }
 
         newMinimatch(pattern, options) {
