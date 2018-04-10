@@ -21,7 +21,7 @@
             }
             catch (e) {
                 // ignore if file does not exist
-                if ( e.name !== 'no-such-file' ) {
+                if ( e.code !== 'no-such-file' ) {
                     throw e;
                 }
             }

@@ -6,7 +6,8 @@
     {
         constructor(code, msg) {
             super(msg);
-            this.name = code;
+            this.name = 'MlprojError.' + code;
+            this.code = code;
         }
     }
 
@@ -33,15 +34,21 @@
         return err;
     }
 
+    function missingValue(name) {
+        let err = new MlprojError('missing-value', 'Value ' + name + ' is missing');
+        err.value = name;
+        return err;
+    }
+
     function noSuchDb(name) {
         let err = new MlprojError('no-such-db', 'No such database: ' + name);
-        err.name = name;
+        err.database = name;
         return err;
     }
 
     function noSuchSrv(name) {
         let err = new MlprojError('no-such-srv', 'No such server: ' + name);
-        err.name = name;
+        err.server = name;
         return err;
     }
 
@@ -63,6 +70,7 @@
         abstractFun    : abstractFun,
         noSuchFile     : noSuchFile,
         invalidJson    : invalidJson,
+	missingValue   : missingValue,
         noSuchDb       : noSuchDb,
         noSuchSrv      : noSuchSrv,
         serverNoDb     : serverNoDb,

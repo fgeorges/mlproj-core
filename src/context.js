@@ -198,7 +198,7 @@
             }
             let host = params.host || environ().param('@host');
             if ( ! host ) {
-                throw new Error('No host in environ');
+                throw err.missingValue('@host');
             }
             let ssl;
             let port;
@@ -230,7 +230,20 @@
             throw err.abstractFun('Platform.put');
         }
 
-        // parts is [ {uri,path}, {uri,path}, ... ]
+        /*~
+         * The parameter `parts` is an array of objects.  Each is either a
+         * document:
+         *
+         *     { uri: '/uri/to/use.xml', path: '/path/on/fs/file.xml' }
+         *
+         * or a metadata part (with optional `uri`, and `body` as metadata part
+         * in http://docs.marklogic.com/guide/rest-dev/bulk):
+         *
+         *     { body: { collections: [ '/some/coll' ] } }
+         *
+         * The difference between both is done by looking at the presence (or
+         * absence) of `path`.
+         */
         multipart(parts) {
             throw err.abstractFun('Platform.multipart');
         }
