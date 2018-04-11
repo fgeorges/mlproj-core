@@ -105,7 +105,7 @@
         }
 
         corePackage() {
-            throw err.abstractFun('Platform.corePackage');
+            return require('../package.json');
         }
 
         newMinimatch(pattern, options) {
