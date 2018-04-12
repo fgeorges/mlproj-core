@@ -73,19 +73,19 @@
             }
         }
 
-        get(params, url) {
+        get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params, url);
+            return this._command.ctxt.platform.get(params);
         }
 
-        post(params, url, data, type) {
+        post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, url, data, type);
+            return this._command.ctxt.platform.post(params, null, data, type);
         }
 
-        put(params, url, data, type) {
+        put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, url, data, type);
+            return this._command.ctxt.platform.put(params, null, data, type);
         }
 
         databases() {
@@ -128,19 +128,19 @@
                 + 'group-id=' + this._group;
         }
 
-        get(params, url) {
+        get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params, url);
+            return this._command.ctxt.platform.get(params);
         }
 
-        post(params, url, data, type) {
+        post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, url, data, type);
+            return this._command.ctxt.platform.post(params, null, data, type);
         }
 
-        put(params, url, data, type) {
+        put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, url, data, type);
+            return this._command.ctxt.platform.put(params, null, data, type);
         }
 
         properties(body) {
