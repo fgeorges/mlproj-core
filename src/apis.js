@@ -100,12 +100,207 @@
                 .map(i => i.nameref);
         }
 
+        database(name) {
+            const resolved = this._command.environ.substitute(name);
+            const db       = this._command.environ.database(resolved);
+            // can use the name of any server, not only these defined in the environ
+            const the_name = db ? db.name : resolved;
+            return new Database(this._command, the_name);
+        }
+
+        forests() {
+            const resp = this.get({ path: '/forests' });
+            if ( resp.status !== 200 ) {
+                throw new Error('Error retrieving the forest list: %s', resp.status);
+            }
+            return resp.body
+                ['forest-default-list']
+                ['list-items']
+                ['list-item']
+                .map(i => i.nameref);
+        }
+
+        forest(name) {
+            const resolved = this._command.environ.substitute(name);
+            return new Forest(this._command, resolved);
+        }
+
+        servers() {
+            const resp = this.get({ path: '/servers' });
+            if ( resp.status !== 200 ) {
+                throw new Error('Error retrieving the server list: %s', resp.status);
+            }
+            return resp.body
+                ['server-default-list']
+                ['list-items']
+                ['list-item']
+                .map(i => i.nameref);
+        }
+
         server(name, group) {
             const resolved = this._command.environ.substitute(name);
             const srv      = this._command.environ.server(resolved);
             // can use the name of any server, not only these defined in the environ
             const the_name = srv ? srv.name : resolved;
             return new Server(this._command, the_name, group);
+        }
+    }
+
+    class Database
+    {
+        constructor(cmd, name) {
+            this._command = cmd;
+            this._name    = name;
+        }
+
+        _adaptParams(params) {
+            if ( ! params.api ) {
+                params.api = 'manage';
+            }
+            params.path = `/databases/${this._name}${params.path}`;
+        }
+
+        get(params) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.get(params);
+        }
+
+        post(params, data, type) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.post(params, null, data, type);
+        }
+
+        put(params, data, type) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.put(params, null, data, type);
+        }
+
+        properties(body) {
+            if ( body === undefined ) {
+                const resp = this.get({ path: '/properties' });
+                if ( resp.status !== 200 ) {
+                    throw new Error(`Error retrieving the database properties: ${this._name} - ${resp.status}`);
+                }
+                return resp.body;
+            }
+            else {
+                const resp = this.put({ path: '/properties' }, undefined, body);
+                if ( resp.status === 202 ) {
+                    const body = resp.body.restart;
+                    if ( ! body ) {
+                        throw new Error('202 returned NOT for a restart reason?!?');
+                    }
+                    const time = Date.parse(body['last-startup'][0].value);
+                    ctxt.platform.restart(time);
+                }
+                else if ( resp.status !== 204 ) {
+                    throw new Error(`Error setting the database properties: ${this._name} - ${resp.status}`);
+                }
+                return this;
+            }
+        }
+
+        forests() {
+            return this.properties().forest;
+        }
+    }
+
+    class Forest
+    {
+        constructor(cmd, name) {
+            this._command = cmd;
+            this._name    = name;
+        }
+
+        _adaptParams(params) {
+            if ( ! params.api ) {
+                params.api = 'manage';
+            }
+            params.path = `/forests/${this._name}${params.path}`;
+        }
+
+        get(params) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.get(params);
+        }
+
+        post(params, data, type) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.post(params, null, data, type);
+        }
+
+        put(params, data, type) {
+            this._adaptParams(params);
+            return this._command.ctxt.platform.put(params, null, data, type);
+        }
+
+        detach() {
+            const resp = this.post({ path: '?state=detach' });
+            if ( resp.status === 404 ) {
+                throw new Error(`Unknown forest to detach: ${this._name}`);
+            }
+            if ( resp.status !== 200 ) {
+                throw new Error(`Error detaching the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
+        }
+
+        attach(db) {
+            const resp = this.post({ path: `?state=attach&database=${db._name || db}` });
+            if ( resp.status === 404 ) {
+                throw new Error(`Unknown database or forest to attach: ${this._name} - ${db._name || db}`);
+            }
+            if ( resp.status !== 200 ) {
+                throw new Error(`Error attaching the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
+        }
+
+        create(param) {
+            let body = { "forest-name": this._name };
+            if ( param instanceof Database ) {
+                body.database = param._name;
+            }
+            else if ( typeof param === 'string' ) {
+                body.database = param;
+            }
+            else if ( typeof param === 'object' ) {
+                body = param;
+                body['forest-name'] = this._name;
+            }
+            else {
+                throw new Error('Unknown type of parameter');
+            }
+            const resp = new Manage(this._command).post({ path: '/forests' }, body);
+            if ( resp.status !== 201 ) {
+                throw new Error(`Error creating the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
+        }
+
+        properties(body) {
+            if ( body === undefined ) {
+                const resp = this.get({ path: '/properties' });
+                if ( resp.status !== 200 ) {
+                    throw new Error(`Error retrieving the forest properties: ${this._name} - ${resp.status}`);
+                }
+                return resp.body;
+            }
+            else {
+                const resp = this.put({ path: '/properties' }, undefined, body);
+                if ( resp.status === 202 ) {
+                    const body = resp.body.restart;
+                    if ( ! body ) {
+                        throw new Error('202 returned NOT for a restart reason?!?');
+                    }
+                    const time = Date.parse(body['last-startup'][0].value);
+                    ctxt.platform.restart(time);
+                }
+                else if ( resp.status !== 204 ) {
+                    throw new Error(`Error setting the forest properties: ${this._name} - ${resp.status}`);
+                }
+                return this;
+            }
         }
     }
 
