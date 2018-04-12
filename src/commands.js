@@ -345,7 +345,7 @@
                     }
                     let impl = this.getImplem(cmd);
                     let apis = new api.Apis(this);
-                    impl.call(this, apis, this.ctxt.environ, this.ctxt);
+                    impl.call(this, apis, this.environ, this.ctxt);
                 }));
             }
             else {
