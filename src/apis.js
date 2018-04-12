@@ -2,7 +2,7 @@
 
 (function() {
 
-    // For when wwe will have to come with user-level errors.  Because we will,
+    // For when we will have to come with user-level errors.  Because we will,
     // at some point.
     //
     // const err = require('./error');
@@ -20,12 +20,12 @@
         }
 
         source(name) {
-            let resolved = this._command.environ.substitute(name);
-            let src      = this._command.environ.source(resolved);
+            const resolved = this._command.environ.substitute(name);
+            const src      = this._command.environ.source(resolved);
             // the source set must exist in the environ
             if ( ! src ) {
-                throw new Error('Unknown source set: ' + resolved
-                                + (resolved === name ? '' : (' (' + name + ')')));
+                throw new Error(`Unknown source set: ${resolved}`
+                                + (resolved === name ? `` : ` (${name})`));
             }
             return new Source(this._command, src);
         }
@@ -55,7 +55,7 @@
         }
 
         files() {
-            let paths = [];
+            const paths = [];
             this._source.walk(this._command.ctxt, this._command.ctxt.display, p => paths.push(p));
             return paths;
         }
@@ -89,7 +89,7 @@
         }
 
         databases() {
-            let resp = this.get({ path: '/databases' });
+            const resp = this.get({ path: '/databases' });
             if ( resp.status !== 200 ) {
                 throw new Error('Error retrieving the database list: %s', resp.status);
             }
@@ -101,10 +101,10 @@
         }
 
         server(name, group) {
-            let resolved = this._command.environ.substitute(name);
-            let srv      = this._command.environ.server(resolved);
+            const resolved = this._command.environ.substitute(name);
+            const srv      = this._command.environ.server(resolved);
             // can use the name of any server, not only these defined in the environ
-            let the_name = srv ? srv.name : resolved;
+            const the_name = srv ? srv.name : resolved;
             return new Server(this._command, the_name, group);
         }
     }
@@ -145,28 +145,26 @@
 
         properties(body) {
             if ( body === undefined ) {
-                let resp = this.get({ path: '/properties' });
+                const resp = this.get({ path: '/properties' });
                 if ( resp.status !== 200 ) {
-                    throw new Error('Error retrieving the server properties: '
-                                    + this._name + ' - ' + resp.status);
+                    throw new Error(`Error retrieving the server properties: ${this._name} - ${resp.status}`);
                 }
                 return resp.body;
             }
             else {
-                let resp = this.put({ path: '/properties' }, undefined, body);
+                const resp = this.put({ path: '/properties' }, undefined, body);
                 if ( resp.status === 202 ) {
-                    let body = resp.body.restart;
+                    const body = resp.body.restart;
                     if ( ! body ) {
                         throw new Error('202 returned NOT for a restart reason?!?');
                     }
-                    let time = Date.parse(body['last-startup'][0].value);
+                    const time = Date.parse(body['last-startup'][0].value);
                     ctxt.platform.restart(time);
                 }
                 else if ( resp.status !== 204 ) {
-                    throw new Error('Error setting the server properties: '
-                                    + this._name + ' - ' + resp.status);
+                    throw new Error(`Error setting the server properties: ${this._name} - ${resp.status}`);
                 }
-                return;
+                return this;
             }
         }
     }
