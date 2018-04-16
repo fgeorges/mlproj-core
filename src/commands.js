@@ -57,7 +57,7 @@
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
                 this.xpdir = xpdir;
-            }, this));
+            }));
             return actions;
         }
     }
@@ -338,15 +338,15 @@
             let actions = new act.ActionList(this.ctxt);
             let name    = this.args.cmd;
             if ( name ) {
+                let cmd = this.environ.command(name);
+                if ( ! cmd ) {
+                    throw new Error('Unknown user command: ' + name);
+                }
+                let impl = this.getImplem(cmd);
                 actions.add(new act.FunAction('Apply the user command: ' + name, ctxt => {
-                    let cmd = this.environ.command(name);
-                    if ( ! cmd ) {
-                        throw new Error('Unknown user command: ' + name);
-                    }
-                    let impl = this.getImplem(cmd);
                     let apis = new api.Apis(this);
                     impl.call(this, apis, this.environ, this.ctxt);
-                }));
+                }, cmd.dryable));
             }
             else {
                 actions.add(new act.FunAction('List user commands', ctxt => {
