@@ -70,7 +70,7 @@
             if ( ! forests ) { // false or 0
                 forests = [];
             }
-            if ( Number.isInteger(forests) ) {
+            else if ( Number.isInteger(forests) ) {
                 if ( forests < 0 ) {
                     throw new Error('Negative number of forests (' + forests + ') on id:'
                                     + json.id + '|name:' + json.name);

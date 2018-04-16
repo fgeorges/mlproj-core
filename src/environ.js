@@ -73,7 +73,7 @@
             var v = this.module.config(name);
             return v !== undefined
                 ? v
-                : this.proj.config(name);
+                : this.proj && this.proj.config(name);
         }
 
         params() {

@@ -627,16 +627,12 @@
     // return the action URI resolved from the name
     Privileges.privilege = (ctxt, name, kind) => {
         if ( ! Privileges.cache ) {
-            // TODO: Use an action for this, for proper verbose logging...
-            let resp = ctxt.platform.get({ api: 'manage' }, '/privileges');
-            if ( resp.status !== 200 ) {
-                throw new Error('Retrieving privilege list not OK: ' + resp.status);
-            }
+            let resp = new act.PrivilegeList().execute(ctxt);
             Privileges.cache = {
                 execute: {},
                 uri:     {}
             };
-            resp.body['privilege-default-list']['list-items']['list-item'].forEach(item => {
+            resp['privilege-default-list']['list-items']['list-item'].forEach(item => {
                 let target;
                 if ( item.kind === 'execute' ) {
                     target = Privileges.cache.execute;

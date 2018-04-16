@@ -831,6 +831,16 @@
     }
 
     /*~
+     * Management API: list all privileges.
+     */
+    class PrivilegeList extends ManageGet
+    {
+        constructor() {
+            super('/privileges', 'Retrieve privileges');
+        }
+    }
+
+    /*~
      * Management API: retrieve properties of a user.
      */
     class UserProps extends ManageGet
@@ -1035,6 +1045,7 @@
         RoleProps               : RoleProps,
         RoleCreate              : RoleCreate,
         RoleUpdate              : RoleUpdate,
+        PrivilegeList           : PrivilegeList,
         UserProps               : UserProps,
         UserCreate              : UserCreate,
         UserUpdate              : UserUpdate,

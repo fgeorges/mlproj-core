@@ -150,7 +150,7 @@
     {
         constructor(cmd, name) {
             this._command = cmd;
-            this._name    = name;
+            this._name    = cmd.environ.substitute(name);
         }
 
         _adaptParams(params) {
@@ -209,7 +209,7 @@
     {
         constructor(cmd, name) {
             this._command = cmd;
-            this._name    = name;
+            this._name    = cmd.environ.substitute(name);
         }
 
         _adaptParams(params) {
@@ -308,7 +308,7 @@
     {
         constructor(cmd, name, group) {
             this._command = cmd;
-            this._name    = name;
+            this._name    = cmd.environ.substitute(name);
             this._group   = group || 'Default';
         }
 
