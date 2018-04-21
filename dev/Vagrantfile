@@ -1,0 +1,88 @@
+# -*- mode: ruby -*-
+
+# TODO: For now, installing MLPROJ is done by installing MLPROJ-CORE then MLPROJ
+# directly from Github:
+#
+#     npm install 'fgeorges/mlproj-core#feature/hosts'
+#     npm install 'fgeorges/mlproj'
+#
+# Change this to be simply:
+#
+#     npm install mlproj
+
+# function to define one box (based on vagrant config, and num from 1 to N)
+def box(config, i)
+  name = "ml940-" + ("%03d" % i)
+  base = 5000 + (100 * i)
+  puts "Config box " + name + ", with ports based on " +String(base)
+  config.vm.define name do |box|
+    box.vm.hostname = name
+    box.vm.network "forwarded_port", guest: 8000, host: base,      host_ip: "0.0.0.0"
+    box.vm.network "forwarded_port", guest: 8001, host: base +  1, host_ip: "0.0.0.0"
+    box.vm.network "forwarded_port", guest: 8002, host: base +  2, host_ip: "0.0.0.0"
+    box.vm.network "forwarded_port", guest: 8010, host: base + 10, host_ip: "0.0.0.0"
+    box.vm.network "private_network", ip: "192.168.42." + (40 + i).to_s()
+    box.vm.provision "shell", inline: <<-SHELL
+      echo "Updating the system..."
+      yum -y update
+      yum -y install lsb gdb glibc glibc.i686
+      yum -y install wget httpie git nodejs npm
+      echo "Installing mlproj..."
+      # npm install -g mlproj
+      echo "WARNING: For now, installs directly latest version from Github!" >&2
+      npm install 'fgeorges/mlproj-core#feature/hosts'
+      npm install 'fgeorges/mlproj'
+      echo "Installing MarkLogic..."
+      rpm -i /vagrant/MarkLogic-9.0-4.x86_64.rpm
+      /etc/init.d/MarkLogic start
+      echo "MarkLogic started"
+    SHELL
+    # init each host one after the other, equivalent to the following command:
+    # mlproj -h ml940-001 init cluster ml940-002 ml940-003...
+    if i === 1
+      box.vm.provision "shell", inline: <<-SHELL
+        echo "Initializing first MarkLogic node"
+        echo admin | mlproj -h localhost -u admin -z init -l "Florent Georges" first
+      SHELL
+    else
+      box.vm.provision "shell", inline: <<-SHELL
+        echo "Initializing extra MarkLogic node"
+        echo admin | mlproj -h ml940-001 -u admin -z init -l "Florent Georges" extra localhost
+      SHELL
+    end
+    box.vm.provision "shell", inline: <<-SHELL
+      echo "Installing the EXPath Console..."
+      if test -d expath-ml-console; then
+        cd expath-ml-console
+        git checkout project-environs
+        git pull
+      else
+        git clone https://github.com/fgeorges/expath-ml-console.git
+        cd expath-ml-console
+        git checkout project-environs
+      fi
+      mlproj -e prod setup                  # -> TODO: must return non-zero to shell...
+      mlproj -e prod deploy                 # -> TODO: must return non-zero to shell...
+    SHELL
+  end
+end
+
+# main processing
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "fgeorges/fedora-cloud"
+
+  config.vm.provider "virtualbox" do |box|
+    box.memory = 2048
+    box.cpus   = 2
+  end
+
+  # no need for sync dir, so not require guest additions on the box image
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
+
+  for i in 1..2
+#  for i in 1..3
+    box(config, i)
+  end
+
+end
