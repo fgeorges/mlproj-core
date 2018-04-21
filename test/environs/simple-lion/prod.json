@@ -62,8 +62,7 @@
             "name": "lion-writer",
             "desc": "Test role 2.",
             "permissions": {
-                "lion-reader": "read",
-                "lion-writer": "read, update"
+                "lion-reader": "read"
             },
             "privileges": {
                 "execute": [
