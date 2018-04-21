@@ -103,6 +103,9 @@
             if ( ! pwd ) {
                 throw new Error('No password in environ');
             }
+console.warn(`MLPROJ INIT: name: ${this.name}`);
+console.warn(`MLPROJ INIT: args: ${this.args}`);
+console.warn(`MLPROJ INIT: glob: ${this.globalArgs}`);
             let key      = this.args.key;
             let licensee = this.args.licensee
             // the action list
