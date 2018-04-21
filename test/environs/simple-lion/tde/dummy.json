@@ -1,0 +1,36 @@
+{
+  "template": {
+    "context": "/match",
+    "collections": [
+      "source1"
+    ],
+    "rows": [
+      {
+        "schemaName": "soccer",
+        "viewName": "matches",
+        "columns": [
+          {
+            "name": "id",
+            "scalarType": "long",
+            "val": "id"
+          },
+          {
+            "name": "document",
+            "scalarType": "string",
+            "val": "docUri"
+          },
+          {
+            "name": "date",
+            "scalarType": "date",
+            "val": "match-date"
+          },
+          {
+            "name": "league",
+            "scalarType": "string",
+            "val": "league"
+          }
+        ]
+      }
+    ]
+  }
+}

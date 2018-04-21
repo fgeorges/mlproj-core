@@ -837,14 +837,17 @@
             }
             else if ( this.type === 'rest-src' ) {
                 const port = (srv || this.restTarget()).props.port.value;
-                this.loadRestSrc(actions, db, port, display, matches);
+                this.loadRestSrc(actions, port, display, matches);
+            }
+            else if ( this.type === 'tde' ) {
+                this.loadTde(actions, db, display);
             }
             else {
                 throw new Error('Unknown source set type: ' + this.type);
             }
         }
 
-        loadRestSrc(actions, db, port, display, matches)
+        loadRestSrc(actions, port, display, matches)
         {
             const pf       = actions.ctxt.platform;
             const dir      = this.prop('dir');
@@ -885,7 +888,7 @@
             if ( pf.exists(services) ) {
                 this.walk(actions.ctxt, display, (path, uri) => {
                     actions.add(
-                        this.installRestThing(port, 'resources', uri.slice(1), path));
+                        this.installRestThing(port, 'resources', uri, path));
                 }, services);
             }
             else if ( display.verbose ) {
@@ -896,7 +899,7 @@
             if ( pf.exists(transforms) ) {
                 this.walk(actions.ctxt, display, (path, uri) => {
                     actions.add(
-                        this.installRestThing(port, 'transforms', uri.slice(1), path));
+                        this.installRestThing(port, 'transforms', uri, path));
                 }, transforms);
             }
             else if ( display.verbose ) {
@@ -904,7 +907,7 @@
             }
         }
 
-        installRestThing(port, kind, filename, path)
+        basenameAndMime(path)
         {
             // extract mime type from extension
             const type = (ext) => {
@@ -914,14 +917,43 @@
                 else if ( ext === 'sjs' ) {
                     return 'application/javascript';
                 }
+                else if ( ext === 'xml' ) {
+                    return 'application/xml';
+                }
+                else if ( ext === 'json' ) {
+                    return 'application/json';
+                }
                 else {
-                    throw new Error('Extension is neither xqy or sjs: ' + ext);
+                    throw new Error('Extension is neither xqy, sjs, xml or json: ' + ext);
                 }
             };
             // the basename and extension
-            let [ name, ext ] = filename.split('.');
-            // return the actual action
-            return new act.ServerRestDeploy(kind, name, path, type(ext), port);
+            const slash    = path.lastIndexOf('/');
+            const filename = slash > -1 ? path.slice(slash + 1) : path;
+            const dot      = filename.lastIndexOf('.');
+            if ( dot < 0 ) {
+                throw new Error('No dot in filename to get the extension: ' + filename);
+            }
+            const basename = filename.slice(0, dot);
+            const ext      = filename.slice(dot + 1);
+            // return the values
+            return [ basename, type(ext) ];
+        }
+
+        installRestThing(port, kind, uri, path)
+        {
+            const [ name, mime ] = this.basenameAndMime(uri);
+            return new act.ServerRestDeploy(kind, name, path, mime, port);
+        }
+
+        loadTde(actions, db, display)
+        {
+            const dir = this.prop('dir');
+            this.walk(actions.ctxt, display, (path, uri, meta) => {
+                display.check(0, 'tde template', uri);
+                const [ name, mime ] = this.basenameAndMime(path);
+                actions.add(new act.TdeInstall(db, uri, path, mime));
+            }, dir);
         }
 
         loadPlain(ctxt, display, matches, dir)

@@ -4,7 +4,7 @@
         "code": "simple-lion",
         "title": "Example with users and roles.",
         "connect": {
-            "host": "ml911",
+            "host": "ml940",
             "user": "admin",
             "password": "admin"
         },
@@ -22,10 +22,23 @@
         }, {
             "name": "src",
             "dir": "src"
+        }, {
+            "name": "schemas",
+            "dir": "schemas"
+        }, {
+            "name": "tde",
+            "dir": "tde",
+            "type": "tde"
         }],
         "databases": [{
             "id": "content",
-            "name": "@{code}-content"
+            "name": "@{code}-content",
+            "schema": {
+                "idref": "schemas"
+            }
+        }, {
+            "id": "schemas",
+            "name": "@{code}-schemas"
         }, {
             "id": "modules",
             "name": "@{code}-modules"

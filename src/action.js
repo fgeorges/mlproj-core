@@ -948,6 +948,51 @@
         }
     }
 
+    /*~
+     * Client API: insert several documents.
+     */
+    class TdeInstall extends ClientPost
+    {
+        constructor(db, uri, path, type) {
+            var name = db && db.name;
+            super('/eval?database=' + name,
+                  { uri: uri, type: type, path: path },
+                  'Install TDE template: \t' + path);
+        }
+
+        connect(api) {
+            let res = super.connect(api);
+            if ( ! res.type ) {
+                res.type = 'application/x-www-form-urlencoded';
+            }
+            return res;
+        }
+
+        getData(ctxt) {
+            const uri      = JSON.stringify(this.data.uri);
+            const type     = JSON.stringify(this.data.type);
+            const template = JSON.stringify(ctxt.platform.read(this.data.path).toString());
+            return `xquery=`
+                + encodeURIComponent(
+                    `xquery version "3.1";
+
+                     import module namespace tde = "http://marklogic.com/xdmp/tde"
+                       at "/MarkLogic/tde.xqy";
+
+                     declare namespace xdmp = "http://marklogic.com/xdmp";
+
+                     declare variable $uri      as xs:string external;
+                     declare variable $type     as xs:string external;
+                     declare variable $template as xs:string external;
+
+                     (: xdmp:unquote necessary, declaring $template as doc node fails for JSON :)
+                     tde:template-insert($uri, xdmp:unquote($template))`)
+                + `&vars=`
+                + encodeURIComponent(
+                    `{"uri":${uri},"type":${type},"template":${template}}`);
+        }
+    }
+
     /*~~~~~ XDBC actions. */
 
     /*~
@@ -1052,6 +1097,7 @@
         UserCreate              : UserCreate,
         UserUpdate              : UserUpdate,
         MultiDocInsert          : MultiDocInsert,
+        TdeInstall              : TdeInstall,
         DocInsert               : DocInsert
     }
 }

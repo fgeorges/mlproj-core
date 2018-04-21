@@ -958,7 +958,7 @@
         .add('name',        true,  new Ignore())
         .add('filter',      false, new Ignore())
         .add('dir',         false, new     String('dir',        'directory'))
-        .add('type',        false, new       Enum('type',       'type',                      [ 'plain', 'rest-src' ]))
+        .add('type',        false, new       Enum('type',       'type',                      [ 'plain', 'rest-src', 'tde' ]))
         .add('garbage',     false, new StringList('garbage',    'garbage patterns',          /\s*,\s*/))
         .add('include',     false, new StringList('include',    'include patterns',          /\s*,\s*/))
         .add('exclude',     false, new StringList('exclude',    'exclude patterns',          /\s*,\s*/))
