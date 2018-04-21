@@ -70,7 +70,7 @@
             if ( ! forests ) { // false or 0
                 forests = [];
             }
-            else if ( Number.isInteger(forests) ) {
+            if ( Number.isInteger(forests) ) {
                 if ( forests < 0 ) {
                     throw new Error('Negative number of forests (' + forests + ') on id:'
                                     + json.id + '|name:' + json.name);
@@ -111,7 +111,7 @@
             display.check(0, 'the database', this.name);
             const body = new act.DatabaseProps(this).execute(actions.ctxt);
             let names;
-            if ( this.forests.length ) {
+            if ( Object.keys(this.forests).length ) {
                 const forests = new act.ForestList().execute(actions.ctxt);
                 const items   = forests['forest-default-list']['list-items']['list-item'];
                 names = items.map(o => o.nameref);
@@ -152,13 +152,14 @@
             }
             // enqueue the "create db" action
             actions.add(new act.DatabaseCreate(this, obj));
-            if ( ! this.forests.length ) {
+            const fkeys = Object.keys(this.forests);
+            if ( ! fkeys.length ) {
                 display.check(1, 'forests - disabled');
             }
             else {
                 display.check(1, 'forests');
                 // check the forests
-                Object.keys(this.forests).forEach(f => {
+                fkeys.forEach(f => {
                     this.forests[f].create(actions, display, forests);
                 });
             }
@@ -172,13 +173,13 @@
             this.updateDb(actions, display, this.triggers, body, 'triggers-database', null);
 
             // check forests
-            if ( ! this.forests.length ) {
+            const desired = Object.keys(this.forests);
+            if ( ! desired.length ) {
                 display.check(1, 'forests - disabled');
             }
             else {
                 display.check(1, 'forests');
-                var actual  = body.forest || [];
-                var desired = Object.keys(this.forests);
+                var actual = body.forest || [];
                 // forests to remove: those in `actual` but not in `desired`
                 actual
                     .filter(name => ! desired.includes(name))
