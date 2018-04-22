@@ -13,6 +13,7 @@
         Context       : ctxt.Context,
         Display       : ctxt.Display,
         Platform      : ctxt.Platform,
+        FakeEnviron   : env.FakeEnviron,
         Environ       : env.Environ,
         Project       : prj.Project,
         NewCommand    : cmd.NewCommand,

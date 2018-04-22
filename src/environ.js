@@ -6,6 +6,39 @@
     const cmp = require('./components');
 
     /*~
+     * A fake environment, with only values from the command line.
+     */
+    class FakeEnviron
+    {
+        constructor(ctxt, params, force)
+        {
+            this._params = {};
+            this.ctxt    = ctxt;
+            // set values from `force`
+            if ( force ) {
+                Object.keys(force).forEach(name => {
+                    this.param('@' + name, force[name]);
+                });
+            }
+            // set values from `params`
+            if ( params ) {
+                Object.keys(params).forEach(name => {
+                    this.param(name, params[name]);
+                });
+            }
+        }
+
+        param(name, value) {
+            if ( value === undefined ) {
+                return this._params[name];
+            }
+            else {
+                this._params[name] = value;
+            }
+        }
+    }
+
+    /*~
      * A complete environment.
      */
     class Environ
@@ -1007,8 +1040,9 @@
     };
 
     module.exports = {
-        Environ : Environ,
-        Module  : Module
+        FakeEnviron : FakeEnviron,
+        Environ     : Environ,
+        Module      : Module
     };
 }
 )();
