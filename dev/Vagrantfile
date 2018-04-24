@@ -3,18 +3,18 @@
 # TODO: For now, installing MLPROJ is done by installing MLPROJ-CORE then MLPROJ
 # directly from Github:
 #
-#     npm install 'fgeorges/mlproj-core#feature/hosts'
-#     npm install 'fgeorges/mlproj'
+#     npm install -g 'fgeorges/mlproj-core#feature/hosts'
+#     npm install -g 'fgeorges/mlproj'
 #
 # Change this to be simply:
 #
-#     npm install mlproj
+#     npm install -g mlproj
 
 # function to define one box (based on vagrant config, and num from 1 to N)
 def box(config, i)
   name = "ml940-" + ("%03d" % i)
   base = 5000 + (100 * i)
-  puts "Config box " + name + ", with ports based on " +String(base)
+  puts "Define box " + name + ", with ports based on " + String(base)
   config.vm.define name do |box|
     box.vm.hostname = name
     box.vm.network "forwarded_port", guest: 8000, host: base,      host_ip: "0.0.0.0"
@@ -30,8 +30,8 @@ def box(config, i)
       echo "Installing mlproj..."
       # npm install -g mlproj
       echo "WARNING: For now, installs directly latest version from Github!" >&2
-      npm install 'fgeorges/mlproj-core#feature/hosts'
-      npm install 'fgeorges/mlproj'
+      sudo npm install -g 'fgeorges/mlproj-core#feature/hosts'
+      sudo npm install -g 'fgeorges/mlproj'
       echo "Installing MarkLogic..."
       rpm -i /vagrant/MarkLogic-9.0-4.x86_64.rpm
       /etc/init.d/MarkLogic start
@@ -42,12 +42,12 @@ def box(config, i)
     if i === 1
       box.vm.provision "shell", inline: <<-SHELL
         echo "Initializing first MarkLogic node"
-        echo admin | mlproj -h localhost -u admin -z init -l "Florent Georges" first
+        mlproj -h localhost -u admin -Z admin init -l "Florent Georges" master
       SHELL
     else
       box.vm.provision "shell", inline: <<-SHELL
         echo "Initializing extra MarkLogic node"
-        echo admin | mlproj -h ml940-001 -u admin -z init -l "Florent Georges" extra localhost
+        mlproj -h ml940-001 -u admin -Z admin init -l "Florent Georges" extra localhost
       SHELL
     end
     box.vm.provision "shell", inline: <<-SHELL
