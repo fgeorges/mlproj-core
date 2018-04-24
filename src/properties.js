@@ -841,7 +841,9 @@
         .add('comment', false, new Ignore())
         .add('name',    true,  new Ignore())
         .add('apis',    false, new Ignore())
-        .add('host',    false, new String('host', 'host'));
+        .add('host',    false, new String('host',  'host'))
+        .add('group',   false, new String('group', 'group'))
+        .dflt('group', 'Default');
 
     // same base for 3 types of range indexes, below
     function rangeBase() {

@@ -590,10 +590,35 @@
     /*~
      * Management API: list all forests.
      */
+    class HostList extends ManageGet
+    {
+        constructor() {
+            super('/hosts', 'Retrieve hosts');
+        }
+    }
+
+    /*~
+     * Management API: list all forests.
+     */
     class ForestList extends ManageGet
     {
         constructor() {
             super('/forests', 'Retrieve forests');
+        }
+    }
+
+    /*~
+     * Management API: retrieve properties of a forest.
+     */
+    class ForestProps extends ManageGet
+    {
+        constructor(forest) {
+            var name = forest;
+            if ( typeof forest === 'object' ) {
+                name = forest.name;
+            }
+            super('/forests/' + name + '/properties',
+                  'Retrieve forest props: \t' + name);
         }
     }
 
@@ -603,10 +628,16 @@
     class ForestCreate extends ManagePost
     {
         constructor(forest) {
-            var name = forest && forest.name;
-            var db   = forest && forest.db && forest.db.name;
+            let name = forest && forest.name;
+            let body = {
+                "forest-name": name,
+                "database": forest && forest.db && forest.db.name
+            };
+            if ( forest && forest.host ) {
+                body.host = forest.host;
+            }
             super('/forests',
-                  { "forest-name": name, "database": db },
+                  body,
                   'Create forest:  \t\t' + name);
         }
     }
@@ -1072,7 +1103,9 @@
         ServerConfig            : ServerConfig,
         ClusterConfig           : ClusterConfig,
         ClusterConfigZip        : ClusterConfigZip,
+        HostList                : HostList,
         ForestList              : ForestList,
+        ForestProps             : ForestProps,
         ForestCreate            : ForestCreate,
         ForestAttach            : ForestAttach,
         ForestDetach            : ForestDetach,

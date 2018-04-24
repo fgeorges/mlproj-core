@@ -1,0 +1,23 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "import": "prod.json",
+        "connect": {
+            "host": "ml911"
+        },
+        "apis": {
+            "manage" : { "port": 8002 },
+            "admin"  : { "port": 8001 },
+            "client" : { "port": 8000 }
+        },
+        "hosts": [{
+            "name":  "ml902-001",
+            "host":  "ml911",
+            "group": "Default"
+        }, {
+            "name":  "ml902-002",
+            "host":  "ml911",
+            "group": "Default"
+        }]
+    }
+}

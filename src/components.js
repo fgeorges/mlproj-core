@@ -50,7 +50,7 @@
      */
     class Database extends Component
     {
-        constructor(json, schema, security, triggers)
+        constructor(json, schema, security, triggers, ctxt)
         {
             super();
             this.id         = json.id;
@@ -63,7 +63,22 @@
             // extract the configured properties
             this.props      = props.database.parse(json);
             // the forests
-            var forests = json.forests;
+
+            // TODO: Improve forest support.  They can be configured using
+            // different ways in the environ files:
+            //
+            // - nothing: there is one forest per host
+            // - number: there is N forests per host
+            // - array: explicit forest list, each being an object
+            // - object: several config options (per host, name template, etc.)
+            //   (TODO: make it another property, like `forest-config`?)
+            //
+            // Short-term: support the following:
+            //
+            // - assign a number of forests per host (`number` above)
+            // - create explicit forests, supporting replication (`array` above)
+
+            let forests = json.forests;
             if ( forests === null || forests === undefined ) {
                 forests = 1;
             }
@@ -80,17 +95,69 @@
                                     + json.id + '|name:' + json.name);
                 }
 
+                const hosts = Database.hosts(ctxt);
+                const array = [];
+console.log('*** HOSTS');
+console.log(hosts);
+                // disable forest computation if host list not available
+                if ( hosts.length ) {
+                    const total    = forests * hosts.length;
+                    const name     = (i) => {
+                        let num = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+                        return json.name + '-' + num;
+                    };
+                    const existing = new act.ForestList()
+                        .execute(ctxt)
+                        ['forest-default-list']['list-items']['list-item']
+                        .map(o => o.nameref);
+//console.log('*** EXISTING');
+//console.log(existing);
+
 // TODO: If several hosts, generate forests on each... !
 
-                var array = [];
-                for ( var i = 1; i <= forests; ++i ) {
-                    var num = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                    array.push(json.name + '-' + num);
+                    let map = {};
+                    for ( let i = 1; i <= total; ++i ) {
+                        let n = name(i);
+                        if ( existing.includes(n) ) {
+                            const props = new act.ForestProps(n).execute(ctxt);
+                            map[n] = props.host;
+                        }
+                    }
+//throw 'DEBUG: Stop here...!';
+
+                    let counters = hosts.map(h => { return { name: h, remain: forests }; });
+                    counters.current = 0;
+                    counters.map     = {};
+                    counters.forEach(c => counters.map[c.name] = c);
+                    counters.next    = () => {
+                        while ( counters[counters.current] && ! counters[counters.current].remain ) {
+                            counters.current++;
+                        }
+                    };
+                    for ( let i = 1; i <= total; ++i ) {
+                        let n = name(i);
+                        let h = map[n];
+                        if ( h ) {
+                            counters.map[h].remain--;
+                            counters.next();
+                        }
+                        else {
+                            h = counters[counters.current].name;
+                            counters[counters.current].remain--;
+                            counters.next();
+                        }
+                        array.push({
+                            name: n,
+                            host: h
+                        });
+                    }
                 }
+console.log('*** ARRAY');
+console.log(array);
                 forests = array;
             }
             forests.forEach(f => {
-                this.forests[f] = new Forest(this, f);
+                this.forests[f.name] = new Forest(this, f.name, f.host);
             });
         }
 
@@ -245,6 +312,38 @@
 
     Database.kind = 'database';
 
+    Database.hosts = (ctxt) => {
+        let hosts;
+        try {
+            hosts = new act.HostList().execute(ctxt);
+        }
+        catch (err) {
+            if ( err.code === 'missing-value' && ['@host', '@user', '@password'].includes(err.value) ) {
+                // return empty list if on an abstract environ
+                return [];
+            }
+            else {
+                throw err;
+            }
+        }
+        const items = hosts['host-default-list']['list-items']['list-item'];
+console.log('*** _raw_ HOSTS');
+console.log(items);
+        const res = items.map(o => o.nameref).sort();
+        // check consistency between existing and configured hosts
+        const configured = ctxt.platform.environ.hosts().map(o => o.name).sort();
+console.log('*** existing');
+console.log(res);
+console.log('*** configured');
+console.log(configured);
+        if ( true /* TODO: existing and configured differ */ ) {
+            ctxt.platform.warn('hosts in the environ and existing hosts differ');
+            ctxt.platform.warn(' - configured hosts: ' + configured);
+            ctxt.platform.warn(' - existing hosts:   ' + res);
+        }
+        return res;
+    };
+
     Database.merge = (name, derived, base) => {
         if ( name === 'indexes' ) {
 
@@ -367,11 +466,12 @@
      */
     class Forest extends Component
     {
-        constructor(db, name)
+        constructor(db, name, host)
         {
             super();
             this.db   = db;
             this.name = name;
+            this.host = host;
         }
 
         create(actions, display, forests)
@@ -1180,6 +1280,17 @@
 
     /*~
      * A host.
+     *
+     * The configured hosts (in the environ files) are only used for the command
+     * `init`.  The command `setup` in particular, does not use them, it always
+     * uses the hosts on the cluster as it is.
+     *
+     * E.g. checking the forests is done on the hosts as they exist at that
+     * moment on the cluster.  That will never trigger the initialization of a
+     * new host just because it is in the environ file.  An explicit invokation
+     * of the `init` command is required for that to happen.
+     *
+     * TODO: Well, how to "assign" forests to hosts...?
      */
     class Host extends Component
     {
@@ -1201,20 +1312,9 @@
         join(actions, key, licensee, master)
         {
             let host  = this.props.host.value;
-            let ctxt  = actions.ctxt;
-            let admin = this.apis && this.apis.admin;
-            // /init
-            actions.add(new act.AdminInit(key, licensee, host, admin));
-            // joining sequence
-            actions.add(new act.FunAction('Join cluster', () => {
-                // /server-config
-                let config = new act.ServerConfig(host, admin).execute(ctxt);
-                // /cluster-config
-                let group   = this.props.group && this.props.group.value;
-                let cluster = new act.ClusterConfig(config, group).execute(ctxt);
-                // /cluster-config
-                new act.ClusterConfigZip(cluster, host, admin).execute(ctxt);
-            }));
+            let group = this.props.group && this.props.group.value;
+            let api   = this.apis && this.apis.admin;
+            Host.join(actions, key, licensee, master, host, group, api);
         }
     }
 
@@ -1223,6 +1323,29 @@
     Host.init = (actions, user, pwd, key, licensee, host) => {
         actions.add(new act.AdminInit(key, licensee, host));
         actions.add(new act.AdminInstance(user, pwd, host));
+    };
+
+    Host.join = (actions, key, licensee, master, host, group, api) => {
+        const ctxt = actions.ctxt;
+        // /init
+        actions.add(new act.AdminInit(key, licensee, host, api));
+        // joining sequence
+        actions.add(new act.FunAction('Join cluster', () => {
+            // /server-config
+            const config  = new act.ServerConfig(host, api).execute(ctxt);
+            // /cluster-config
+            const cluster = new act.ClusterConfig(config, group).execute(ctxt);
+            // /cluster-config
+            new act.ClusterConfigZip(cluster, host, api).execute(ctxt);
+        }));
+    };
+
+    Host.merge = (name, derived, base) => {
+        if ( name === 'apis' ) {
+            // TODO: ...
+            // throw new Error('TODO: Merging host.apis properties still to be implemented...');
+        }
+        return derived;
     };
 
     /*~

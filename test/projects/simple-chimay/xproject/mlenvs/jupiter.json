@@ -1,0 +1,80 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "connect": {
+            "host": "jupiter",
+            "user": "admin",
+            "password": "admin"
+        },
+        "apis": {
+            "manage" : { "port": 5102 },
+            "admin"  : { "port": 5101 },
+            "client" : { "port": 5100 }
+        },
+        "hosts": [{
+            "name":  "ml902-001",
+            "host":  "jupiter",
+            "group": "Default",
+            "apis":  { "admin": { "port": 5101 } }
+        }, {
+            "name":  "ml902-002",
+            "host":  "jupiter",
+            "group": "Default",
+            "apis":  { "admin": { "port": 5201 } }
+        }],
+        "hosts___XXX": [{
+            "name": "ml902-001",
+            "host": "jupiter",
+            "apis": { "admin": { "port": 5101 } }
+        }, {
+            "name": "ml902-002",
+            "host": "jupiter",
+            "apis": { "admin": { "port": 5201 } }
+        }, {
+            "name": "ml902-003",
+            "host": "jupiter",
+            "apis": { "admin": { "port": 5301 } }
+        }],
+        "databases": [{
+            "id": "content",
+            "forests": 2,
+            "comment": {
+                "XXX_forests": [{
+                    "name": "_@{code}-001",
+                    "host": "ml902-001",
+                    "hostname": "ml911",
+                    "replica": {
+                        "name": "_@{code}-001-replica",
+                        "host": "ml902-002"
+                    }
+                }, {
+                    "name": "_@{code}-002",
+                    "host": "ml902-002",
+                    "hostname": "ml911",
+                    "replica": {
+                        "name": "_@{code}-002-replica",
+                        "host": "ml902-001"
+                    }
+                }],
+                "YYY_forests": {
+                    "name": "defaults to {code}-nnn",
+                    "dir": "...",
+                    "large-dir": "...",
+                    "fast-dir": "...",
+                    "available": false,
+                    "on": {
+                        "ml902-001": 2,
+                        "ml902-002": 2
+                    },
+                    "not-on": "ml902-001, ml902-002",
+                    "replicas": {
+                        "name": "defaults to {forest}-replica",
+                        "dir": "...",
+                        "large-dir": "...",
+                        "fast-dir": "..."
+                    }
+                }
+            }
+        }]
+    }
+}

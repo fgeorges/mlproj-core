@@ -693,7 +693,7 @@
                 var schema   = resolve(json.schema);
                 var security = resolve(json.security);
                 var triggers = resolve(json.triggers)
-                var db       = new cmp.Database(json, schema, security, triggers);
+                var db       = new cmp.Database(json, schema, security, triggers, this.ctxt);
                 res.list.push(db);
                 if ( json.id ) {
                     res.ids[json.id] = db;
@@ -963,6 +963,8 @@
 
             // compile hosts
             if ( this.json.hosts ) {
+console.log('*** HOST json');
+console.log(this.json.hosts);
                 this.json.hosts.forEach(host => {
                     impl(host, cache.hosts, null, cache.hostNames, cmp.Host);
                 });
