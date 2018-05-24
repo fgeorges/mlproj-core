@@ -3,6 +3,7 @@
   "version": "0.33.2",
   "description": "Project management for MarkLogic, core implementation",
   "repository": "https://github.com/fgeorges/mlproj-core",
+  "homepage": "http://mlproj.org/",
   "main": "index.js",
   "scripts": {
     "test": "./test/run-tests.js"
