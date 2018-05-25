@@ -184,7 +184,7 @@
                 return resp.body;
             }
             else {
-                const resp = this.put({ path: '/properties' }, undefined, body);
+                const resp = this.put({ path: '/properties' }, body);
                 if ( resp.status === 202 ) {
                     const body = resp.body.restart;
                     if ( ! body ) {
@@ -287,7 +287,7 @@
                 return resp.body;
             }
             else {
-                const resp = this.put({ path: '/properties' }, undefined, body);
+                const resp = this.put({ path: '/properties' }, body);
                 if ( resp.status === 202 ) {
                     const body = resp.body.restart;
                     if ( ! body ) {
@@ -347,7 +347,7 @@
                 return resp.body;
             }
             else {
-                const resp = this.put({ path: '/properties' }, undefined, body);
+                const resp = this.put({ path: '/properties' }, body);
                 if ( resp.status === 202 ) {
                     const body = resp.body.restart;
                     if ( ! body ) {
