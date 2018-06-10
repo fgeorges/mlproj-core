@@ -45,6 +45,53 @@
         }
     }
 
+    function handleForestsNumber(forests, db, ctxt) {
+        if ( forests < 0 ) {
+            throw new Error(`Negative number of forests (${forests}) on id:${db.id}|name:${db.name}`);
+        }
+        if ( forests > 100 ) {
+            throw new Error(`Number of forests greater than 100 (${forests}) on id:${db.id}|name:${db.name}`);
+        }
+        const hosts = ctxt.platform.environ.hosts();
+        // disable forest computation if host list not available
+        if ( hosts.length ) {
+            const total    = forests * hosts.length;
+            const name     = (i, j) => {
+                let h = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+                let f = j.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+                return db.name + '-' + h + '-' + f;
+            };
+            const existing = new act.ForestList()
+                .execute(ctxt)
+                ['forest-default-list']['list-items']['list-item']
+                .map(o => o.nameref);
+            hosts.forEach((h, i) => {
+                for ( let j = 0; j < forests; ++j ) {
+                    const n = name(i + 1, j + 1);
+                    const f = new Forest(db, n, h);
+                    if ( existing.includes(n) ) {
+                        const props = new act.ForestProps(n).execute(ctxt);
+                        if ( h.name !== props.host ) {
+                            throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
+                        }
+                        f.exists = true;
+                    }
+                    db.forests[n] = f;
+                }
+            });
+        }
+    }
+
+    function handleForestsList(forests, db, ctxt) {
+        // TODO: ...
+        throw new Error('TODO: Implement the "array" case for forests');
+    }
+
+    function handleForestsObject(forests, db, ctxtx) {
+        // TODO: ...
+        throw new Error('TODO: Implement the "object" case for forests');
+    }
+
     /*~
      * A database.
      */
@@ -77,71 +124,38 @@
             //
             // - assign a number of forests per host (`number` above)
             // - create explicit forests, supporting replication (`array` above)
+            //
+            // Support also replica forests.  This can become even harder to
+            // generate "meaningful" names for the forests accros hosts, with
+            // replication...
 
+            // normalize forests value, at the end must be an array of Forest objects
             let forests = json.forests;
             if ( forests === null || forests === undefined ) {
                 forests = 1;
             }
-            if ( ! forests ) { // false or 0
-                forests = [];
-            }
-            if ( Number.isInteger(forests) ) {
-                if ( forests < 0 ) {
-                    throw new Error('Negative number of forests (' + forests + ') on id:'
-                                    + json.id + '|name:' + json.name);
-                }
-                if ( forests > 100 ) {
-                    throw new Error('Number of forests greater than 100 (' + forests + ') on id:'
-                                    + json.id + '|name:' + json.name);
-                }
 
-                const hosts = ctxt.platform.environ.hosts();
-                const array = [];
-                // disable forest computation if host list not available
-                if ( hosts.length ) {
-                    const total    = forests * hosts.length;
-                    const name     = (i, j) => {
-                        let h = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                        let f = j.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                        return json.name + '-' + h + '-' + f;
-                    };
-                    const existing = new act.ForestList()
-                        .execute(ctxt)
-                        ['forest-default-list']['list-items']['list-item']
-                        .map(o => o.nameref);
-                    hosts.forEach((h, i) => {
-                        for ( let j = 0; j < forests; ++j ) {
-                            const n = name(i + 1, j + 1);
-                            const x = existing.indexOf(n);
-                            if ( x >= 0 ) {
-                                const props = new act.ForestProps(n).execute(ctxt);
-                                if ( h.name !== props.host ) {
-                                    throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
-                                }
-                                array.push({ name: n, host: h, exists: true });
-                            }
-                            else {
-                                array.push({ name: n, host: h });
-                            }
-                        }
-                    });
+            // do not do forests if 0 or false
+            if ( forests ) {
+                // support several types of data for forests
+                if ( Number.isInteger(forests) ) {
+                    handleForestsNumber(forests, this, ctxt);
                 }
-                forests = array;
+                else if ( Array.isArray(forests) ) {
+                    handleForestsList(forests, this, ctxt);
+                }
+                else if ( typeof forests === 'object' ) {
+                    handleForestsObject(forests, this, ctxt);
+                }
+                // TODO: Accept also a function?  Is there any incentive for that,
+                // or is it just possible to simply generate, say, the forest array
+                // using a piece of code in a *.js environment?  That is, is there
+                // any benefit to call a function from here? (like passing some
+                // parameters, calling it only for some specific (sub-)parts, etc.)
+                else {
+                    throw new Error('Unsupported data type for forests: ${typeof forests}');
+                }
             }
-            else if ( Array.isArray(forests) ) {
-                // TODO: ...
-                throw new Error('Implement the "array" case for forests');
-            }
-            else if ( typeof forests === 'object' ) {
-                // TODO: ...
-                throw new Error('Implement the "object" case for forests');
-            }
-            else {
-                throw new Error('Unsupported type for forests: ${typeof forests}');
-            }
-            forests.forEach(f => {
-                this.forests[f.name] = new Forest(this, f.name, f.host);
-            });
         }
 
         show(display)
