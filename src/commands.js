@@ -393,6 +393,24 @@ console.warn(`MLPROJ INIT: glob: ${this.globalArgs}`);
 `;
     }
 
+    // helper function for the command `new`, to create xproject/mlproj.json
+    function NEW_MLPROJ_JSON(vars)
+    {
+        return `{
+    "mlproj": {
+        "config": {
+            "comment": {
+                "message": "Remove the comment level and this message to enable tracing.",
+                "trace": {
+                    "dir": "/tmp/mlproj"
+                }
+            }
+        }
+    }
+}
+`;
+    }
+
     // helper function for the command `new`, to create xproject/mlenvs/base.json
     function NEW_BASE_ENV(vars)
     {
