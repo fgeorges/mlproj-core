@@ -1,0 +1,9 @@
+{
+    "mlproj": {
+        "config": {
+            "trace": {
+                "dir": "/tmp/mlproj"
+            }
+        }
+    }
+}
