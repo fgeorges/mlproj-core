@@ -2,8 +2,9 @@
 
 (function() {
 
-    const err = require('./error');
+    const act = require('./action');
     const cmp = require('./components');
+    const err = require('./error');
 
     /*~
      * A fake environment, with only values from the command line.
@@ -154,6 +155,10 @@
         }
 
         hosts() {
+            if ( ! this._hostsChecked && this._topology ) {
+                checkHosts(this.ctxt, this._hosts, this._topology);
+                this._hostsChecked = true;
+            }
             return this._hosts;
         }
 
@@ -571,8 +576,24 @@
             };
             this.compileImpl(cache);
 
+            // if no host declared, use the connection host as single host
+            if ( ! cache.hosts.length ) {
+                const name = this.param('@host');
+                if ( name ) {
+                    const host = { name: name, group: 'Default' };
+                    cache.hosts.push(host);
+                    cache.hostNames[host.name] = host;
+                }
+            }
+
             // compile apis
             this.compileApis(root, cache);
+
+            // fetch cluster topology (except in case of command "init")
+            if ( this.ctxt.fetchTopology ) {
+                // include fetching ML version as well, and maybe other values?
+                root._topology = fetchTopology(this.ctxt);
+            }
 
             // instantiate all mime types now
             root._mimetypes = cache.mimes.map(m => {
@@ -963,8 +984,6 @@
 
             // compile hosts
             if ( this.json.hosts ) {
-console.log('*** HOST json');
-console.log(this.json.hosts);
                 this.json.hosts.forEach(host => {
                     impl(host, cache.hosts, null, cache.hostNames, cmp.Host);
                 });
@@ -1040,6 +1059,43 @@ console.log(this.json.hosts);
             ssl  : false
         }
     };
+
+    function fetchTopology(ctxt) {
+        try {
+            const resp  = new act.HostList().execute(ctxt);
+            const items = resp['host-default-list']['list-items']['list-item'];
+            return items.map(o => o.nameref).sort();
+        }
+        catch (err) {
+            if ( err.code === 'missing-value' && ['@host', '@user', '@password'].includes(err.value) ) {
+                // return empty list if on an abstract environ
+                return [];
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+
+    function checkHosts(ctxt, configured, topology) {
+        if ( configured.length ) {
+            const declared = configured.map(o => o.name || o.host).sort();
+            let same = declared.length === topology.length;
+            if ( same ) {
+                declared.forEach((v, i) => {
+                    if ( same ) {
+                        same = v === topology[i];
+                    }
+                });
+            }
+            if ( ! same ) {
+                ctxt.platform.warn('Hosts in the environ and existing topology differ');
+                ctxt.platform.warn(' - configured hosts:  ' + declared);
+                ctxt.platform.warn(' - existing topology: ' + topology);
+                throw new Error('Hosts in the environ and existing topology differ.');
+            }
+        }
+    }
 
     module.exports = {
         FakeEnviron : FakeEnviron,

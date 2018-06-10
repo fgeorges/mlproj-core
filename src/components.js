@@ -95,66 +95,49 @@
                                     + json.id + '|name:' + json.name);
                 }
 
-                const hosts = Database.hosts(ctxt);
+                const hosts = ctxt.platform.environ.hosts();
                 const array = [];
-console.log('*** HOSTS');
-console.log(hosts);
                 // disable forest computation if host list not available
                 if ( hosts.length ) {
                     const total    = forests * hosts.length;
-                    const name     = (i) => {
-                        let num = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                        return json.name + '-' + num;
+                    const name     = (i, j) => {
+                        let h = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+                        let f = j.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+                        return json.name + '-' + h + '-' + f;
                     };
                     const existing = new act.ForestList()
                         .execute(ctxt)
                         ['forest-default-list']['list-items']['list-item']
                         .map(o => o.nameref);
-//console.log('*** EXISTING');
-//console.log(existing);
-
-// TODO: If several hosts, generate forests on each... !
-
-                    let map = {};
-                    for ( let i = 1; i <= total; ++i ) {
-                        let n = name(i);
-                        if ( existing.includes(n) ) {
-                            const props = new act.ForestProps(n).execute(ctxt);
-                            map[n] = props.host;
+                    hosts.forEach((h, i) => {
+                        for ( let j = 0; j < forests; ++j ) {
+                            const n = name(i + 1, j + 1);
+                            const x = existing.indexOf(n);
+                            if ( x >= 0 ) {
+                                const props = new act.ForestProps(n).execute(ctxt);
+                                if ( h.name !== props.host ) {
+                                    throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
+                                }
+                                array.push({ name: n, host: h, exists: true });
+                            }
+                            else {
+                                array.push({ name: n, host: h });
+                            }
                         }
-                    }
-//throw 'DEBUG: Stop here...!';
-
-                    let counters = hosts.map(h => { return { name: h, remain: forests }; });
-                    counters.current = 0;
-                    counters.map     = {};
-                    counters.forEach(c => counters.map[c.name] = c);
-                    counters.next    = () => {
-                        while ( counters[counters.current] && ! counters[counters.current].remain ) {
-                            counters.current++;
-                        }
-                    };
-                    for ( let i = 1; i <= total; ++i ) {
-                        let n = name(i);
-                        let h = map[n];
-                        if ( h ) {
-                            counters.map[h].remain--;
-                            counters.next();
-                        }
-                        else {
-                            h = counters[counters.current].name;
-                            counters[counters.current].remain--;
-                            counters.next();
-                        }
-                        array.push({
-                            name: n,
-                            host: h
-                        });
-                    }
+                    });
                 }
-console.log('*** ARRAY');
-console.log(array);
                 forests = array;
+            }
+            else if ( Array.isArray(forests) ) {
+                // TODO: ...
+                throw new Error('Implement the "array" case for forests');
+            }
+            else if ( typeof forests === 'object' ) {
+                // TODO: ...
+                throw new Error('Implement the "object" case for forests');
+            }
+            else {
+                throw new Error('Unsupported type for forests: ${typeof forests}');
             }
             forests.forEach(f => {
                 this.forests[f.name] = new Forest(this, f.name, f.host);
@@ -311,38 +294,6 @@ console.log(array);
     }
 
     Database.kind = 'database';
-
-    Database.hosts = (ctxt) => {
-        let hosts;
-        try {
-            hosts = new act.HostList().execute(ctxt);
-        }
-        catch (err) {
-            if ( err.code === 'missing-value' && ['@host', '@user', '@password'].includes(err.value) ) {
-                // return empty list if on an abstract environ
-                return [];
-            }
-            else {
-                throw err;
-            }
-        }
-        const items = hosts['host-default-list']['list-items']['list-item'];
-console.log('*** _raw_ HOSTS');
-console.log(items);
-        const res = items.map(o => o.nameref).sort();
-        // check consistency between existing and configured hosts
-        const configured = ctxt.platform.environ.hosts().map(o => o.name).sort();
-console.log('*** existing');
-console.log(res);
-console.log('*** configured');
-console.log(configured);
-        if ( true /* TODO: existing and configured differ */ ) {
-            ctxt.platform.warn('hosts in the environ and existing hosts differ');
-            ctxt.platform.warn(' - configured hosts: ' + configured);
-            ctxt.platform.warn(' - existing hosts:   ' + res);
-        }
-        return res;
-    };
 
     Database.merge = (name, derived, base) => {
         if ( name === 'indexes' ) {
