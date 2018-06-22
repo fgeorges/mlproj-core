@@ -38,7 +38,7 @@ t.test('Parsing achel (base) - parameters and typical topology', ass => {
                'simple-achel-content', null, {
                    "server-type": 'http',
                    port:          6010,
-                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
+                   root:          '/home/fgeorges/projects/ml/mlproj/mlproj-core/test/unit/src/'
                });
 });
 
@@ -66,7 +66,7 @@ t.test('Parsing achel (dev) - inheritence and connection info', ass => {
                'simple-achel-content', null, {
                    "server-type": 'http',
                    port:          6010,
-                   root:          '/Users/fgeorges/projects/ml/mlproj/core/test/unit/src/'
+                   root:          '/home/fgeorges/projects/ml/mlproj/mlproj-core/test/unit/src/'
                });
 });
 
