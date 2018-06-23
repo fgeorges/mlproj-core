@@ -7,7 +7,16 @@
         },
         "databases": [{
             "id": "content",
-            "forests": false
+            "forests": [{
+                "name": "s-chimay-a-1",
+                "host": "ml940",
+                "replicas": [{ "name": "s-chimay-a-1-replica", "host": "ml940" }]
+            }, {
+                "name": "s-chimay-a-2",
+                "host": "ml940",
+                "dir": "/tmp",
+                "replica": { "name": "s-chimay-a-2-replica", "host": "ml940" }
+            }]
         }]
     }
 }

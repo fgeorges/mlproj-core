@@ -23,8 +23,8 @@ t.test('Parsing ape (base module) - parameters and typical topology', ass => {
     // the databases
     const dbs = mod._databases;
     ass.equal('There must be 2 databases', dbs.length, 2);
-    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001']);
-    ass.database('The modules db', dbs[1], null, 'simple-ape-modules', ['simple-ape-modules-001']);
+    ass.database('The content db', dbs[0], null, 'simple-ape-content', []);
+    ass.database('The modules db', dbs[1], null, 'simple-ape-modules', []);
     // the app server
     const srvs = mod._servers;
     ass.equal('There must be 1 app server', srvs.length, 1);
@@ -52,7 +52,7 @@ t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
     // the databases
     const dbs = mod._databases;
     ass.equal('There must be 2 databases', dbs.length, 1);
-    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001']);
+    ass.database('The content db', dbs[0], null, 'simple-ape-content', []);
     // the app server
     const srvs = mod._servers;
     ass.equal('There must be 1 app server', srvs.length, 1);
@@ -82,8 +82,8 @@ t.test('Parsing ape (base) - parameters and typical topology', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 2);
-    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001']);
-    ass.database('The modules db', dbs[1], null, 'simple-ape-modules', ['simple-ape-modules-001']);
+    ass.database('The content db', dbs[0], null, 'simple-ape-content', []);
+    ass.database('The modules db', dbs[1], null, 'simple-ape-modules', []);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
@@ -115,7 +115,7 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 1);
-    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001']);
+    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001-001']);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);

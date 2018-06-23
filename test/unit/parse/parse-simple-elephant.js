@@ -22,7 +22,7 @@ t.test('Parsing elephant - all range index types', ass => {
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
     ass.database('The content db', dbs[0], null, 'simple-elephant-content',
-                 ['simple-elephant-content-001'], null, null, null, {
+                 ['simple-elephant-content-001-001'], null, null, null, {
                      "range-element-index": [{
                          "scalar-type":           'dateTime',
                          "localname":             'elem',

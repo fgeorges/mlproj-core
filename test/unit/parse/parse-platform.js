@@ -28,7 +28,33 @@
             super(true, true);
         }
 
+        // only called in case of GET /forests
+        get(params, path) {
+            // is params = { api: 'manage' } ?
+            if ( Object.keys(params).length !== 1 || params.api !== 'manage' ) {
+                throw new Error(`Expected {api:'manage'} but got ${JSON.stringify(params)}`);
+            }
+            // is path = '/forest' ?
+            if ( path !== '/forests' ) {
+                throw new Error(`Expected {api:'manage'} but got ${JSON.stringify(params)}`);
+            }
+            return {
+                status: 200,
+                body: {
+                    'forest-default-list': { 'list-items': { 'list-item': [] } }
+                }
+            };
+        }
+
         info(msg) {
+            // ignore
+        }
+
+        yellow(msg) {
+            // ignore
+        }
+
+        warn(msg) {
             // ignore
         }
 

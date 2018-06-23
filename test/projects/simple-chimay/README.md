@@ -15,5 +15,5 @@ To test new devs on hosts...:
         -l "Florent Georges - Development" \
         -k "B589-9DED-6A63-4B99-CBC7-1899-DEC6-..."
 
-**TODO**: Add garbage, include and exclude filters and files...  Add
-more source sets too.
+**TODO**: Add include, exclude and garbage filters and files...  Add more source
+sets too.

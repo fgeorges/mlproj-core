@@ -22,7 +22,7 @@ t.test('Parsing frog - lexicons', ass => {
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
     ass.database('The content db',  dbs[0], null, 'simple-frog-content',
-                 ['simple-frog-content-001'], null, null, null, {
+                 ['simple-frog-content-001-001'], null, null, null, {
                      "uri-lexicon":        false,
                      "collection-lexicon": true
                  });

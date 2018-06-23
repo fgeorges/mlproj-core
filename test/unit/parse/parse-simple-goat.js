@@ -21,8 +21,8 @@ t.test('Parsing goat - url rewriter and error handler', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 2);
-    ass.database('The content db', dbs[0], null, 'simple-goat-content', ['simple-goat-content-001']);
-    ass.database('The modules db', dbs[1], null, 'simple-goat-modules', ['simple-goat-modules-001']);
+    ass.database('The content db', dbs[0], null, 'simple-goat-content', ['simple-goat-content-001-001']);
+    ass.database('The modules db', dbs[1], null, 'simple-goat-modules', ['simple-goat-modules-001-001']);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);

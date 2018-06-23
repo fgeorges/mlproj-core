@@ -21,10 +21,10 @@ t.test('Parsing cat - schema, security and triggers dbs', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 4 databases', dbs.length, 4);
-    ass.database('The schema db',   dbs[0], null, 'simple-cat-schema',   ['simple-cat-schema-001']);
-    ass.database('The security db', dbs[1], null, 'simple-cat-security', ['simple-cat-security-001']);
-    ass.database('The triggers db', dbs[2], null, 'simple-cat-triggers', ['simple-cat-triggers-001']);
-    ass.database('The content db',  dbs[3], null, 'simple-cat-content',  ['simple-cat-content-001'],
+    ass.database('The schema db',   dbs[0], null, 'simple-cat-schema',   ['simple-cat-schema-001-001']);
+    ass.database('The security db', dbs[1], null, 'simple-cat-security', ['simple-cat-security-001-001']);
+    ass.database('The triggers db', dbs[2], null, 'simple-cat-triggers', ['simple-cat-triggers-001-001']);
+    ass.database('The content db',  dbs[3], null, 'simple-cat-content',  ['simple-cat-content-001-001'],
                  'simple-cat-schema', 'simple-cat-security', 'simple-cat-triggers');
     // the app server
     const srvs = env.servers();

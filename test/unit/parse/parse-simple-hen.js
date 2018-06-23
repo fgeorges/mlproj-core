@@ -22,7 +22,7 @@ t.test('Parsing hen - fast searches and output parameters', ass => {
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 2);
     ass.database('The content db', dbs[0], 'content', 'simple-hen-content',
-                 ['simple-hen-content-001'], null, null, null, {
+                 ['simple-hen-content-001-001'], null, null, null, {
                      "fast-case-sensitive-searches"            : true,
                      "fast-diacritic-sensitive-searches"       : false,
                      "fast-element-character-searches"         : false,
@@ -32,7 +32,7 @@ t.test('Parsing hen - fast searches and output parameters', ass => {
                      "fast-phrase-searches"                    : false,
                      "fast-reverse-searches"                   : true
                  });
-    ass.database('The modules db', dbs[1], null, 'simple-hen-modules', ['simple-hen-modules-001']);
+    ass.database('The modules db', dbs[1], null, 'simple-hen-modules', ['simple-hen-modules-001-001']);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
