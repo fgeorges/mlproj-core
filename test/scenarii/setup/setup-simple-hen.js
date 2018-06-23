@@ -23,7 +23,7 @@
                     []),
                 scenario.dbProps(
                     'Get modules DB props',
-                    'simple-hen-modules_XXX'),
+                    'simple-hen-modules'),
                 scenario.forests(
                     'Get forest list',
                     []),
