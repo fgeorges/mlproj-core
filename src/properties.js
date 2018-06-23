@@ -90,9 +90,12 @@
                 if ( this.prop.frozen ) {
                     throw new Error('Property differ but is frozen on ' + comp.name + ': ' + this.prop.name + ', please proceed manually');
                 }
-                display.add(1, 'update', this.prop.label);
+                display.add('forest' === this.prop._type ? 2 : 1, 'update', this.prop.label);
                 if ( 'database' === this.prop._type ) {
                     actions.add(new act.DatabaseUpdate(comp, this.prop.name, val));
+                }
+                else if ( 'forest' === this.prop._type ) {
+                    actions.add(new act.ForestUpdate(comp, this.prop.name, val));
                 }
                 else if ( 'server' === this.prop._type ) {
                     actions.add(new act.ServerUpdate(comp, this.prop.name, val));
@@ -907,6 +910,20 @@
              .add('collection', false, new Boolean('collection-lexicon', 'collection lexicon')));
 
     /*~
+     * The forest properties and config format.
+     */
+    var forest = new ConfigObject('forest')
+        .add('comment',    false, new Ignore())
+        .add('name',       true,  new Ignore())
+        .add('properties', false, new Ignore())
+        .add('host',       false, new Ignore())
+        .add('replica',    false, new Ignore())
+        .add('replicas',   false, new Ignore())
+        .add('dir',        false, new String('data-directory',       'data directory'))
+        .add('large-dir',  false, new String('large-data-directory', 'large data directory'))
+        .add('fast-dir',   false, new String('fast-data-directory',  'fast data directory'));
+
+    /*~
      * The server properties and config format.
      */
     var server = new ConfigObject('server')
@@ -1011,6 +1028,7 @@
     module.exports = {
         host     : host,
         database : database,
+        forest   : forest,
         server   : server,
         source   : source,
         mime     : mime,

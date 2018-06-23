@@ -627,18 +627,25 @@
      */
     class ForestCreate extends ManagePost
     {
-        constructor(forest) {
+        constructor(forest, body) {
             let name = forest && forest.name;
-            let body = {
-                "forest-name": name,
-                "database": forest && forest.db && forest.db.name
-            };
-            if ( forest && forest.host ) {
-                body.host = forest.host;
-            }
             super('/forests',
                   body,
                   'Create forest:  \t\t' + name);
+        }
+    }
+
+    /*~
+     * Management API: update a forest property.
+     */
+    class ForestUpdate extends ManagePut
+    {
+        constructor(forest, name, value) {
+            var fname = forest && forest.name;
+            var body  = name && { [name]: value };
+            super('/forests/' + fname + '/properties',
+                  body,
+                  'Update ' + name + ':  \t' + fname);
         }
     }
 
@@ -1107,6 +1114,7 @@
         ForestList              : ForestList,
         ForestProps             : ForestProps,
         ForestCreate            : ForestCreate,
+        ForestUpdate            : ForestUpdate,
         ForestAttach            : ForestAttach,
         ForestDetach            : ForestDetach,
         DatabaseProps           : DatabaseProps,

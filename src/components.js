@@ -45,49 +45,61 @@
         }
     }
 
-    function handleForestsNumber(forests, db, ctxt) {
+    function handleForestsNumber(forests, existing, hosts, db, ctxt) {
         if ( forests < 0 ) {
             throw new Error(`Negative number of forests (${forests}) on id:${db.id}|name:${db.name}`);
         }
         if ( forests > 100 ) {
             throw new Error(`Number of forests greater than 100 (${forests}) on id:${db.id}|name:${db.name}`);
         }
-        const hosts = ctxt.platform.environ.hosts();
-        // disable forest computation if host list not available
-        if ( hosts.length ) {
-            const total    = forests * hosts.length;
-            const name     = (i, j) => {
-                let h = i.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                let f = j.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
-                return db.name + '-' + h + '-' + f;
-            };
-            const existing = new act.ForestList()
-                .execute(ctxt)
-                ['forest-default-list']['list-items']['list-item']
-                .map(o => o.nameref);
-            hosts.forEach((h, i) => {
-                for ( let j = 0; j < forests; ++j ) {
-                    const n = name(i + 1, j + 1);
-                    const f = new Forest(db, n, h);
-                    if ( existing.includes(n) ) {
-                        const props = new act.ForestProps(n).execute(ctxt);
-                        if ( h.name !== props.host ) {
-                            throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
-                        }
-                        f.exists = true;
+        const fmt  = n => n.toLocaleString('en-IN', { minimumIntegerDigits: 3 });
+        const name = (i, j) => `${db.name}-${fmt(i)}-${fmt(j)}`;
+        hosts.forEach((h, i) => {
+            for ( let j = 0; j < forests; ++j ) {
+                const n = name(i + 1, j + 1);
+                const f = new Forest(db, h, { name: n });
+                if ( existing.includes(n) ) {
+                    const props = new act.ForestProps(n).execute(ctxt);
+                    if ( h.name !== props.host ) {
+                        throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
                     }
-                    db.forests[n] = f;
+                    f.exists = true;
                 }
-            });
+                db.forests[n] = f;
+            }
+        });
+    }
+
+    function handleForestsList(forests, existing, hosts, db, ctxt) {
+        const map = {};
+        hosts.forEach(h => map[h.name] = h);
+        const hasHost = forests.find(f => f.host);
+        const noHost  = forests.find(f => ! f.host);
+        if ( hasHost && noHost ) {
+            throw new Error(`Forests with both host and no host no allowed in the same array`);
         }
+        const dflt = (noHost && hosts.length === 1) ? hosts[0] : null;
+        if ( noHost && ! dflt ) {
+            throw new Error(`Forests have no explicit host and there is not exactly one host`);
+        }
+        forests.forEach(decl => {
+            const h = noHost ? dflt : map[decl.host];
+            if ( ! h ) {
+                throw new Error(`No such host for forest ${decl.name}: ${decl.host}`);
+            }
+            const f = new Forest(db, h, decl);
+            if ( existing.includes(decl.name) ) {
+                const props = new act.ForestProps(decl.name).execute(ctxt);
+                if ( h.name !== props.host ) {
+                    throw new Error(`Host do not match for forest ${decl.name}: ${h.name} vs. ${props.host}`);
+                }
+                f.exists = true;
+            }
+            db.forests[decl.name] = f;
+        });
     }
 
-    function handleForestsList(forests, db, ctxt) {
-        // TODO: ...
-        throw new Error('TODO: Implement the "array" case for forests');
-    }
-
-    function handleForestsObject(forests, db, ctxtx) {
+    function handleForestsObject(forests, existing, hosts, db, ctxtx) {
         // TODO: ...
         throw new Error('TODO: Implement the "object" case for forests');
     }
@@ -109,8 +121,9 @@
             this.forests    = {};
             // extract the configured properties
             this.props      = props.database.parse(json);
-            // the forests
 
+            // the forests
+            //
             // TODO: Improve forest support.  They can be configured using
             // different ways in the environ files:
             //
@@ -137,23 +150,33 @@
 
             // do not do forests if 0 or false
             if ( forests ) {
-                // support several types of data for forests
-                if ( Number.isInteger(forests) ) {
-                    handleForestsNumber(forests, this, ctxt);
-                }
-                else if ( Array.isArray(forests) ) {
-                    handleForestsList(forests, this, ctxt);
-                }
-                else if ( typeof forests === 'object' ) {
-                    handleForestsObject(forests, this, ctxt);
-                }
-                // TODO: Accept also a function?  Is there any incentive for that,
-                // or is it just possible to simply generate, say, the forest array
-                // using a piece of code in a *.js environment?  That is, is there
-                // any benefit to call a function from here? (like passing some
-                // parameters, calling it only for some specific (sub-)parts, etc.)
-                else {
-                    throw new Error('Unsupported data type for forests: ${typeof forests}');
+                // is there any reason not to have an environ, except during unit tests?
+                const hosts = ctxt.platform.environ ? ctxt.platform.environ.hosts() : [];
+                // disable forest computation if host list not available
+                if ( hosts.length ) {
+                    // the forests actually existing on the cluster
+                    const existing = new act.ForestList()
+                        .execute(ctxt)
+                        ['forest-default-list']['list-items']['list-item']
+                        .map(o => o.nameref);
+                    // support several types of data for forests
+                    if ( Number.isInteger(forests) ) {
+                        handleForestsNumber(forests, existing, hosts, this, ctxt);
+                    }
+                    else if ( Array.isArray(forests) ) {
+                        handleForestsList(forests, existing, hosts, this, ctxt);
+                    }
+                    else if ( typeof forests === 'object' ) {
+                        handleForestsObject(forests, existing, hosts, this, ctxt);
+                    }
+                    // TODO: Accept also a function?  Is there any incentive for that,
+                    // or is it just possible to simply generate, say, the forest array
+                    // using a piece of code in a *.js environment?  That is, is there
+                    // any benefit to call a function from here? (like passing some
+                    // parameters, calling it only for some specific (sub-)parts, etc.)
+                    else {
+                        throw new Error('Unsupported data type for forests: ${typeof forests}');
+                    }
                 }
             }
         }
@@ -248,13 +271,19 @@
                 actual
                     .filter(name => ! desired.includes(name))
                     .forEach(name => {
-                        new Forest(this, name).remove(actions, display);
+                        new Forest(this, null, { name: name }).remove(actions, display);
                     });
                 // forests to add: those in `desired` but not in `actual`
                 desired
                     .filter(name => ! actual.includes(name))
                     .forEach(name => {
                         this.forests[name].create(actions, display, forests);
+                    });
+                // forests to (potentially) update: those in both `desired` and `actual`
+                desired
+                    .filter(name => actual.includes(name))
+                    .forEach(name => {
+                        this.forests[name].update(actions, display, forests);
                     });
             }
 
@@ -431,12 +460,47 @@
      */
     class Forest extends Component
     {
-        constructor(db, name, host)
+        constructor(db, host, json)
         {
+            if ( ! json.name ) {
+                throw new Error(`Forest has no name: ${JSON.stringify(json)}`);
+            }
             super();
-            this.db   = db;
-            this.name = name;
-            this.host = host;
+            this.db         = db;
+            this.host       = host;
+            this.name       = json.name;
+            this.properties = json.properties;
+            this.props      = props.forest.parse(json);
+            this.replicas   = [];
+            // TODO: "Parse" (and validate) the replica objects themselves?
+            if ( json.replica && json.replicas ) {
+                throw new Error(`Both replica and replicas set for forest ${json.name}`);
+            }
+            else if ( json.replica ) {
+                this.replicas.push(json.replica);
+            }
+            else if ( json.replicas ) {
+                json.replicas.forEach(r => this.replicas.push(r));
+            }
+            // sort by name
+            this.replicas.sort((a, b) => {
+                return a.name < b.name
+                    ? -1
+                    : a.name === b.name
+                    ? 0
+                    : 1;
+            });
+            // transform to API payload
+            this.replicas = this.replicas.map(decl => {
+                const def = {
+                    "replica-name": decl.name,
+                    "host":         decl.host
+                };
+                decl['dir']       && ( def['data-directory']       = decl['dir']       );
+                decl['large-dir'] && ( def['large-data-directory'] = decl['large-dir'] );
+                decl['fast-dir']  && ( def['fast-data-directory']  = decl['fast-dir']  );
+                return def;
+            });
         }
 
         create(actions, display, forests)
@@ -445,10 +509,80 @@
             if ( forests.includes(this.name) ) {
                 display.add(1, 'attach', 'forest', this.name);
                 actions.add(new act.ForestAttach(this));
+                // check whether needs to update properties
+                this.update(actions, display);
             }
             else {
                 display.add(1, 'create', 'forest', this.name);
-                actions.add(new act.ForestCreate(this));
+                // the base forest object
+                let obj = {
+                    "forest-name": this.name,
+                    "database":    this.db.name,
+                    "host":        this.host.name
+                };
+                // replicas if any
+                if ( this.replicas.length ) {
+                    obj['forest-replica'] = this.replicas;
+                }
+                // its properties
+                Object.keys(this.props).forEach(p => {
+                    this.props[p].create(obj);
+                });
+                if ( this.properties ) {
+                    Object.keys(this.properties).forEach(p => {
+                        if ( obj[p] ) {
+                            throw new Error('Explicit property already set on forest: name='
+                                            + this.name + ' - ' + p);
+                        }
+                        obj[p] = this.properties[p];
+                    });
+                }
+                actions.add(new act.ForestCreate(this, obj));
+            }
+        }
+
+        // Check properties, and update accordingly, if necessary.
+        update(actions, display)
+        {
+            const body = new act.ForestProps(this).execute(actions.ctxt);
+            display.check(2, 'properties');
+            // replicas
+            const replicas = body['forest-replica'];
+            if ( this.replicas.length !== (replicas ? replicas.length : 0) ) {
+                actions.add(new act.ForestUpdate(this, 'forest-replica', this.replicas));
+            }
+            else if ( this.replicas.length ) {
+                const compare = (as, bs) => {
+                    if ( ! as.length ) {
+                        return true;
+                    }
+                    const a = as.pop();
+                    const b = bs.pop();
+                    const eq = p => a[p] === b[p];
+                    if ( ! (eq('name')
+                            && eq('host')
+                            && eq('data-directory')
+                            && eq('large-data-directory')
+                            && eq('fast-data-directory')) ) {
+                        return false;
+                    }
+                    return compare();
+                };
+                if ( ! compare(this.replicas, replicas) ) {
+                    actions.add(new act.ForestUpdate(this, 'forest-replica', this.replicas));
+                }
+            }
+            // properties
+            Object.keys(this.props).forEach(p => {
+                let res = this.props[p];
+                res.update(actions, display, body, this);
+            });
+            if ( this.properties ) {
+                Object.keys(this.properties).forEach(p => {
+                    if ( this.properties[p] !== body[p] ) {
+                        actions.add(new act.ForestUpdate(this, p, this.properties[p]));
+                    }
+                });
             }
         }
 
