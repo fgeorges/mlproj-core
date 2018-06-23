@@ -2,35 +2,39 @@
 
 (function() {
 
-    const fs   = require('fs');
-    const path = require('path');
-    const c    = require('../../../src/context');
-    const e    = require('../../../src/environ');
+    const chalk = require('chalk');
+    const fs    = require('fs');
+    const path  = require('path');
+    const c     = require('../../../src/context');
+    const e     = require('../../../src/environ');
+    const debug = require('debug')('mlproj:debug');
+    const trace = require('debug')('mlproj:trace');
 
     // utility functions to create expected HTTP calls
 
-    function dbProps(name) {
-        var res = {
+    function dbProps(msg, name) {
+        return {
+            msg: msg,
             verb: 'get',
             api: 'manage',
             url: '/databases/' + name + '/properties',
             response: 'Not found'
         };
-        return res;
     }
 
-    function asProps(name) {
-        var res = {
+    function asProps(msg, name) {
+        return {
+            msg: msg,
             verb: 'get',
             api: 'manage',
             url: '/servers/' + name + '/properties?group-id=Default',
             response: 'Not found'
         };
-        return res;
     }
 
-    function forests(list) {
-        var res = {
+    function forests(msg, list) {
+        return {
+            msg: msg,
             verb: 'get',
             api: 'manage',
             url: '/forests',
@@ -44,57 +48,71 @@
                         })
                     } } }
         };
+    }
+
+    function forestProps(msg, name, props) {
+        const res = {
+            msg: msg,
+            verb: 'get',
+            api: 'manage',
+            url: '/forests/' + name + '/properties',
+            response: 'OK'
+        };
+        if ( props ) {
+            res.body = props;
+        }
         return res;
     }
 
-    function createDb(props) {
-        var res = {
+    function createDb(msg, props) {
+        return {
+            msg: msg,
             verb: 'post',
             api: 'manage',
             url: '/databases',
             data: props,
             response: 'OK'
         };
-        return res;
     }
 
-    function createForest(props) {
-        var res = {
+    function createForest(msg, props) {
+        return {
+            msg: msg,
             verb: 'post',
             api: 'manage',
             url: '/forests',
             data: props,
             response: 'OK'
         };
-        return res;
     }
 
-    function attachForest(forest, db) {
-        var res = {
+    function attachForest(msg, forest, db) {
+        return {
+            msg: msg,
             verb: 'post',
             api: 'manage',
             url: '/forests/' + forest + '?state=attach&database=' + db,
             response: 'OK'
         };
-        return res;
     }
 
-    function createAs(props) {
-        var res = {
+    function createAs(msg, props) {
+        return {
+            msg: msg,
             verb: 'post',
             api: 'manage',
             url: '/servers?group-id=Default',
             data: props,
             response: 'OK'
         };
-        return res;
     }
 
     // used also as a marker
-    function ignore(resp, body) {
-        var res = {
-            ignore   : true,
-            response : resp
+    function ignore(msg, resp, body) {
+        const res = {
+            msg: msg,
+            ignore: true,
+            response: resp
         };
         if ( body ) {
             res.body = body;
@@ -105,13 +123,15 @@
     // function to assert the current HTTP call (they are in sequence)
 
     function assertCall(runner, verb, api, url, data) {
-        // log progress
-        runner.progress(verb, api, url, data);
         // get the current expected call
         var call = runner.nextCall();
+        // log progress
+        runner.progress(call.msg, verb, api, url, data);
         // assert `data`
         var assertData = function(call, data) {
             if ( ! call.data !== ! data ) {
+                trace('data sent:');
+                trace('%O', data);
                 runner.fail(call, 'One data is undefined: ' + call.data + ' - ' + data);
             }
             let lhs = Object.keys(call.data).sort();
@@ -231,6 +251,7 @@
         dbProps      : dbProps,
         asProps      : asProps,
         forests      : forests,
+        forestProps  : forestProps,
         createDb     : createDb,
         createForest : createForest,
         attachForest : attachForest,

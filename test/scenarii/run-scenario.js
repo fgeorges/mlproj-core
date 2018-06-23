@@ -6,6 +6,7 @@ const chalk    = require('chalk');
 const fs       = require('fs');
 const scenario = require('./lib/scenario');
 const cmd      = require('../../src/commands');
+const debug    = require('debug')('mlproj:debug');
 
 var tests = [];
 if ( process.argv.length === 2 ) {
@@ -63,9 +64,10 @@ class TestRunner
         return this.calls[this.nextIdx++];
     }
 
-    progress(verb, api, url, data) {
+    progress(msg, verb, api, url, data) {
         // push this call in history
         var hist = {
+            msg  : msg,
             verb : verb,
             api  : api,
             url  : url
@@ -75,19 +77,15 @@ class TestRunner
         }
         this.history.push(hist);
         // log this call
-        // TODO: Make it depends on a "verbose" flag
-        if ( false ) {
-            console.log('Send ' + verb + ' on ' + api + ' at ' + url);
-        }
+        debug(`${msg}\t-- ${verb.toUpperCase()} {${api}}${url}`);
     }
 
     fail(call, msg) {
-        // TODO: Create a flag "verbose", or "info", or "debug"
-        //
-        // console.log(chalk.red('FAIL') + ': ' + msg);
-        // console.dir(call);
-        // console.log('Call history so far:');
-        // console.dir(this.history);
+        this.history.slice(0, -1).forEach(h => {
+            console.log('  ' + chalk.green('✔') + ' ' + h.msg);
+        });
+        console.log('  ' + chalk.red('✘') + ' ' + call.msg);
+        console.log('      ' + msg);
         var err = new Error(msg);
         err.expected = call;
         err.actual   = this.history[this.history.length - 1];
@@ -102,11 +100,12 @@ tests.forEach(test => {
         if ( t[0] !== '.' ) {
             t = './' + t;
         }
+        console.log(test);
         require(t).test(new TestRunner(), scenario, cmd, './');
-        console.log(chalk.green('✔') + ' ' + test);
+        console.log(chalk.green('✔') + ' Scenario passed');
     }
     catch ( err ) {
-        console.log(chalk.red('✘') + ' ' + test);
+        console.log(chalk.red('✘') + ' Scenario failed');
         // test failure
         if ( err.expected ) {
             failures.push({
@@ -124,9 +123,9 @@ tests.forEach(test => {
             });
         }
     }
+    console.log();
 });
 
-console.log();
 if ( failures.length ) {
     console.log('Some scenario failed.');
 }

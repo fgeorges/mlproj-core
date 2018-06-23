@@ -9,16 +9,60 @@
             'setup',
             cmd.SetupCommand,
             [
-                scenario.dbProps('simple-hen-content'),
-                scenario.forests([ 'simple-hen-content-001' ]),
-                scenario.dbProps('simple-hen-modules'),
-                scenario.forests([ 'simple-hen-modules-001' ]),
-                scenario.ignore('Not found'), // as props
-                scenario.ignore('OK'),        // create db content
-                scenario.attachForest('simple-hen-content-001', 'simple-hen-content'),
-                scenario.ignore('OK'),        // create db modules
-                scenario.attachForest('simple-hen-modules-001', 'simple-hen-modules'),
-                scenario.ignore('OK')         // create as
+                scenario.forests(
+                    'Get forest list',
+                    [ 'simple-hen-content-001-001', 'simple-hen-modules-001-001' ]),
+                scenario.forestProps(
+                    'Get content forest props',
+                    'simple-hen-content-001-001',
+                    { host: 'ml911' }),
+                scenario.forests(
+                    'Get forest list',
+                    [ 'simple-hen-content-001-001', 'simple-hen-modules-001-001' ]),
+                scenario.forestProps(
+                    'Get modules forest props',
+                    'simple-hen-modules-001-001',
+                    { host: 'ml911' }),
+                scenario.dbProps(
+                    'Get content DB props',
+                    'simple-hen-content'),
+                scenario.forests(
+                    'Get forest list',
+                    [ 'simple-hen-content-001-001', 'simple-hen-modules-001-001' ]),
+                scenario.forestProps(
+                    'Get content forest props',
+                    'simple-hen-content-001-001',
+                    { host: 'ml911' }),
+                scenario.dbProps(
+                    'Get modules DB props',
+                    'simple-hen-modules'),
+                scenario.forests(
+                    'Get forest list',
+                    [ 'simple-hen-content-001-001', 'simple-hen-modules-001-001' ]),
+                scenario.forestProps(
+                    'Get modules forest props',
+                    'simple-hen-modules-001-001',
+                    { host: 'ml911' }),
+                scenario.ignore(
+                    'Get AS props',
+                    'Not found'),
+                scenario.ignore(
+                    'Create content DB',
+                    'OK'),
+                scenario.attachForest(
+                    'Attach content forest',
+                    'simple-hen-content-001-001',
+                    'simple-hen-content'),
+                scenario.ignore(
+                    'Create modules DB',
+                    'OK'),
+                scenario.attachForest(
+                    'Attach modules forest',
+                    'simple-hen-modules-001-001',
+                    'simple-hen-modules'),
+                scenario.ignore(
+                    'Create AS',
+                    'OK')
             ]);
     }
 
