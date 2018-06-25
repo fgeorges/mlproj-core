@@ -7,16 +7,30 @@
     const path  = require('path');
     const c     = require('../../../src/context');
     const e     = require('../../../src/environ');
+    const prj   = require('../../../src/project');
     const debug = require('debug')('mlproj:debug');
     const trace = require('debug')('mlproj:trace');
 
     // utility functions to create expected HTTP calls
 
+    // used also as a marker
+    function ignore(msg, resp, body) {
+        const res = {
+            msg: msg,
+            ignore: true,
+            response: resp
+        };
+        if ( body ) {
+            res.body = body;
+        }
+        return res;
+    }
+
     function dbProps(msg, name) {
         return {
             msg: msg,
             verb: 'get',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/databases/' + name + '/properties',
             response: 'Not found'
         };
@@ -26,7 +40,7 @@
         return {
             msg: msg,
             verb: 'get',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/servers/' + name + '/properties?group-id=Default',
             response: 'Not found'
         };
@@ -36,7 +50,7 @@
         return {
             msg: msg,
             verb: 'get',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/forests',
             response: 'OK',
             body: {
@@ -54,7 +68,7 @@
         const res = {
             msg: msg,
             verb: 'get',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/forests/' + name + '/properties',
             response: 'OK'
         };
@@ -68,7 +82,7 @@
         return {
             msg: msg,
             verb: 'post',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/databases',
             data: props,
             response: 'OK'
@@ -79,7 +93,7 @@
         return {
             msg: msg,
             verb: 'post',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/forests',
             data: props,
             response: 'OK'
@@ -90,7 +104,7 @@
         return {
             msg: msg,
             verb: 'post',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/forests/' + forest + '?state=attach&database=' + db,
             response: 'OK'
         };
@@ -100,16 +114,13 @@
         return {
             msg: msg,
             verb: 'post',
-            api: 'manage',
+            params: {api: 'manage'},
             url: '/servers?group-id=Default',
             data: props,
             response: 'OK'
         };
     }
 
-    // used also as a marker
-    function ignore(msg, resp, body) {
-        const res = {
             msg: msg,
             ignore: true,
             response: resp
@@ -122,20 +133,18 @@
 
     // function to assert the current HTTP call (they are in sequence)
 
-    function assertCall(runner, verb, api, url, data) {
+    function assertCall(runner, verb, params, url, data) {
         // get the current expected call
-        var call = runner.nextCall();
+        const call = runner.nextCall();
+        if ( ! call ) {
+            throw new Error(`More requests than expected: ${verb} {${params.api}}${url}`);
+        }
         // log progress
-        runner.progress(call.msg, verb, api, url, data);
-        // assert `data`
-        var assertData = function(call, data) {
-            if ( ! call.data !== ! data ) {
-                trace('data sent:');
-                trace('%O', data);
-                runner.fail(call, 'One data is undefined: ' + call.data + ' - ' + data);
-            }
-            let lhs = Object.keys(call.data).sort();
-            let rhs = Object.keys(data).sort();
+        runner.progress(call.msg, verb, params, url, data);
+        // assert objects (like `data` or `params`)
+        const assertObj = (call, left, right) => {
+            let lhs = Object.keys(left).sort();
+            let rhs = Object.keys(right).sort();
             // number of props
             if ( lhs.length !== rhs.length ) {
                 runner.fail(call, 'Not the same number of props: ' + lhs + ' / ' + rhs);
@@ -148,24 +157,39 @@
             }
             // prop values
             lhs.forEach(p => {
-                if ( call.data[p] !== data[p] ) {
-                    runner.fail(call, 'Data prop differs: ' + p + ': ' + call.data[p] + ' - ' + data[p]);
+                const l = left[p];
+                const r = right[p];
+                if ( typeof l === 'object' && typeof r === 'object' ) {
+                    assertObj(call, l, r);
+                }
+                else if ( l !== r ) {
+                    runner.fail(call, 'Object prop differs: ' + p + ': ' + l + ' - ' + r);
                 }
             });
         };
         if ( ! call.ignore ) {
             // assert values
-            if ( call.verb !== verb ) {
-                runner.fail(call, 'Verb is ' + verb + ', expected ' + call.verb);
-            }
-            if ( call.api !== api ) {
-                runner.fail(call, 'API is ' + api + ', expected ' + call.api);
-            }
             if ( call.url !== url ) {
                 runner.fail(call, 'URL is ' + url + ', expected ' + call.url);
             }
+            if ( call.verb !== verb ) {
+                runner.fail(call, 'Verb is ' + verb + ', expected ' + call.verb);
+            }
+            if ( call.params ) {
+                if ( ! call.params !== ! params ) {
+                    trace('actual params:');
+                    trace('%O', params);
+                    runner.fail(call, 'One param set is undefined: ' + call.params + ' - ' + params);
+                }
+                assertObj(call, call.params, params);
+            }
             if ( call.data && call.data !== ignore ) {
-                assertData(call, data);
+                if ( ! call.data !== ! data ) {
+                    trace('data sent:');
+                    trace('%O', data);
+                    runner.fail(call, 'One data is undefined: ' + call.data + ' - ' + data);
+                }
+                assertObj(call, call.data, data);
             }
         }
         // continue with expected result
@@ -189,24 +213,18 @@
         }
     };
 
-    // the main processing
-    function test(runner, file, name, cmd, calls) {
-        // set the expected calls on the runner object
-        runner.calls = calls;
+    function makeCtxt(runner) {
         // the platform instance
-        let ctxt = new c.Context(new c.Display(), new c.Platform(process.cwd()));
+        const ctxt = new c.Context(new c.Display(), new c.Platform(process.cwd()));
         // override the http functions
         ctxt.platform.get = function(params, url) {
-            // TODO: Don't we want to check other params than only api?
-            return assertCall(runner, 'get', params.api, url);
+            return assertCall(runner, 'get', params, url);
         };
         ctxt.platform.post = function(params, url, data) {
-            // TODO: Don't we want to check other params than only api?
-            return assertCall(runner, 'post', params.api, url, data);
+            return assertCall(runner, 'post', params, url, data);
         };
         ctxt.platform.put = function(params, url, data) {
-            // TODO: Don't we want to check other params than only api?
-            return assertCall(runner, 'put', params.api, url, data);
+            return assertCall(runner, 'put', params, url, data);
         };
         // various functions on the platform object to load the project file
         ctxt.platform.resolve = function(href, base) {
@@ -227,6 +245,22 @@
         ctxt.platform.yellow = function(s) {
             return s;
         };
+        ctxt.platform.exists = function(path) {
+            return fs.existsSync(path);
+        };
+        ctxt.platform.projectXml = function(path) {
+            if ( path.endsWith('/test/projects/simple-chimay/xproject/project.xml') ) {
+                return {
+                    name:    'http://mlproj.org/example/simple-chimay',
+                    abbrev:  'simple-chimay',
+                    version: '0.1.0',
+                    title:   'Some test.'
+                };
+            }
+            else {
+                throw new Error(`Unexpected location to parse as XML: ${path}`);
+            }
+        };
         // TODO: Ignore the output for now, but redirect it to a file...
         ctxt.platform.log = function(msg) {
         };
@@ -238,9 +272,29 @@
         };
         ctxt.display.check = function(indent, msg, arg) {
         };
+        ctxt.display.info = function(msg) {
+        };
+        // flag to throw errors directly, instead of accumulating them
+        ctxt.throwErrors = true
+        return ctxt;
+    }
+
+    // the main processing
+    function test(runner, path, environ, name, cmd, calls) {
+        // set the expected calls on the runner object
+        runner.calls(calls);
+        // make the context
+        const ctxt = makeCtxt(runner);
+        // make the environ (from a project or an environ file)
+        let env;
+        if ( environ ) {
+            env = new prj.Project(ctxt, path).environ(environ);
+        }
+        else {
+            env = new e.Environ(ctxt, ctxt.platform.json(path), path);
+            env.compile();
+        }
         // launch processing
-        let env = new e.Environ(ctxt, ctxt.platform.json(file), file);
-        env.compile();
         let command = new cmd(name, {}, {}, ctxt, env);
         let actions = command.prepare();
         actions.execute();

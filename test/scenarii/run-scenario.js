@@ -57,19 +57,23 @@ class TestRunner
     }
 
     calls(calls) {
-        this.calls = calls;
+        this._calls = calls;
     }
 
     nextCall() {
-        return this.calls[this.nextIdx++];
+        return this._calls[this.nextIdx++];
     }
 
-    progress(msg, verb, api, url, data) {
+    callsLeft() {
+        return this._calls.length - this.nextIdx;
+    }
+
+    progress(msg, verb, params, url, data) {
         // push this call in history
         var hist = {
             msg  : msg,
             verb : verb,
-            api  : api,
+            api  : params.api,
             url  : url
         };
         if ( data ) {
@@ -77,7 +81,8 @@ class TestRunner
         }
         this.history.push(hist);
         // log this call
-        debug(`${msg}\t-- ${verb.toUpperCase()} {${api}}${url}`);
+        debug(`${msg}\t-- ${verb.toUpperCase()} {${params.api}}${url}`);
+        debug('  params: %o', params);
     }
 
     fail(call, msg) {
@@ -101,7 +106,13 @@ tests.forEach(test => {
             t = './' + t;
         }
         console.log(test);
-        require(t).test(new TestRunner(), scenario, cmd, './');
+        const runner = new TestRunner();
+        require(t).test(runner, scenario, cmd, './');
+        // any expected call left?
+        const left = runner.callsLeft();
+        if ( left ) {
+            throw new Error(`Still ${left} expected request(s) left`);
+        }
         console.log(chalk.green('✔') + ' Scenario passed');
     }
     catch ( err ) {

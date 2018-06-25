@@ -95,8 +95,13 @@
 
         configs() {
             var names = this.module.configs();
-            return names.concat(
-                this.proj.configs().filter(n => ! names.includes(n)));
+            if ( this.proj ) {
+                const extra = this.proj.configs().filter(n => ! names.includes(n));
+                return names.concat(extra);
+            }
+            else {
+                return names;
+            }
         }
 
         // Precedence:

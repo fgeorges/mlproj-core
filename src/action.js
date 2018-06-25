@@ -1092,6 +1092,11 @@
                 }
             }
             catch (err) {
+                // flag to throw errors directly, instead of accumulating them
+                // set e.g. during tests
+                if ( this.ctxt.throwErrors ) {
+                    throw err;
+                }
                 this.error = {
                     action  : action,
                     message : err.message,
