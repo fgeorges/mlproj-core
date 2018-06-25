@@ -121,14 +121,92 @@
         };
     }
 
-            msg: msg,
-            ignore: true,
-            response: resp
+    function init(msg, host, port) {
+        const params = {
+            api: 'admin'
         };
-        if ( body ) {
-            res.body = body;
+        if ( host ) {
+            params.host = host;
         }
-        return res;
+        if ( port ) {
+            params.port = port;
+        }
+        return {
+            msg: msg,
+            verb: 'post',
+            params: params,
+            url: '/init',
+            response: 'OK'
+        };
+    }
+
+    function instanceAdmin(msg, host, port) {
+        const params = {
+            api: 'admin'
+        };
+        if ( host ) {
+            params.host = host;
+        }
+        if ( port ) {
+            params.port = port;
+        }
+        return {
+            msg: msg,
+            verb: 'post',
+            params: params,
+            url: '/instance-admin',
+            response: 'OK'
+        };
+    }
+
+    function serverConfig(msg, host, port) {
+        const params = {
+            api: 'admin',
+            headers: { accept: 'application/xml' }
+        };
+        if ( host ) {
+            params.host = host;
+        }
+        if ( port ) {
+            params.port = port;
+        }
+        return {
+            msg: msg,
+            verb: 'get',
+            params: params,
+            url: '/server-config',
+            response: 'OK'
+        };
+    }
+
+    function registerHost(msg) {
+        return {
+            msg: msg,
+            verb: 'post',
+            params: { api: 'admin', type: 'application/x-www-form-urlencoded' },
+            url: '/cluster-config',
+            response: 'OK'
+        };
+    }
+
+    function clusterConfig(msg, host, port) {
+        const params = {
+            api: 'admin',
+            type: 'application/zip'
+        };
+        if ( host ) {
+            params.host = host;
+        }
+        if ( port ) {
+            params.port = port;
+        }
+        return {
+            msg: msg,
+            verb: 'post',
+            params: params,
+            url: '/cluster-config',
+            response: 'OK'
+        };
     }
 
     // function to assert the current HTTP call (they are in sequence)
@@ -301,17 +379,22 @@
     }
 
     module.exports = {
-        ignore       : ignore,
-        dbProps      : dbProps,
-        asProps      : asProps,
-        forests      : forests,
-        forestProps  : forestProps,
-        createDb     : createDb,
-        createForest : createForest,
-        attachForest : attachForest,
-        createAs     : createAs,
-        assertCall   : assertCall,
-        test         : test
+        ignore        : ignore,
+        dbProps       : dbProps,
+        asProps       : asProps,
+        forests       : forests,
+        forestProps   : forestProps,
+        createDb      : createDb,
+        createForest  : createForest,
+        attachForest  : attachForest,
+        createAs      : createAs,
+        init          : init,
+        instanceAdmin : instanceAdmin,
+        serverConfig  : serverConfig,
+        registerHost  : registerHost,
+        clusterConfig : clusterConfig,
+        assertCall    : assertCall,
+        test          : test
     }
 }
 )();

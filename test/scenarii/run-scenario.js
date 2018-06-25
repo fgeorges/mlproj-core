@@ -10,7 +10,7 @@ const debug    = require('debug')('mlproj:debug');
 
 var tests = [];
 if ( process.argv.length === 2 ) {
-    [ 'setup' ].forEach(dir => addDir(tests, dir));
+    [ 'init', 'setup' ].forEach(dir => addDir(tests, dir));
 }
 else if ( process.argv.length !== 3 ) {
     console.log('Must have exactly one option (the path to the scenario file to run)');
