@@ -31,12 +31,10 @@
     class NewCommand extends Command
     {
         prepare() {
-            var pf      = this.ctxt.platform;
-            var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Create a new project', ctxt => {
-                var pf    = ctxt.platform;
-                var vars  = this.args;
-                var force = vars.force;
+            const action = new act.FunAction('Create a new project', ctxt => {
+                const pf    = ctxt.platform;
+                const vars  = this.args;
+                const force = vars.force;
 
                 // create `src/`
                 // TODO: Create `test/` as well, when supported.
@@ -56,8 +54,10 @@
                 pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars),     force);
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
 
-                this.xpdir = xpdir;
-            }));
+                action.xpdir = xpdir;
+            });
+            var actions = new act.ActionList(this.ctxt);
+            actions.add(action);
             return actions;
         }
     }
