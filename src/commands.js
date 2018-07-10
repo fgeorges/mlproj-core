@@ -53,6 +53,7 @@
                 pf.write(pf.resolve('default.json', mldir), NEW_DEFAULT_ENV(vars), force);
                 pf.write(pf.resolve('dev.json',     mldir), NEW_DEV_ENV(vars),     force);
                 pf.write(pf.resolve('prod.json',    mldir), NEW_PROD_ENV(vars),    force);
+                pf.write(pf.resolve('example.js',   mldir), NEW_EXAMPLE_ENV(vars), force);
 
                 action.xpdir = xpdir;
             });
@@ -498,6 +499,41 @@ console.warn(`MLPROJ INIT: glob: ${this.globalArgs}`);
         }]
     }
 }
+`;
+    }
+
+    // helper function for the command `new`, to create xproject/mlenvs/example.js
+    function NEW_EXAMPLE_ENV(vars)
+    {
+        return `// This is an example environment file written in JavaScript, instead of JSON.
+//
+// It allows you to create the environment object dynamically, using any type of
+// logic you want (e.g. to create a complex arrangement of forest in a cluster
+// of hundreds of nodes,) as well as providing actual functions as values
+// (e.g. for implementing user commands, than can then be invoked from the
+// command line.)
+//
+// The introduction of the first page below contains more details, and the
+// second page below contains more examples:
+//
+// - http://mlproj.org/environs
+// - http://mlproj.org/user-commands
+
+module.exports = () => {
+    return {
+        mlproj: {
+            format: '0.1',
+            import: 'base.json',
+            commands: {
+                databases: (apis) => {
+                    apis.manage()
+                        .databases()
+                        .forEach(db => console.log(db));
+                }
+            }
+        }
+    };
+};
 `;
     }
 
