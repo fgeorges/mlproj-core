@@ -160,9 +160,14 @@
         }
 
         hosts() {
-            if ( ! this._hostsChecked && this._topology ) {
-                checkHosts(this.ctxt, this._hosts, this._topology);
-                this._hostsChecked = true;
+            if ( this._topology ) {
+                if ( ! this._hosts ) {
+                    this._hosts = this._topology;
+                }
+                else if ( ! this._hostsChecked ) {
+                    checkHosts(this.ctxt, this._hosts, this._topology);
+                    this._hostsChecked = true;
+                }
             }
             return this._hosts;
         }
@@ -581,23 +586,18 @@
             };
             this.compileImpl(cache);
 
-            // if no host declared, use the connection host as single host
-            if ( ! cache.hosts.length ) {
-                const name = this.param('@host');
-                if ( name ) {
-                    const host = { name: name, group: 'Default' };
-                    cache.hosts.push(host);
-                    cache.hostNames[host.name] = host;
-                }
-            }
-
             // compile apis
             this.compileApis(root, cache);
 
-            // fetch cluster topology (except in case of command "init")
-            if ( this.ctxt.fetchTopology ) {
+            // if no host declared, fetch cluster topology (except in case of command `init`)
+            if ( ! cache.hosts.length && this.ctxt.fetchTopology ) {
                 // include fetching ML version as well, and maybe other values?
                 root._topology = fetchTopology(this.ctxt);
+                root._topology.forEach(t => {
+                    const host = { name: t, group: 'Default' };
+                    cache.hosts.push(host);
+                    cache.hostNames[t] = host;
+                });
             }
 
             // instantiate all mime types now
