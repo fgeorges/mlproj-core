@@ -315,7 +315,7 @@
     }
 
     /*~
-     * An array of objects.  Supoprts `Multiplexer`.
+     * An array of objects.  Supports `Multiplexer`.
      */
     class ObjectArray extends ConfigItem
     {
@@ -336,34 +336,39 @@
             }
         }
 
-        handle(result, value, key) {
+        handle(result, values, key) {
             this.init(result);
-            var r     = this.prop.parse(value);
-            var all   = [];
-            var multi = Object.keys(this.prop.props).filter(p => {
+            if ( ! Array.isArray(values) ) {
+                values = [ values ];
+            }
+            const all   = [];
+            const multi = Object.keys(this.prop.props).filter(p => {
                 return this.prop.props[p] instanceof Multiplexer;
             });
-            if ( multi.length === 0 ) {
-                all.push(r);
-            }
-            else if ( multi.length === 1 ) {
-                var name = this.prop.props[multi[0]].name;
-                var val  = r[name].value;
-                if ( Array.isArray(val) ) {
-                    val.forEach(v => {
-                        var o = {};
-                        Object.keys(r).filter(n => n !== name).forEach(n => o[n] = r[n]);
-                        o[name] = new Result(r[name].prop, v);
-                        all.push(o);
-                    });
-                }
-                else {
+            values.forEach(value => {
+                const r = this.prop.parse(value);
+                if ( ! multi.length ) {
                     all.push(r);
                 }
-            }
-            else {
-                throw new Error('Several multiplexer in the same object not supported');
-            }
+                else if ( multi.length === 1 ) {
+                    const name = this.prop.props[multi[0]].name;
+                    const val  = r[name].value;
+                    if ( Array.isArray(val) ) {
+                        val.forEach(v => {
+                            const o = {};
+                            Object.keys(r).filter(n => n !== name).forEach(n => o[n] = r[n]);
+                            o[name] = new Result(r[name].prop, v);
+                            all.push(o);
+                        });
+                    }
+                    else {
+                        all.push(r);
+                    }
+                }
+                else {
+                    throw new Error('Several multiplexer in the same object not supported');
+                }
+            });
             all.forEach(one => result[this.name].value.push(one));
         }
 
@@ -879,35 +884,45 @@
         .add('security', false, new Ignore())
         .add('triggers', false, new Ignore())
         .add('indexes',  false, new ConfigObject(/*'db.indexes'*/)
-             .add('namespaces', false, new CouplesAsMap('path-namespace', 'path namespaces', 'prefix', 'namespace-uri'))
-             .add('ranges', false, new MultiArray()
-                  .add(item => item.path, new ObjectArray('range-path-index', 'path range index', rangeBase()
-                       .add('path',      true,  new Multiplexer(new String('path-expression', 'path')))))
-                  .add(item => item.parent, new ObjectArray('range-element-attribute-index', 'Attribute range index', rangeBase()
-                       .add('name',      true,  new Multiplexer(new String('localname', 'name')))
-                       .add('namespace', false, new String('namespace-uri', 'ns'))
-                       .add('parent',    true,  new ConfigObject(/*'db.parent'*/ undefined, 'parent')
-                            .add('name',      true,  new String('parent-localname',     'parent name'))
-                            .add('namespace', false, new String('parent-namespace-uri', 'parent ns'))
-                            .dflt('namespace', ''))
-                       .dflt('namespace', '')))
-                  .add(item => true, new ObjectArray('range-element-index', 'element range index', rangeBase()
-                       .add('name',      true,  new Multiplexer(new String('localname', 'name')))
-                       .add('namespace', false, new String('namespace-uri', 'ns'))
-                       .dflt('namespace', '')))))
+            .add('namespaces', false, new CouplesAsMap('path-namespace', 'path namespaces', 'prefix', 'namespace-uri'))
+            .add('ranges', false, new MultiArray()
+                .add(item => item.field, new ObjectArray('range-field-index', 'field range index', rangeBase()
+                    .add('field',     true,  new Multiplexer(new String('field-name', 'field')))))
+                .add(item => item.path, new ObjectArray('range-path-index', 'path range index', rangeBase()
+                    .add('path',      true,  new Multiplexer(new String('path-expression', 'path')))))
+                .add(item => item.parent, new ObjectArray('range-element-attribute-index', 'Attribute range index', rangeBase()
+                    .add('name',      true,  new Multiplexer(new String('localname', 'name')))
+                    .add('namespace', false, new String('namespace-uri', 'ns'))
+                    .add('parent',    true,  new ConfigObject(/*'db.parent'*/ undefined, 'parent')
+                        .add('name',      true,  new String('parent-localname',     'parent name'))
+                        .add('namespace', false, new String('parent-namespace-uri', 'parent ns'))
+                        .dflt('namespace', ''))
+                    .dflt('namespace', '')))
+                .add(item => true, new ObjectArray('range-element-index', 'element range index', rangeBase()
+                    .add('name',      true,  new Multiplexer(new String('localname', 'name')))
+                    .add('namespace', false, new String('namespace-uri', 'ns'))
+                    .dflt('namespace', '')))))
+        .add('fields', false, new ObjectArray('field', 'fields', new ConfigObject(/*'db.fields'*/)
+            .add('name', false, new String('field-name', 'name'))))
         .add('searches', false, new ConfigObject(/*'db.searches'*/)
-             .add('fast', false, new ConfigObject()
-                  .add('case-sensitive',            false, new Boolean('fast-case-sensitive-searches',            'fast case sensitive searches'))
-                  .add('diacritic-sensitive',       false, new Boolean('fast-diacritic-sensitive-searches',       'fast diacritic sensitive searches'))
-                  .add('element-character',         false, new Boolean('fast-element-character-searches',         'fast element character searches'))
-                  .add('element-phrase',            false, new Boolean('fast-element-phrase-searches',            'fast element phrase searches'))
-                  .add('element-trailing-wildcard', false, new Boolean('fast-element-trailing-wildcard-searches', 'fast element trailing wildcard searches'))
-                  .add('element-word',              false, new Boolean('fast-element-word-searches',              'fast element word searches'))
-                  .add('phrase',                    false, new Boolean('fast-phrase-searches',                    'fast phrase searches'))
-                  .add('reverse',                   false, new Boolean('fast-reverse-searches',                   'fast reverse searches'))))
+            .add('one-character',     false, new Boolean('one-character-searches',     'one-character searches'))
+            .add('two-character',     false, new Boolean('two-character-searches',     'two-character searches'))
+            .add('three-character',   false, new Boolean('three-character-searches',   'three-character searches'))
+            .add('trailing-wildcard', false, new Boolean('trailing-wildcard-searches', 'searches with trailing wildcard'))
+            .add('word',              false, new Boolean('word-searches',              'unstemmed word searches'))
+            .add('stemmed',           false, new    Enum('stemmed-searches',           'stemmed word searches', ['off', 'basic', 'advanced', 'decompounding']))
+            .add('fast', false, new ConfigObject()
+                .add('case-sensitive',            false, new Boolean('fast-case-sensitive-searches',            'fast case sensitive searches'))
+                .add('diacritic-sensitive',       false, new Boolean('fast-diacritic-sensitive-searches',       'fast diacritic sensitive searches'))
+                .add('element-character',         false, new Boolean('fast-element-character-searches',         'fast element character searches'))
+                .add('element-phrase',            false, new Boolean('fast-element-phrase-searches',            'fast element phrase searches'))
+                .add('element-trailing-wildcard', false, new Boolean('fast-element-trailing-wildcard-searches', 'fast element trailing wildcard searches'))
+                .add('element-word',              false, new Boolean('fast-element-word-searches',              'fast element word searches'))
+                .add('phrase',                    false, new Boolean('fast-phrase-searches',                    'fast phrase searches'))
+                .add('reverse',                   false, new Boolean('fast-reverse-searches',                   'fast reverse searches'))))
         .add('lexicons', false, new ConfigObject(/*'db.lexicons'*/)
-             .add('uri',        false, new Boolean('uri-lexicon',        'URI lexicon'))
-             .add('collection', false, new Boolean('collection-lexicon', 'collection lexicon')));
+            .add('uri',        false, new Boolean('uri-lexicon',        'URI lexicon'))
+            .add('collection', false, new Boolean('collection-lexicon', 'collection lexicon')));
 
     /*~
      * The forest properties and config format.
@@ -944,29 +959,29 @@
         .add('rewriter', false, new  String('url-rewriter',  'url rewriter'))
         .add('handler',  false, new  String('error-handler', 'error handler'))
         .add('output',   false, new ConfigObject()
-             .add('byte-order-mark',             false, new   Enum('output-byte-order-mark',             'output byte order mark',             [ 'yes', 'no', 'default' ]))
-             .add('cdata-section-localname',     false, new String('output-cdata-section-localname',     'output cdata section localname'))
-             .add('cdata-section-namespace-uri', false, new String('output-cdata-section-namespace-uri', 'output cdata section namespace uri'))
-             .add('doctype-public',              false, new String('output-doctype-public',              'output doctype public'))
-             .add('doctype-system',              false, new String('output-doctype-system',              'output doctype system'))
-             .add('encoding',                    false, new   Enum('output-encoding',                    'output encoding', [
-                 'UTF-8', 'ASCII', 'ISO-8859-1', 'ISO-8859-5', 'ISO-8859-6', 'ISO-2022-KR', 'ISO-2022-JP', 'EUC-CN', 'EUC-KR', 'EUC-JP', 'CP932',
-                 'CP936', 'CP949', 'CP950', 'CP1252', 'CP1256', 'KOI8-R', 'GB12052', 'GB18030', 'GB2312', 'HZ-GB-2312', 'BIG5', 'BIG5-HKSCS', 'Shift_JIS' ]))
-             .add('escape-uri-attributes',       false, new   Enum('output-escape-uri-attributes',       'output escape uri attributes',       [ 'yes', 'no', 'default' ]))
-             .add('include-content-type',        false, new   Enum('output-include-content-type',        'output include content type',        [ 'yes', 'no', 'default' ]))
-             .add('include-default-attributes',  false, new   Enum('output-include-default-attributes',  'output include default attributes',  [ 'yes', 'no', 'default' ]))
-             .add('indent',                      false, new   Enum('output-indent',                      'output indent',                      [ 'yes', 'no', 'default' ]))
-             .add('indent-tabs',                 false, new   Enum('output-indent-tabs',                 'output indent tabs',                 [ 'yes', 'no', 'default' ]))
-             .add('indent-untyped',              false, new   Enum('output-indent-untyped',              'output indent untyped',              [ 'yes', 'no', 'default' ]))
-             .add('media-type',                  false, new String('output-media-type',                  'output media type'))
-             .add('method',                      false, new   Enum('output-method',                      'output method', [
-                 'default', 'xml', 'xhtml', 'html', 'text', 'sparql-results-json', 'sparql-results-csv', 'n-triples', 'n-quads' ]))
-             .add('normalization-form',          false, new   Enum('output-normalization-form',          'output normalization form',          [ 'none', 'NFC', 'NFD', 'NFKD' ]))
-             .add('omit-xml-declaration',        false, new   Enum('output-omit-xml-declaration',        'output omit xml declaration',        [ 'yes', 'no', 'default' ]))
-             .add('sgml-character-entities',     false, new   Enum('output-sgml-character-entities',     'output sgml character entities',     [ 'none', 'normal', 'math', 'pub' ]))
-             .add('standalone',                  false, new   Enum('output-standalone',                  'output standalone',                  [ 'yes', 'no', 'omit' ]))
-             .add('undeclare-prefixes',          false, new   Enum('output-undeclare-prefixes',          'output undeclare prefixes',          [ 'yes', 'no', 'default' ]))
-             .add('version',                     false, new String('output-version',                     'output version')));
+            .add('byte-order-mark',             false, new   Enum('output-byte-order-mark',             'output byte order mark',             [ 'yes', 'no', 'default' ]))
+            .add('cdata-section-localname',     false, new String('output-cdata-section-localname',     'output cdata section localname'))
+            .add('cdata-section-namespace-uri', false, new String('output-cdata-section-namespace-uri', 'output cdata section namespace uri'))
+            .add('doctype-public',              false, new String('output-doctype-public',              'output doctype public'))
+            .add('doctype-system',              false, new String('output-doctype-system',              'output doctype system'))
+            .add('encoding',                    false, new   Enum('output-encoding',                    'output encoding', [
+                'UTF-8', 'ASCII', 'ISO-8859-1', 'ISO-8859-5', 'ISO-8859-6', 'ISO-2022-KR', 'ISO-2022-JP', 'EUC-CN', 'EUC-KR', 'EUC-JP', 'CP932',
+                'CP936', 'CP949', 'CP950', 'CP1252', 'CP1256', 'KOI8-R', 'GB12052', 'GB18030', 'GB2312', 'HZ-GB-2312', 'BIG5', 'BIG5-HKSCS', 'Shift_JIS' ]))
+            .add('escape-uri-attributes',       false, new   Enum('output-escape-uri-attributes',       'output escape uri attributes',       [ 'yes', 'no', 'default' ]))
+            .add('include-content-type',        false, new   Enum('output-include-content-type',        'output include content type',        [ 'yes', 'no', 'default' ]))
+            .add('include-default-attributes',  false, new   Enum('output-include-default-attributes',  'output include default attributes',  [ 'yes', 'no', 'default' ]))
+            .add('indent',                      false, new   Enum('output-indent',                      'output indent',                      [ 'yes', 'no', 'default' ]))
+            .add('indent-tabs',                 false, new   Enum('output-indent-tabs',                 'output indent tabs',                 [ 'yes', 'no', 'default' ]))
+            .add('indent-untyped',              false, new   Enum('output-indent-untyped',              'output indent untyped',              [ 'yes', 'no', 'default' ]))
+            .add('media-type',                  false, new String('output-media-type',                  'output media type'))
+            .add('method',                      false, new   Enum('output-method',                      'output method', [
+                'default', 'xml', 'xhtml', 'html', 'text', 'sparql-results-json', 'sparql-results-csv', 'n-triples', 'n-quads' ]))
+            .add('normalization-form',          false, new   Enum('output-normalization-form',          'output normalization form',          [ 'none', 'NFC', 'NFD', 'NFKD' ]))
+            .add('omit-xml-declaration',        false, new   Enum('output-omit-xml-declaration',        'output omit xml declaration',        [ 'yes', 'no', 'default' ]))
+            .add('sgml-character-entities',     false, new   Enum('output-sgml-character-entities',     'output sgml character entities',     [ 'none', 'normal', 'math', 'pub' ]))
+            .add('standalone',                  false, new   Enum('output-standalone',                  'output standalone',                  [ 'yes', 'no', 'omit' ]))
+            .add('undeclare-prefixes',          false, new   Enum('output-undeclare-prefixes',          'output undeclare prefixes',          [ 'yes', 'no', 'default' ]))
+            .add('version',                     false, new String('output-version',                     'output version')));
 
     /*~
      * The source properties and config format.
