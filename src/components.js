@@ -293,14 +293,21 @@
 
             // check properties
             display.check(1, 'properties');
-            Object.keys(this.props).forEach(p => {
-                let res = this.props[p];
+            const updateProp = key => {
+                let res = this.props[key];
                 // TODO: Rather fix the "_type" setting mechanism, AKA the "root cause"...
                 if ( ! res.prop._type ) {
                     res.prop._type = 'database';
                 }
                 res.update(actions, display, body, this);
-            });
+            };
+            Object.keys(this.props)
+                .filter(key => key !== 'range-field-index')
+                .forEach(updateProp);
+            // done after all the others, to avoid dependency on `field` property
+            if ( this.props['range-field-index'] ) {
+                updateProp('range-field-index');
+            }
             if ( this.properties ) {
                 Object.keys(this.properties).forEach(p => {
                     if ( this.properties[p] !== body[p] ) {
