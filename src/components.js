@@ -1152,7 +1152,9 @@
         installRestThing(port, kind, uri, path)
         {
             const [ name, mime ] = this.basenameAndMime(uri);
-            return new act.ServerRestDeploy(kind, name, path, mime, port);
+            if ( mime ) {
+                return new act.ServerRestDeploy(kind, name, path, mime, port);
+            }
         }
 
         loadTde(actions, db, display)
@@ -1161,7 +1163,9 @@
             this.walk(actions.ctxt, display, (path, uri, meta) => {
                 display.check(0, 'tde template', uri);
                 const [ name, mime ] = this.basenameAndMime(path);
-                actions.add(new act.TdeInstall(db, uri, path, mime));
+                if ( mime ) {
+                    actions.add(new act.TdeInstall(db, uri, path, mime));
+                }
             }, dir);
         }
 
