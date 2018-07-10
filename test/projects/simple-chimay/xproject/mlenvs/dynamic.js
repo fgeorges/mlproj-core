@@ -1,4 +1,4 @@
-module.exports = function() {
+module.exports = () => {
     return {
         mlproj: {
             format   : '0.1',

@@ -104,14 +104,30 @@
             if ( ! pwd ) {
                 throw new Error('No password in environ');
             }
-console.warn(`MLPROJ INIT: name: ${this.name}`);
-console.warn(`MLPROJ INIT: args: ${this.args}`);
-console.warn(`MLPROJ INIT: glob: ${this.globalArgs}`);
-            let key      = this.args.key;
-            let licensee = this.args.licensee
+            const kind = this.args.kind;
+throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
+            switch ( kind ) {
+            case undefined:
+                console.warn(`KIND undefined`);
+                break;
+            case 'host':
+            case 'master':
+                console.warn(`KIND host/master`);
+                break;
+            case 'extra':
+                console.warn(`KIND extra`);
+                break;
+            case 'cluster':
+                console.warn(`KIND cluster`);
+                break;
+            default:
+                throw new Error(`Unknown kind in init: ${kind}`);
+            }
+            const key      = this.args.key;
+            const licensee = this.args.licensee;
             // the action list
-            let actions = new act.ActionList(this.ctxt);
-            let hosts   = this.environ.hosts();
+            const actions = new act.ActionList(this.ctxt);
+            const hosts   = this.environ.hosts();
             // if explicit hosts, init the cluster
             if ( hosts.length ) {
                 let master = hosts[0];
