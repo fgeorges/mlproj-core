@@ -4,6 +4,7 @@
 
     const act   = require('./action');
     const props = require('./properties');
+//    const trace = require('debug')('mlproj:core:trace');
 
     /*~
      * Interface of a component.
@@ -160,23 +161,26 @@
                         ['forest-default-list']['list-items']['list-item']
                         .map(o => o.nameref);
                     // support several types of data for forests
-                    if ( Number.isInteger(forests) ) {
-                        handleForestsNumber(forests, existing, hosts, this, ctxt);
-                    }
-                    else if ( Array.isArray(forests) ) {
-                        handleForestsList(forests, existing, hosts, this, ctxt);
-                    }
-                    else if ( typeof forests === 'object' ) {
-                        handleForestsObject(forests, existing, hosts, this, ctxt);
-                    }
+                    //
                     // TODO: Accept also a function?  Is there any incentive for that,
                     // or is it just possible to simply generate, say, the forest array
                     // using a piece of code in a *.js environment?  That is, is there
                     // any benefit to call a function from here? (like passing some
                     // parameters, calling it only for some specific (sub-)parts, etc.)
-                    else {
-                        throw new Error('Unsupported data type for forests: ${typeof forests}');
+                    let handler;
+                    if ( Number.isInteger(forests) ) {
+                        handler = handleForestsNumber;
                     }
+                    else if ( Array.isArray(forests) ) {
+                        handler = handleForestsList;
+                    }
+                    else if ( typeof forests === 'object' ) {
+                        handler = handleForestsObject;
+                    }
+                    else {
+                        throw new Error(`Unsupported data type for forests: ${typeof forests}`);
+                    }
+                    handler(forests, existing, hosts, this, ctxt);
                 }
             }
         }
@@ -477,6 +481,9 @@
                 throw new Error(`Both replica and replicas set for forest ${json.name}`);
             }
             else if ( json.replica ) {
+                if ( Array.isArray(json.replica) ) {
+                    throw new Error(`Forest.replica cannot be an array, use forest.replicas instead (plural)`);
+                }
                 this.replicas.push(json.replica);
             }
             else if ( json.replicas ) {
@@ -552,23 +559,26 @@
                 actions.add(new act.ForestUpdate(this, 'forest-replica', this.replicas));
             }
             else if ( this.replicas.length ) {
-                const compare = (as, bs) => {
-                    if ( ! as.length ) {
+                const compare = (i, lhs, rhs) => {
+                    if ( i >= lhs.length ) {
                         return true;
                     }
-                    const a = as.pop();
-                    const b = bs.pop();
-                    const eq = p => a[p] === b[p];
-                    if ( ! (eq('name')
+                    const eq = p => {
+                        // values are the same
+                        return lhs[i][p] === rhs[i][p]
+                            // or are both unset (undefined, empty string...)
+                            || (! lhs[i][p] && ! rhs[i][p]);
+                    };
+                    if ( ! (eq('replica-name')
                             && eq('host')
                             && eq('data-directory')
                             && eq('large-data-directory')
                             && eq('fast-data-directory')) ) {
                         return false;
                     }
-                    return compare();
+                    return compare(i + 1, lhs, rhs);
                 };
-                if ( ! compare(this.replicas, replicas) ) {
+                if ( ! compare(0, this.replicas, replicas) ) {
                     actions.add(new act.ForestUpdate(this, 'forest-replica', this.replicas));
                 }
             }
@@ -1123,7 +1133,7 @@
                     return 'application/json';
                 }
                 else {
-                    throw new Error('Extension is neither xqy, sjs, xml or json: ' + ext);
+                    console.log('Extension is neither xqy, sjs, xml or json: ' + ext);
                 }
             };
             // the basename and extension
