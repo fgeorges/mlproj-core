@@ -45,6 +45,46 @@
         manage() {
             return new Manage(this._command);
         }
+
+        eval(params, evalParams) {
+            if ( ! params.path && ! params.url ) {
+                if ( evalParams.database ) {
+                    params.path = '/eval?database=' + evalParams.database;
+                }
+                else {
+                    params.path = '/eval';
+                }
+            }
+            if ( ! params.api ) {
+                params.api = 'rest';
+            }
+            if ( ! params.type ) {
+                params.type = 'application/x-www-form-urlencoded';
+            }
+            if ( ! evalParams.xquery && ! evalParams.javascript ) {
+                throw new Error('No code provided to evaluate');
+            }
+            if ( evalParams.xquery && evalParams.javascript ) {
+                throw new Error('Both XQuery and JavaScript code provided to evaluate');
+            }
+            if ( ! params.body ) {
+                params.body = evalParams.xquery
+                    ? 'xquery='     + encodeURIComponent(evalParams.xquery)
+                    : 'javascript=' + encodeURIComponent(evalParams.javascript);
+                if ( evalParams.vars ) {
+                    const values = Object.keys(evalParams.vars).map(name => {
+                        return `"${name}":${JSON.stringify(evalParams.vars[name])}`
+                    });
+                    params.body += '&vars=' + encodeURIComponent('{' + values.join(',') + '}');
+                }
+            }
+            const resp = this.post(params);
+            if ( resp.status !== 200 ) {
+                throw new Error(`Error on the eval endpoint: ${resp.status}`);
+            }
+            // TODO: Parse the multipart result as a sequence (so an array here...)
+            return resp.body.toString();
+        }
     }
 
     class Source
@@ -91,7 +131,7 @@
         databases() {
             const resp = this.get({ path: '/databases' });
             if ( resp.status !== 200 ) {
-                throw new Error('Error retrieving the database list: %s', resp.status);
+                throw new Error(`Error retrieving the database list: ${resp.status}`);
             }
             return resp.body
                 ['database-default-list']
@@ -111,7 +151,7 @@
         forests() {
             const resp = this.get({ path: '/forests' });
             if ( resp.status !== 200 ) {
-                throw new Error('Error retrieving the forest list: %s', resp.status);
+                throw new Error(`Error retrieving the forest list: ${resp.status}`);
             }
             return resp.body
                 ['forest-default-list']
@@ -128,7 +168,7 @@
         servers() {
             const resp = this.get({ path: '/servers' });
             if ( resp.status !== 200 ) {
-                throw new Error('Error retrieving the server list: %s', resp.status);
+                throw new Error(`Error retrieving the server list: ${resp.status}`);
             }
             return resp.body
                 ['server-default-list']

@@ -1044,7 +1044,8 @@
             ssl  : false
         },
         rest: {
-            root : '/v1/rest-apis',
+            root : '/v1',
+            //root : '/v1/rest-apis',
             port : 8002,
             ssl  : false
         },
