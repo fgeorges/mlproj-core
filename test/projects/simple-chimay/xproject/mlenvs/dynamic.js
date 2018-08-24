@@ -9,6 +9,29 @@ module.exports = () => {
                 password: 'admin'
             },
             commands : {
+                eval: apis => {
+                    let result = apis.eval({}, {
+                        xquery:   `
+xquery version "3.1";
+let $who := 'world'
+return (
+  'Hello, ' || $who || '!',
+  42
+)
+`
+                    });
+                    console.log(result);
+                    result = apis.eval({}, {
+                        javascript:   `
+const who = 'world';
+[
+  'Hello, ' + who + '!',
+  42
+];
+`
+                    });
+                    console.log(result);
+                },
                 ":do" : {
                     implem: (apis, environ, ctxt) => {
                         let resp;
