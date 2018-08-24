@@ -284,6 +284,27 @@
             return httpPut(this, params, null, data, type);
         }
 
+        remove(arg) {
+            const params = {};
+            if ( ! arg ) {
+                // nothing
+            }
+            else if ( arg === 'config' ) {
+                params.path = '?forest-delete=configuration';
+            }
+            else if ( arg === 'data' ) {
+                params.path = '?forest-delete=data';
+            }
+            else {
+                throw new Error(`Unknown argument to remove() for database ${this._name}: ${arg}`);
+            }
+            const resp = httpDelete(this, this._adaptParams(params));
+            if ( resp.status !== 204 ) {
+                throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
+        }
+
         properties(body) {
             if ( body === undefined ) {
                 const resp = this.get({ path: '/properties' });
@@ -334,6 +355,15 @@
         put(params, data, type) {
             this._adaptParams(params);
             return httpPut(this, params, null, data, type);
+        }
+
+        remove() {
+            const params = { path: '?level=full' };
+            const resp   = httpDelete(this, this._adaptParams(params));
+            if ( resp.status !== 204 ) {
+                throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
         }
 
         detach() {
@@ -432,6 +462,14 @@
         put(params, data, type) {
             this._adaptParams(params);
             return httpPut(this, params, null, data, type);
+        }
+
+        remove(arg) {
+            const resp = httpDelete(this, this._adaptParams({}));
+            if ( resp.status !== 202 && resp.status !== 204 ) {
+                throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
+            }
+            return this;
         }
 
         properties(body) {
