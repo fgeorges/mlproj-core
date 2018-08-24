@@ -605,14 +605,9 @@
                 return new cmp.MimeType(m);
             });
 
-            // instantiate all roles now
-            root._roles = cache.roles.map(m => {
-                return new cmp.Role(m, this.ctxt);
-            });
-
             // instantiate all users now
-            root._users = cache.users.map(m => {
-                return new cmp.User(m);
+            root._users = cache.users.map(u => {
+                return new cmp.User(u);
             });
 
             // instantiate all sources now
@@ -627,14 +622,20 @@
                 return new cmp.Host(h);
             });
 
-            // compile databases and servers
+            // compile roles (the order of root._roles is in such a way that all
+            // dependencies are resolved if the roles are created in that order)
+            this.compileRoles(root, cache);
+
+            // compile databases and servers (the order of both root._servers and
+            // root._databases is in such a way that all dependencies are resolved if
+            // the components are created in that order)
             this.compileDbsSrvs(root, cache, root.source('src'));
         }
 
         compileApis(root, cache)
         {
             // "flatten" the import graph in a single array
-            // most priority at index 0, least priority at the end
+            // from highest priority at index 0, to lowest priority at the end
             var imports = [];
             var flatten = mod => {
                 if ( ! imports.includes(mod) ) {
@@ -643,6 +644,7 @@
                 }
             };
             flatten(this);
+
             // overrides lhs props with those in rhs, if any
             var collapse = (lhs, rhs) => {
                 if ( rhs ) {
@@ -651,6 +653,7 @@
             };
             root._overridenApis = {};
             root._apis          = {};
+
             // loop over all known apis
             Object.keys(DEFAULT_APIS).forEach(name => {
                 // start with nothing
@@ -667,6 +670,70 @@
                         || DEFAULT_APIS[name][p];
                 });
             });
+        }
+
+        compileRoles(root, cache)
+        {
+            // the map of dependencies
+            const map = {};
+            // the list of roles with no dependencies anymore (other than those resolved)
+            const zeroes = [];
+            // if a role has no more dep, add it to `zeroes` and remove it from `map`
+            const checkZero = role => {
+                if ( ! role.depon.length ) {
+                    zeroes.push(role);
+                    delete map[role.name];
+                }
+            };
+
+            // init 1. - "empty" map (all slots, no dependencies yet)
+            cache.roles.forEach(r => map[r.name] = {
+                name:  r.name,
+                depon: [],
+                depby: []
+            });
+
+            // init 2. - add dependencies to the map
+            cache.roles.forEach(r => {
+                if ( r.roles ) {
+                    const role = map[r.name];
+                    r.roles.forEach(d => {
+                        const dep = map[d];
+                        if ( dep ) {
+                            role.depon.push(d);
+                            dep.depby.push(r.name);
+                        }
+                    });
+                }
+            });
+
+            // init 3. - initial list of roles with no dependency
+            Object.keys(map).forEach(k => checkZero(map[k]));
+
+            // init 4. - the final list of roles is empty
+            root._roles = [];
+
+            // as long as there are roles with no unresolved dep, pick one, add it to the
+            // final list, and remove it from the list of dependencies of each role that
+            // depends on it
+            while ( zeroes.length ) {
+                const role  = zeroes.shift();
+                const found = cache.roles.find(r => r.name === role.name);
+                root._roles.push(new cmp.Role(found, this.ctxt));
+                role.depby.forEach(d => {
+                    const dep = map[d];
+                    const idx = dep.depon.indexOf(role.name);
+                    dep.depon.splice(idx, 1);
+                    checkZero(dep);
+                });
+            }
+
+            // check whether there are still roles in the map (thus, with unresolved deps)
+            const unresolved = Object.keys(map);
+            if ( unresolved.length ) {
+                throw new Error('Cannot resolve dependencies for all roles, these must have '
+                                + 'cyclic dependencies: ' + unresolved);
+            }
         }
 
         compileDbsSrvs(root, cache, src)

@@ -153,7 +153,10 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             const actions = new act.ActionList(this.ctxt);
             // setup a specific component?
             const what = this.args.what;
+            // the components to setup
             let comps = [];
+            // are roles part of them? (to update permissions after creation of *all* roles)
+            let haveRoles = false;
             if ( what === 'databases' ) {
                 comps = this.environ.databases();
             }
@@ -162,6 +165,10 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             }
             else if ( what === 'mimetypes' ) {
                 comps = this.environ.mimetypes();
+            }
+            else if ( what === 'roles' ) {
+                haveRoles = true;
+                comps = this.environ.roles();
             }
             else if ( what === 'users' ) {
                 comps = this.environ.users();
@@ -181,6 +188,7 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             }
             else {
                 // add all components
+                haveRoles = true;
                 var dbs   = this.environ.databases();
                 var srvs  = this.environ.servers();
                 var mimes = this.environ.mimetypes();
@@ -192,6 +200,14 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             comps.forEach(comp => {
                 comp.setup(actions, this.ctxt.display);
             });
+            if ( haveRoles && this.environ.roles().length ) {
+                // check permissions on roles (might depend on creation of other roles)
+                actions.add(new act.FunAction(null, ctxt => {
+                    this.environ.roles().forEach(role => {
+                        role.updatePermissions(actions, this.ctxt.display);
+                    });
+                }));
+            }
             return actions;
         }
     }

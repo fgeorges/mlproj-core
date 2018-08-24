@@ -1553,6 +1553,9 @@
             display.role(this.props);
         }
 
+        // Cannot send permissions at creation, as they can depend on other roles to be
+        // created first (or even on itself.)  So neither setup(), create() or update()
+        // sends permissions.  Only updatePermissions() does.
         setup(actions, display)
         {
             display.check(0, 'the role', this.props['role-name'].value);
@@ -1570,8 +1573,9 @@
         create(actions, display)
         {
             display.add(0, 'create', 'role', this.props['role-name'].value);
-            var obj = {};
-            Object.keys(this.props).forEach(p => {
+            const obj  = {};
+            const keys = Object.keys(this.props).filter(p => p !== 'permission');
+            keys.forEach(p => {
                 this.props[p].create(obj);
             });
             actions.add(new act.RoleCreate(this, obj));
@@ -1581,9 +1585,20 @@
         {
             // check properties
             display.check(1, 'properties');
-            Object.keys(this.props).forEach(p => {
+            const keys = Object.keys(this.props).filter(p => p !== 'permission');
+            keys.forEach(p => {
                 this.props[p].update(actions, display, actual, this);
             });
+        }
+
+        updatePermissions(actions, display)
+        {
+            const prop = this.props.permission;
+            if ( prop ) {
+                display.check(0, 'permissions on role', this.props['role-name'].value);
+                const body = new act.RoleProps(this).retrieve(actions.ctxt);
+                prop.update(actions, display, body, this);
+            }
         }
     }
 
