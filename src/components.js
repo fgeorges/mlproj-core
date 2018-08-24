@@ -38,7 +38,7 @@
         setup(actions, display)
         {
             display.check(0, 'the database', this.name);
-            const body = new act.DatabaseProps(this).execute(actions.ctxt);
+            const body = new act.DatabaseProps(this).retrieve(actions.ctxt);
             // if DB does not exist
             if ( ! body ) {
                 display.remove(0, 'be created', 'outside', this.name);
@@ -60,7 +60,7 @@
                 const n = name(i + 1, j + 1);
                 const f = new Forest(db, h, { name: n });
                 if ( existing.includes(n) ) {
-                    const props = new act.ForestProps(n).execute(ctxt);
+                    const props = new act.ForestProps(n).retrieve(ctxt);
                     if ( h.name !== props.host ) {
                         throw new Error(`Host do not match for forest ${n}: ${h.name} vs. ${props.host}`);
                     }
@@ -90,7 +90,7 @@
             }
             const f = new Forest(db, h, decl);
             if ( existing.includes(decl.name) ) {
-                const props = new act.ForestProps(decl.name).execute(ctxt);
+                const props = new act.ForestProps(decl.name).retrieve(ctxt);
                 if ( h.name !== props.host ) {
                     throw new Error(`Host do not match for forest ${decl.name}: ${h.name} vs. ${props.host}`);
                 }
@@ -157,7 +157,7 @@
                 if ( hosts.length ) {
                     // the forests actually existing on the cluster
                     const existing = new act.ForestList()
-                        .execute(ctxt)
+                        .retrieve(ctxt)
                         ['forest-default-list']['list-items']['list-item']
                         .map(o => o.nameref);
                     // support several types of data for forests
@@ -200,10 +200,10 @@
         setup(actions, display)
         {
             display.check(0, 'the database', this.name);
-            const body = new act.DatabaseProps(this).execute(actions.ctxt);
+            const body = new act.DatabaseProps(this).retrieve(actions.ctxt);
             let names;
             if ( Object.keys(this.forests).length ) {
-                const forests = new act.ForestList().execute(actions.ctxt);
+                const forests = new act.ForestList().retrieve(actions.ctxt);
                 const items   = forests['forest-default-list']['list-items']['list-item'];
                 names = items.map(o => o.nameref);
             }
@@ -221,7 +221,7 @@
         {
             display.add(0, 'create', 'database', this.name);
             // the base database object
-            var obj = {
+            const obj = {
                 "database-name": this.name
             };
             // its schema, security and triggers DB
@@ -270,7 +270,7 @@
             }
             else {
                 display.check(1, 'forests');
-                var actual = body.forest || [];
+                const actual = body.forest || [];
                 // forests to remove: those in `actual` but not in `desired`
                 actual
                     .filter(name => ! desired.includes(name))
@@ -319,7 +319,7 @@
 
         updateDb(actions, display, db, body, prop, dflt)
         {
-            var actual = body[prop];
+            const actual = body[prop];
             var newName;
 
             // do not exist, not desired
@@ -558,7 +558,7 @@
         // Check properties, and update accordingly, if necessary.
         update(actions, display)
         {
-            const body = new act.ForestProps(this).execute(actions.ctxt);
+            const body = new act.ForestProps(this).retrieve(actions.ctxt);
             display.check(2, 'properties');
             // replicas
             const replicas = body['forest-replica'];
@@ -672,7 +672,7 @@
                             'The app server has no modules db, no root, and default src has no dir: ',
                             this.name);
                     }
-                    var dir = platform.resolve(src.props.dir.value) + '/';
+                    const dir = platform.resolve(src.props.dir.value) + '/';
                     this.props.root = new props.Result(props.server.props.root, dir);
                 }
             }
@@ -693,7 +693,7 @@
         setup(actions, display)
         {
             display.check(0, 'the ' + this.type + ' server', this.name);
-            const body = new act.ServerProps(this).execute(actions.ctxt);
+            const body = new act.ServerProps(this).retrieve(actions.ctxt);
             // if AS does not exist yet
             if ( ! body ) {
                 if ( this.type === 'http' ) {
@@ -738,7 +738,7 @@
         {
             display.add(0, 'create', this.type + ' server', this.name);
             // the base server object
-            var obj = {
+            const obj = {
                 "server-name":      this.name,
                 "server-type":      this.type,
                 "content-database": this.content.name
@@ -832,7 +832,7 @@
             if ( ( ! this.modules && actual['modules-database'] )
                  || ( this.modules && ! actual['modules-database'] )
                  || ( this.modules && this.modules.name !== actual['modules-database'] ) ) {
-                var mods = this.modules ? this.modules.name : 0;
+                const mods = this.modules ? this.modules.name : 0;
                 display.add(0, 'update', 'modules-database');
                 actions.add(new act.ServerUpdate(this, 'modules-database', mods));
             }
@@ -878,7 +878,7 @@
                 }
             };
             const bool = val => {
-                var type = typeof val;
+                const type = typeof val;
                 if ( 'boolean' === type ) {
                     return val;
                 }
@@ -897,7 +897,7 @@
                     throw new Error('Boolean value neither a string or a boolean: ' + type);
                 }
             };
-            const cprops = new act.ServerRestCreationProps(this).execute(actions.ctxt);
+            const cprops = new act.ServerRestCreationProps(this).retrieve(actions.ctxt);
             check('name',             cprops.name,                  this.name);
             check('group',            cprops.group,                 this.group);
             check('database',         cprops.database,              this.content && this.content.name);
@@ -913,7 +913,7 @@
                     obj[name] = current;
                 }
             };
-            const props = new act.ServerRestProps(this, this.props.port.value).execute(actions.ctxt);
+            const props = new act.ServerRestProps(this, this.props.port.value).retrieve(actions.ctxt);
             update('debug',                  bool(props['debug']),                  this.rest && this.rest['debug'],               false);
             update('document-transform-all', bool(props['document-transform-all']), this.rest && this.rest['transform-all'],       true);
             update('document-transform-out', props['document-transform-out'],       this.rest && this.rest['transform-out'] || '', '');
@@ -1452,11 +1452,11 @@
         // joining sequence
         actions.add(new act.FunAction('Join cluster', () => {
             // /server-config
-            const config  = new act.ServerConfig(host, api).execute(ctxt);
+            const config  = new act.ServerConfig(host, api).retrieve(ctxt);
             // /cluster-config
-            const cluster = new act.ClusterConfig(config, group).execute(ctxt);
+            const cluster = new act.ClusterConfig(config, group).retrieve(ctxt);
             // /cluster-config
-            new act.ClusterConfigZip(cluster, host, api).execute(ctxt);
+            new act.ClusterConfigZip(cluster, host, api).retrieve(ctxt);
         }));
     };
 
@@ -1491,7 +1491,7 @@
         setup(actions, display)
         {
             display.check(0, 'the mime type', this.name);
-            const body = new act.MimeProps(this).execute(actions.ctxt);
+            const body = new act.MimeProps(this).retrieve(actions.ctxt);
             // if mime does not exist yet
             if ( ! body ) {
                 this.create(actions, display);
@@ -1505,7 +1505,7 @@
         create(actions, display)
         {
             display.add(0, 'create', 'mime', this.name);
-            var obj = {
+            const obj = {
                 "name": this.name
             };
             Object.keys(this.props).forEach(p => {
@@ -1540,7 +1540,8 @@
             super();
             // extract the configured properties
             this.props = props.role.parse(json, null, ctxt);
-            // TODO: To handle in properties.js...
+            // TODO: To handle in properties.js... (at least check if values have changed
+            // during "setup"...)
             // TODO: Value should be a StringList, not necessarily an array...
             let priv = json.privileges || {};
             this.execpriv = priv.execute || [];
@@ -1555,7 +1556,7 @@
         setup(actions, display)
         {
             display.check(0, 'the role', this.props['role-name'].value);
-            const body = new act.RoleProps(this).execute(actions.ctxt);
+            const body = new act.RoleProps(this).retrieve(actions.ctxt);
             // if role does not exist yet
             if ( ! body ) {
                 this.create(actions, display);
@@ -1624,7 +1625,7 @@
         setup(actions, display)
         {
             display.check(0, 'the user', this.props['user-name'].value);
-            const body = new act.UserProps(this).execute(actions.ctxt);
+            const body = new act.UserProps(this).retrieve(actions.ctxt);
             // if user does not exist yet
             if ( ! body ) {
                 this.create(actions, display);
@@ -1638,7 +1639,7 @@
         create(actions, display)
         {
             display.add(0, 'create', 'user', this.props['user-name'].value);
-            var obj = {};
+            const obj = {};
             Object.keys(this.props).forEach(p => {
                 this.props[p].create(obj);
             });

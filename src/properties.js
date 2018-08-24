@@ -635,7 +635,7 @@
     // return the action URI resolved from the name
     Privileges.privilege = (ctxt, name, kind) => {
         if ( ! Privileges.cache ) {
-            let resp = new act.PrivilegeList().execute(ctxt);
+            let resp = new act.PrivilegeList().retrieve(ctxt);
             Privileges.cache = {
                 execute: {},
                 uri:     {}

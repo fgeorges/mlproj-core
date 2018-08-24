@@ -16,12 +16,14 @@
         }
 
         display(platform, status) {
-            var start = status === 'done'
-                ? platform.green('✓')      // success
-                : status === 'todo'
-                ? platform.yellow('✗')     // not done
-                : platform.red('✗');       // error
-            platform.log(start + ' ' + this.msg);
+            if ( this.msg ) {
+                const start = status === 'done'
+                    ? platform.green('✓')      // success
+                    : status === 'todo'
+                    ? platform.yellow('✗')     // not done
+                    : platform.red('✗');       // error
+                platform.log(start + ' ' + this.msg);
+            }
         }
 
         execute(ctxt) {
@@ -51,10 +53,9 @@
         }
 
         execute(ctxt) {
-            if ( ctxt.verbose ) {
-                ctxt.platform.warn('Execute: ' + this.msg);
+            if ( this.msg ) {
+                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             }
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
             if ( this.dryable || ! ctxt.dry ) {
                 return this.fun(ctxt);
             }
@@ -115,19 +116,25 @@
             };
         }
 
-        execute(ctxt) {
+        retrieve(ctxt) {
             if ( ctxt.verbose ) {
-                ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] '
-                                   + this.verb + ' to ' + this.url);
+                const tag = '[' + ctxt.platform.bold('verbose') + '] ';
+                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            }
+            return this.send(ctxt, this.api, this.url, this.getData(ctxt));
+        }
+
+        execute(ctxt) {
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            if ( ctxt.verbose ) {
+                const tag = '[' + ctxt.platform.bold('verbose') + '] ';
+                ctxt.platform.warn(tag + this.verb + ' to ' + this.url);
                 if ( this.data && ! this.type ) {
-                    ctxt.platform.warn('[' + ctxt.platform.bold('verbose') + '] Body:');
+                    ctxt.platform.warn(tag + 'Body:');
                     ctxt.platform.warn(this.data);
                 }
             }
-            if ( ! ctxt.dry || this.verb !== 'GET' ) {
-                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
-            }
-            if ( ! ctxt.dry || this.verb === 'GET' ) {
+            if ( ! ctxt.dry ) {
                 return this.send(ctxt, this.api, this.url, this.getData(ctxt));
             }
         }
@@ -777,7 +784,7 @@
             }
             super('/servers/' + srvname + '/properties?group-id=' + group,
                   body,
-                  'Update ' + what + ':  \t\t' + srvname);
+                  'Update server ' + what + ':  \t' + srvname);
             this.name = srvname;
             this.port = body && body.port;
         }
@@ -865,7 +872,7 @@
             }
             super('/roles/' + rolename + '/properties',
                   body,
-                  'Update ' + what + ':  \t\t' + rolename);
+                  'Update role ' + what + ':  \t' + rolename);
             this.name = rolename;
         }
     }
@@ -876,7 +883,8 @@
     class PrivilegeList extends ManageGet
     {
         constructor() {
-            super('/privileges', 'Retrieve privileges');
+            super('/privileges');
+            // super('/privileges', 'Retrieve privileges');
         }
     }
 
@@ -920,7 +928,7 @@
             }
             super('/users/' + username + '/properties',
                   body,
-                  'Update ' + what + ':  \t\t' + username);
+                  'Update user ' + what + ':  \t' + username);
             this.name = username;
         }
     }

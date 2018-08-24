@@ -150,9 +150,9 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
     {
         prepare() {
             // the action list
-            let actions = new act.ActionList(this.ctxt);
+            const actions = new act.ActionList(this.ctxt);
             // setup a specific component?
-            let what  = this.args.what;
+            const what = this.args.what;
             let comps = [];
             if ( what === 'databases' ) {
                 comps = this.environ.databases();

@@ -1068,7 +1068,7 @@
 
     function fetchTopology(ctxt) {
         try {
-            const resp  = new act.HostList().execute(ctxt);
+            const resp  = new act.HostList().retrieve(ctxt);
             const items = resp['host-default-list']['list-items']['list-item'];
             return items.map(o => o.nameref).sort();
         }
