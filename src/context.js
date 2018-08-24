@@ -222,6 +222,10 @@
             throw err.abstractFun('Platform.get');
         }
 
+        delete(params, url) {
+            throw err.abstractFun('Platform.delete');
+        }
+
         post(params, url, data, type) {
             throw err.abstractFun('Platform.post');
         }

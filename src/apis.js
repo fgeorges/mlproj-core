@@ -7,6 +7,60 @@
     //
     // const err = require('./error');
 
+    function logHttp(self, verb, params, path) {
+        const ctxt = self._command.ctxt;
+        if ( ctxt.verbose ) {
+            const tag = '[' + ctxt.platform.bold('verbose') + ']';
+            const url = path || params.url || params.path;
+            ctxt.platform.warn(tag + ' ' + verb + ' to ' + url);
+        }
+        return ctxt;
+    }
+
+    function checkHttp(ctxt, resp) {
+        if ( resp.status === 202 ) {
+            const body = resp.body.restart;
+            if ( ! body ) {
+                throw new Error('202 returned NOT for a restart reason?!?');
+            }
+            const time = Date.parse(body['last-startup'][0].value);
+            ctxt.platform.restart(time);
+        }
+        else if ( resp.status < 200 || resp.status >= 300 ) {
+            if ( ctxt.verbose ) {
+                const tag = '[' + ctxt.platform.bold('verbose') + ']';
+                ctxt.platform.warn(tag + ' Error in the HTTP request, status is: ' + resp.status);
+                ctxt.platform.warn(tag + ' Full body content is: ');
+                ctxt.platform.warn(resp.body);
+            }
+        }
+        return resp;
+    }
+
+    function httpGet(self, params, url) {
+        const ctxt = logHttp(self, 'GET', params, url);
+        const resp = ctxt.platform.get(params, url);
+        return checkHttp(ctxt, resp);
+    }
+
+    function httpDelete(self, params, url) {
+        const ctxt = logHttp(self, 'DELETE', params, url);
+        const resp = ctxt.platform.delete(params, url);
+        return checkHttp(ctxt, resp);
+    }
+
+    function httpPost(self, params, url, data, type) {
+        const ctxt = logHttp(self, 'POST', params, url);
+        const resp = ctxt.platform.post(params, url, data, type);
+        return checkHttp(ctxt, resp);
+    }
+
+    function httpPut(self, params, url, data, type) {
+        const ctxt = logHttp(self, 'PUT', params, url);
+        const resp = ctxt.platform.post(params, url, data, type);
+        return checkHttp(ctxt, resp);
+    }
+
     /*~
      * APIs object for invoking user commands.
      *
@@ -31,15 +85,19 @@
         }
 
         get(params, url) {
-            return this._command.ctxt.platform.get(params, url);
+            return httpGet(this, params, url);
+        }
+
+        delete(params, url) {
+            return httpDelete(this, params, url);
         }
 
         post(params, url, data, type) {
-            return this._command.ctxt.platform.post(params, url, data, type);
+            return httpPost(this, params, url, data, type);
         }
 
         put(params, url, data, type) {
-            return this._command.ctxt.platform.put(params, url, data, type);
+            return httpPut(this, params, url, data, type);
         }
 
         manage() {
@@ -80,6 +138,10 @@
             }
             const resp = this.post(params);
             if ( resp.status !== 200 ) {
+                if ( this._command.ctxt.verbose ) {
+                    console.log(`Error on the eval endpoint: ${resp.status}. Response body:`);
+                    console.log(resp.body);
+                }
                 throw new Error(`Error on the eval endpoint: ${resp.status}`);
             }
             // TODO: Parse the multipart result as a sequence (so an array here...)
@@ -111,21 +173,27 @@
             if ( ! params.api ) {
                 params.api = 'manage';
             }
+            return params;
         }
 
         get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params);
+            return httpGet(this, params);
+        }
+
+        delete(params) {
+            this._adaptParams(params);
+            return httpDelete(this, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, null, data, type);
+            return httpPost(this, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, null, data, type);
+            return httpPut(this, params, null, data, type);
         }
 
         databases() {
@@ -197,22 +265,23 @@
             if ( ! params.api ) {
                 params.api = 'manage';
             }
-            params.path = `/databases/${this._name}${params.path}`;
+            params.path = `/databases/${this._name}${params.path || ''}`;
+            return params;
         }
 
         get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params);
+            return httpGet(this, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, null, data, type);
+            return httpPost(this, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, null, data, type);
+            return httpPut(this, params, null, data, type);
         }
 
         properties(body) {
@@ -225,15 +294,7 @@
             }
             else {
                 const resp = this.put({ path: '/properties' }, body);
-                if ( resp.status === 202 ) {
-                    const body = resp.body.restart;
-                    if ( ! body ) {
-                        throw new Error('202 returned NOT for a restart reason?!?');
-                    }
-                    const time = Date.parse(body['last-startup'][0].value);
-                    ctxt.platform.restart(time);
-                }
-                else if ( resp.status !== 204 ) {
+                if ( resp.status !== 202 && resp.status !== 204 ) {
                     throw new Error(`Error setting the database properties: ${this._name} - ${resp.status}`);
                 }
                 return this;
@@ -241,7 +302,7 @@
         }
 
         forests() {
-            return this.properties().forest;
+            return this.properties().forest || [];
         }
     }
 
@@ -256,22 +317,23 @@
             if ( ! params.api ) {
                 params.api = 'manage';
             }
-            params.path = `/forests/${this._name}${params.path}`;
+            params.path = `/forests/${this._name}${params.path || ''}`;
+            return params;
         }
 
         get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params);
+            return httpGet(this, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, null, data, type);
+            return httpPost(this, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, null, data, type);
+            return httpPut(this, params, null, data, type);
         }
 
         detach() {
@@ -328,15 +390,7 @@
             }
             else {
                 const resp = this.put({ path: '/properties' }, body);
-                if ( resp.status === 202 ) {
-                    const body = resp.body.restart;
-                    if ( ! body ) {
-                        throw new Error('202 returned NOT for a restart reason?!?');
-                    }
-                    const time = Date.parse(body['last-startup'][0].value);
-                    ctxt.platform.restart(time);
-                }
-                else if ( resp.status !== 204 ) {
+                if ( resp.status !== 202 && resp.status !== 204 ) {
                     throw new Error(`Error setting the forest properties: ${this._name} - ${resp.status}`);
                 }
                 return this;
@@ -356,26 +410,28 @@
             if ( ! params.api ) {
                 params.api = 'manage';
             }
+            const path = params.path || '';
             params.path =
                 '/servers/' + this._name
-                + params.path
-                + (params.path.includes('?') ? '&' : '?')
+                + path
+                + (path.includes('?') ? '&' : '?')
                 + 'group-id=' + this._group;
+            return params;
         }
 
         get(params) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.get(params);
+            return httpGet(this, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.post(params, null, data, type);
+            return httpPost(this, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return this._command.ctxt.platform.put(params, null, data, type);
+            return httpPut(this, params, null, data, type);
         }
 
         properties(body) {
@@ -388,15 +444,7 @@
             }
             else {
                 const resp = this.put({ path: '/properties' }, body);
-                if ( resp.status === 202 ) {
-                    const body = resp.body.restart;
-                    if ( ! body ) {
-                        throw new Error('202 returned NOT for a restart reason?!?');
-                    }
-                    const time = Date.parse(body['last-startup'][0].value);
-                    ctxt.platform.restart(time);
-                }
-                else if ( resp.status !== 204 ) {
+                if ( resp.status !== 202 && resp.status !== 204 ) {
                     throw new Error(`Error setting the server properties: ${this._name} - ${resp.status}`);
                 }
                 return this;
