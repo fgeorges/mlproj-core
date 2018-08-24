@@ -1358,7 +1358,7 @@
 
     // TODO: Set another, real-world length, or based on the size...
     // TODO: And of course, be able to set this (these) from the environs.
-    const INSERT_LENGTH = 25;
+    const INSERT_LENGTH = 100;
 
     /*~
      * A source set wrapping just a plain dir.
