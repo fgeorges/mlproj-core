@@ -21,11 +21,10 @@ t.test('Parsing frog - lexicons', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
-    ass.database('The content db',  dbs[0], null, 'simple-frog-content',
-                 ['simple-frog-content-001-001'], null, null, null, {
-                     "uri-lexicon":        false,
-                     "collection-lexicon": true
-                 });
+    ass.database('The content db',  dbs[0], null, 'simple-frog-content', [], null, null, null, {
+        "uri-lexicon":        false,
+        "collection-lexicon": true
+    });
     // the app server
     const srvs = env.servers();
     ass.equal('There must be no app server', srvs.length, 0);

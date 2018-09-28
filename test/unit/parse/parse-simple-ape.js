@@ -115,7 +115,7 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 1);
-    ass.database('The content db', dbs[0], null, 'simple-ape-content', ['simple-ape-content-001-001']);
+    ass.database('The content db', dbs[0], null, 'simple-ape-content', []);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);

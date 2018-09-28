@@ -26,7 +26,8 @@ t.test('Parsing bear - range indexes', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
-    ass.database('The one db', dbs[0], null, 'simple-bear', ['simple-bear-001-001'], null, null, null, {
+    ass.database('The one db', dbs[0], null, 'simple-bear', [], null, null, null, {
+        "range-field-index": [],
         "range-path-index": [],
         "range-element-attribute-index": [],
         "range-element-index": [{

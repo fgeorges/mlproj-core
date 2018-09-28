@@ -21,21 +21,21 @@ t.test('Parsing dog - complex db topology and references/embedding', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 8 databases', dbs.length, 8);
-    ass.database('The triggers db', dbs[0], null, 'simple-dog-triggers', ['simple-dog-triggers-001-001']);
-    ass.database('The security db', dbs[1], 'security', 'simple-dog-security',
-                 ['simple-dog-security-001-001'], null, 'simple-dog-security');
-    ass.database('The schema-2 db', dbs[2], null, 'simple-dog-schema-2',
-                 ['simple-dog-schema-2-001-001'], null, 'simple-dog-security');
-    ass.database('The schema-4 db', dbs[3], null, 'simple-dog-schema-4',
-                 ['simple-dog-schema-4-001-001'], null, 'simple-dog-security');
-    ass.database('The schema-1 db', dbs[4], null, 'simple-dog-schema-1', ['simple-dog-schema-1-001-001'],
+    ass.database('The triggers db', dbs[0], null, 'simple-dog-triggers', []);
+    ass.database('The security db', dbs[1], 'security', 'simple-dog-security', [],
+                 null, 'simple-dog-security');
+    ass.database('The schema-2 db', dbs[2], null, 'simple-dog-schema-2', [],
+                 null, 'simple-dog-security');
+    ass.database('The schema-4 db', dbs[3], null, 'simple-dog-schema-4', [],
+                 null, 'simple-dog-security');
+    ass.database('The schema-1 db', dbs[4], null, 'simple-dog-schema-1', [],
                  'simple-dog-schema-2', 'simple-dog-security', 'simple-dog-triggers');
-    ass.database('The schema-3 db', dbs[5], null, 'simple-dog-schema-3', ['simple-dog-schema-3-001-001'],
+    ass.database('The schema-3 db', dbs[5], null, 'simple-dog-schema-3', [],
                  'simple-dog-schema-4', 'simple-dog-security');
-    ass.database('The content db',  dbs[6], 'content', 'simple-dog-content',
-                 ['simple-dog-content-001-001'], 'simple-dog-schema-1');
-    ass.database('The modules db',  dbs[7], null, 'simple-dog-modules',
-                 ['simple-dog-modules-001-001'], 'simple-dog-schema-3');
+    ass.database('The content db',  dbs[6], 'content', 'simple-dog-content', [],
+                 'simple-dog-schema-1');
+    ass.database('The modules db',  dbs[7], null, 'simple-dog-modules', [],
+                 'simple-dog-schema-3');
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);

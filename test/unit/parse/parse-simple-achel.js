@@ -58,7 +58,7 @@ t.test('Parsing achel (dev) - inheritence and connection info', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
-    ass.database('The content db', dbs[0], 'content', 'simple-achel-content', ['simple-achel-content-001-001']);
+    ass.database('The content db', dbs[0], 'content', 'simple-achel-content', []);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);
@@ -85,8 +85,8 @@ t.test('Parsing achel (prod) - inheritence and connection info', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 2 databases', dbs.length, 2);
-    ass.database('The modules db', dbs[0], 'modules', 'simple-achel-modules', ['simple-achel-modules-001-001']);
-    ass.database('The content db', dbs[1], 'content', 'simple-achel-content', ['simple-achel-content-001-001']);
+    ass.database('The modules db', dbs[0], 'modules', 'simple-achel-modules', []);
+    ass.database('The content db', dbs[1], 'content', 'simple-achel-content', []);
     // the app server
     const srvs = env.servers();
     ass.equal('There must be 1 app server', srvs.length, 1);

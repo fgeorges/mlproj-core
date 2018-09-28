@@ -21,70 +21,70 @@ t.test('Parsing elephant - all range index types', ass => {
     // the databases
     const dbs = env.databases();
     ass.equal('There must be 1 database', dbs.length, 1);
-    ass.database('The content db', dbs[0], null, 'simple-elephant-content',
-                 ['simple-elephant-content-001-001'], null, null, null, {
-                     "range-element-index": [{
-                         "scalar-type":           'dateTime',
-                         "localname":             'elem',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             ''
-                     }],
-                     "range-element-attribute-index": [{
-                         "scalar-type":           'string',
-                         "localname":             'attr',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             'http://marklogic.com/collation/',
-                         "parent-localname":      'elem',
-                         "parent-namespace-uri":  ''
-                     }, {
-                         "scalar-type":           'dateTime',
-                         "localname":             'date',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             '',
-                         "parent-localname":      'elem',
-                         "parent-namespace-uri":  'http://example.org/'
-                     }, {
-                         "scalar-type":           'dateTime',
-                         "localname":             'time',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             '',
-                         "parent-localname":      'elem',
-                         "parent-namespace-uri":  'http://example.org/'
-                     }, {
-                         "scalar-type":           'string',
-                         "localname":             'bear',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             'http://marklogic.com/collation/',
-                         "parent-localname":      'elem',
-                         "parent-namespace-uri":  'http://example.org/'
-                     }, {
-                         "scalar-type":           'string',
-                         "localname":             'cat',
-                         "namespace-uri":         '',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             'http://marklogic.com/collation/',
-                         "parent-localname":      'elem',
-                         "parent-namespace-uri":  'http://example.org/'
-                     }],
-                     "range-path-index": [{
-                         "scalar-type":           'int',
-                         "path-expression":       'foo/bar',
-                         "range-value-positions": false,
-                         "invalid-values":        'ignore',
-                         "collation":             ''
-                     }]
-                 });
+    ass.database('The content db', dbs[0], null, 'simple-elephant-content', [], null, null, null, {
+        "range-element-index": [{
+            "scalar-type":           'dateTime',
+            "localname":             'elem',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             ''
+        }],
+        "range-element-attribute-index": [{
+            "scalar-type":           'string',
+            "localname":             'attr',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             'http://marklogic.com/collation/',
+            "parent-localname":      'elem',
+            "parent-namespace-uri":  ''
+        }, {
+            "scalar-type":           'dateTime',
+            "localname":             'date',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             '',
+            "parent-localname":      'elem',
+            "parent-namespace-uri":  'http://example.org/'
+        }, {
+            "scalar-type":           'dateTime',
+            "localname":             'time',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             '',
+            "parent-localname":      'elem',
+            "parent-namespace-uri":  'http://example.org/'
+        }, {
+            "scalar-type":           'string',
+            "localname":             'bear',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             'http://marklogic.com/collation/',
+            "parent-localname":      'elem',
+            "parent-namespace-uri":  'http://example.org/'
+        }, {
+            "scalar-type":           'string',
+            "localname":             'cat',
+            "namespace-uri":         '',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             'http://marklogic.com/collation/',
+            "parent-localname":      'elem',
+            "parent-namespace-uri":  'http://example.org/'
+        }],
+        "range-path-index": [{
+            "scalar-type":           'int',
+            "path-expression":       'foo/bar',
+            "range-value-positions": false,
+            "invalid-values":        'ignore',
+            "collation":             ''
+        }],
+        "range-field-index": []
+    });
     // the app server
     const srvs = env.servers();
     ass.equal('There must be no app server', srvs.length, 0);
