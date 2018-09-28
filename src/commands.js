@@ -84,6 +84,9 @@
                 components(this.environ.servers());
                 components(this.environ.sources());
                 components(this.environ.mimetypes());
+                components(this.environ.execPrivileges());
+                components(this.environ.uriPrivileges());
+                components(this.environ.roles());
                 components(this.environ.users());
             }));
             return actions;
@@ -166,6 +169,11 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             else if ( what === 'mimetypes' ) {
                 comps = this.environ.mimetypes();
             }
+            else if ( what === 'privileges' ) {
+                const execs = this.environ.execPrivileges();
+                const uris  = this.environ.uriPrivileges();
+                comps = execs.concat(uris);
+            }
             else if ( what === 'roles' ) {
                 haveRoles = true;
                 comps = this.environ.roles();
@@ -189,12 +197,14 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
             else {
                 // add all components
                 haveRoles = true;
-                var dbs   = this.environ.databases();
-                var srvs  = this.environ.servers();
-                var mimes = this.environ.mimetypes();
-                var roles = this.environ.roles();
-                var users = this.environ.users();
-                comps = dbs.concat(srvs, mimes, roles, users);
+                const dbs   = this.environ.databases();
+                const srvs  = this.environ.servers();
+                const mimes = this.environ.mimetypes();
+                const execs = this.environ.execPrivileges();
+                const uris  = this.environ.uriPrivileges();
+                const roles = this.environ.roles();
+                const users = this.environ.users();
+                comps = dbs.concat(srvs, mimes, execs, uris, roles, users);
             }
             // do it
             comps.forEach(comp => {

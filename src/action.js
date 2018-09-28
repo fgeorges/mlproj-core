@@ -833,6 +833,63 @@
     }
 
     /*~
+     * Management API: list all privileges.
+     */
+    class PrivilegeList extends ManageGet
+    {
+        constructor() {
+            // super('/privileges');
+            super('/privileges', 'Retrieve privileges');
+        }
+    }
+
+    /*~
+     * Management API: retrieve properties of a privilege.
+     */
+    class PrivilegeProps extends ManageGet
+    {
+        constructor(priv) {
+            var name = priv && priv.props['privilege-name'].value;
+            var kind = priv && priv.props['kind'].value;
+            super('/privileges/' + name + '/properties?kind=' + kind,
+                  'Retrieve privilege props: \t' + name);
+        }
+    }
+
+    /*~
+     * Management API: create a privilege.
+     */
+    class PrivilegeCreate extends ManagePost
+    {
+        constructor(role, body) {
+            var name = role && role.props['privilege-name'].value;
+            super('/privileges',
+                  body,
+                  'Create privilege: \t\t' + name);
+        }
+    }
+
+    /*~
+     * Management API: update a privilege property.
+     */
+    class PrivilegeUpdate extends ManagePut
+    {
+        constructor(priv, name, value) {
+            var privname = priv && priv.props['privilege-name'].value;
+            var body     = name;
+            var what     = 'properties';
+            if ( typeof name !== 'object' ) {
+                body = name && { [name]: value };
+                what = name;
+            }
+            super('/privileges/' + privname + '/properties',
+                  body,
+                  'Update privilege ' + what + ':  \t' + privname);
+            this.name = privname;
+        }
+    }
+
+    /*~
      * Management API: retrieve properties of a role.
      */
     class RoleProps extends ManageGet
@@ -840,7 +897,7 @@
         constructor(role) {
             var name = role && role.props['role-name'].value;
             super('/roles/' + name + '/properties',
-                  'Retrieve role props: \t' + name);
+                  'Retrieve role props: \t\t' + name);
         }
     }
 
@@ -853,7 +910,7 @@
             var name = role && role.props['role-name'].value;
             super('/roles',
                   body,
-                  'Create role: \t\t' + name);
+                  'Create role: \t\t\t' + name);
         }
     }
 
@@ -874,17 +931,6 @@
                   body,
                   'Update role ' + what + ':  \t' + rolename);
             this.name = rolename;
-        }
-    }
-
-    /*~
-     * Management API: list all privileges.
-     */
-    class PrivilegeList extends ManageGet
-    {
-        constructor() {
-            super('/privileges');
-            // super('/privileges', 'Retrieve privileges');
         }
     }
 
@@ -1143,10 +1189,13 @@
         ServerRestDeploy        : ServerRestDeploy,
         MimeProps               : MimeProps,
         MimeCreate              : MimeCreate,
+        PrivilegeList           : PrivilegeList,
+        PrivilegeProps          : PrivilegeProps,
+        PrivilegeCreate         : PrivilegeCreate,
+        PrivilegeUpdate         : PrivilegeUpdate,
         RoleProps               : RoleProps,
         RoleCreate              : RoleCreate,
         RoleUpdate              : RoleUpdate,
-        PrivilegeList           : PrivilegeList,
         UserProps               : UserProps,
         UserCreate              : UserCreate,
         UserUpdate              : UserUpdate,

@@ -2,9 +2,10 @@
 
 (function() {
 
-    const act = require('./action');
-    const cmp = require('./components');
-    const err = require('./error');
+    const act   = require('./action');
+    const cmp   = require('./components');
+//    const err   = require('./error');
+    const props = require('./properties');
 
     /*~
      * A fake environment, with only values from the command line.
@@ -214,6 +215,14 @@
             return this._mimetypes;
         }
 
+        execPrivileges() {
+            return this._execPrivileges;
+        }
+
+        uriPrivileges() {
+            return this._uriPrivileges;
+        }
+
         roles() {
             return this._roles;
         }
@@ -265,8 +274,8 @@
                     this.param(name, params[name]);
                 });
             }
-            // compile databses, servers, source sets, mime types, roles, users and
-            // apis (with import priority)
+            // compile databses, servers, source sets, mime types, privileges,
+            // roles, users and apis (with import priority)
             this.module.compile(this);
         }
 
@@ -452,6 +461,7 @@
             this.resolveArray(root, this.json.databases);
             this.resolveArray(root, this.json.servers);
             this.resolveArray(root, this.json.sources);
+            this.resolveObject(root, this.json.privileges);
             this.resolveArray(root, this.json.roles);
             this.resolveArray(root, this.json.users);
             this.imports.forEach(i => i.resolve(root));
@@ -544,7 +554,7 @@
         //
         // `root` can be the root module, or the environ itself
         // this function sets the _hosts, _databases, _servers, _sources, _mimetypes,
-        // _roles and _users on it
+        // _execPrivileges, _uriPrivileges, _roles and _users on it
         compile(root)
         {
             // start by resolving the param references (could it be done on the
@@ -552,6 +562,7 @@
             this.resolve(root);
 
             // resolve the connection infos
+            // TODO: Shouldn't it be done before this.resolve(), right above?
             [ 'host', 'user', 'password' ].forEach(name => {
                 var val = this.param('@' + name);
                 if ( ! val ) {
@@ -566,23 +577,27 @@
 
             // merge database and server JSON objects
             var cache = {
-                href      : "@root",
-                hosts     : [],
-                hostNames : {},
-                dbs       : [],
-                dbIds     : {},
-                dbNames   : {},
-                srvs      : [],
-                srvIds    : {},
-                srvNames  : {},
-                srcs      : [],
-                srcNames  : {},
-                mimes     : [],
-                mimeNames : {},
-                roles     : [],
-                roleNames : {},
-                users     : [],
-                userNames : {}
+                href          : "@root",
+                hosts         : [],
+                hostNames     : {},
+                dbs           : [],
+                dbIds         : {},
+                dbNames       : {},
+                srvs          : [],
+                srvIds        : {},
+                srvNames      : {},
+                srcs          : [],
+                srcNames      : {},
+                mimes         : [],
+                mimeNames     : {},
+                execPrivs     : [],
+                execPrivNames : {},
+                uriPrivs      : [],
+                uriPrivNames  : {},
+                roles         : [],
+                roleNames     : {},
+                users         : [],
+                userNames     : {}
             };
             this.compileImpl(cache);
 
@@ -622,14 +637,20 @@
                 return new cmp.Host(h);
             });
 
-            // compile roles (the order of root._roles is in such a way that all
-            // dependencies are resolved if the roles are created in that order)
-            this.compileRoles(root, cache);
+            // compile privileges and roles (the order of root._execPrivileges,
+            // root._uriPrivileges and root._roles is in such a way that all
+            // dependencies are resolved if the privileges and roles are created
+            // in that order)
+            this.compilePrivsRoles(root, cache);
 
             // compile databases and servers (the order of both root._servers and
-            // root._databases is in such a way that all dependencies are resolved if
-            // the components are created in that order)
+            // root._databases is in such a way that all dependencies are resolved
+            // if the components are created in that order)
             this.compileDbsSrvs(root, cache, root.source('src'));
+
+            // privilege actions (in references to privileges) must be resolved
+            // after we parsed all privileges (declarations)
+            props.privilege.resolve(this.ctxt);
         }
 
         compileApis(root, cache)
@@ -672,67 +693,169 @@
             });
         }
 
-        compileRoles(root, cache)
+        // FIXME: An exec and a uri priv can both have the same name!
+        // The "privs" map here make the assumption they can't.
+        // Fix this and check other potential places where this mistake is done.
+        compilePrivsRoles(root, cache)
         {
-            // the map of dependencies
-            const map = {};
-            // the list of roles with no dependencies anymore (other than those resolved)
-            const zeroes = [];
-            // if a role has no more dep, add it to `zeroes` and remove it from `map`
-            const checkZero = role => {
-                if ( ! role.depon.length ) {
-                    zeroes.push(role);
-                    delete map[role.name];
-                }
+            // the maps of dependencies
+            const execs = {};
+            const uris  = {};
+            const roles = {};
+            // find the next priv, or role, with no more dep (remove it from
+            // execs, uris, or roles, and return it)
+            const nextZero = () => {
+                const none = val => ! (val && val.length);
+                const zero = (map, kind) => {
+                    for ( const k in map ) {
+                        const item = map[k];
+                        if ( none(item.depExecOn) && none(item.depUriOn) && none(item.depRoleOn) ) {
+                            delete map[k];
+                            return {
+                                kind:  kind,
+                                stuff: item
+                            };
+                        }
+                    }
+                };
+                return zero(execs, 'exec')
+                    || zero(uris,  'uri')
+                    || zero(roles, 'role');
             };
 
-            // init 1. - "empty" map (all slots, no dependencies yet)
-            cache.roles.forEach(r => map[r.name] = {
-                name:  r.name,
-                depon: [],
-                depby: []
+            // init 1. - "empty" privs and roles (all slots, no dependencies yet)
+            // all exec privs
+            cache.execPrivs.forEach(p => execs[p.name] = {
+                name:      p.name,
+                depRoleOn: [],
+                depRoleBy: []
+            });
+            // all uri privs
+            cache.uriPrivs.forEach(p => uris[p.name] = {
+                name:      p.name,
+                depRoleOn: [],
+                depRoleBy: []
+            });
+            // all roles
+            cache.roles.forEach(r => roles[r.name] = {
+                name:      r.name,
+                depExecOn: [],
+                depExecBy: [],
+                depUriOn:  [],
+                depUriBy:  [],
+                depRoleOn: [],
+                depRoleBy: []
             });
 
-            // init 2. - add dependencies to the map
-            cache.roles.forEach(r => {
-                if ( r.roles ) {
-                    const role = map[r.name];
-                    r.roles.forEach(d => {
-                        const dep = map[d];
+            // init 2. - add dependencies
+            // add "exec priv -> role" dependencies
+            cache.execPrivs.forEach(p => {
+                if ( p.roles ) {
+                    const priv = execs[p.name];
+                    p.roles.forEach(d => {
+                        const dep = roles[d];
                         if ( dep ) {
-                            role.depon.push(d);
-                            dep.depby.push(r.name);
+                            priv.depRoleOn.push(d);
+                            dep.depExecBy.push(p.name);
                         }
                     });
                 }
             });
 
-            // init 3. - initial list of roles with no dependency
-            Object.keys(map).forEach(k => checkZero(map[k]));
+            // add "uri priv -> role" dependencies
+            cache.uriPrivs.forEach(p => {
+                if ( p.roles ) {
+                    const priv = uris[p.name];
+                    p.roles.forEach(d => {
+                        const dep = roles[d];
+                        if ( dep ) {
+                            priv.depRoleOn.push(d);
+                            dep.depUriBy.push(p.name);
+                        }
+                    });
+                }
+            });
 
-            // init 4. - the final list of roles is empty
-            root._roles = [];
+            // add "role -> role", "role -> exec priv" and "role -> uri priv" deps
+            cache.roles.forEach(r => {
+                const role = roles[r.name];
+                if ( r.roles ) {
+                    r.roles.forEach(d => {
+                        const dep = roles[d];
+                        if ( dep ) {
+                            role.depRoleOn.push(d);
+                            dep.depRoleBy.push(r.name);
+                        }
+                    });
+                }
+                if ( r.privileges ) {
+                    if ( r.privileges.execute ) {
+                        r.privileges.execute.forEach(d => {
+                            const dep = execs[d];
+                            if ( dep ) {
+                                role.depExecOn.push(d);
+                                dep.depRoleBy.push(r.name);
+                            }
+                        });
+                    }
+                    if ( r.privileges.uri ) {
+                        r.privileges.uri.forEach(d => {
+                            const dep = uris[d];
+                            if ( dep ) {
+                                role.depUriOn.push(d);
+                                dep.depRoleBy.push(r.name);
+                            }
+                        });
+                    }
+                }
+            });
 
-            // as long as there are roles with no unresolved dep, pick one, add it to the
-            // final list, and remove it from the list of dependencies of each role that
-            // depends on it
-            while ( zeroes.length ) {
-                const role  = zeroes.shift();
-                const found = cache.roles.find(r => r.name === role.name);
-                root._roles.push(new cmp.Role(found, this.ctxt));
-                role.depby.forEach(d => {
-                    const dep = map[d];
-                    const idx = dep.depon.indexOf(role.name);
-                    dep.depon.splice(idx, 1);
-                    checkZero(dep);
-                });
+            // init 3. - the final lists of privileges and roles are empty
+            root._execPrivileges = [];
+            root._uriPrivileges  = [];
+            root._roles          = [];
+
+            const rem = (str, list) => {
+                list.splice(list.indexOf(str), 1);
+            };
+            // as long as there are roles with no more (unresolved) dep, pick one, add it
+            // to the final list, and remove it from the list of dependencies of each role
+            // that depends on it
+            let zero;
+            while ( zero = nextZero() ) {
+                if ( zero.kind === 'exec' ) {
+                    const priv  = zero.stuff;
+                    const found = cache.execPrivs.find(p => p.name === priv.name);
+                    root._execPrivileges.push(new cmp.Privilege(found, 'execute', this.ctxt));
+                    priv.depRoleBy.forEach(d => rem(priv.name, roles[d].depExecOn));
+                }
+                else if ( zero.kind === 'uri' ) {
+                    const priv  = zero.stuff;
+                    const found = cache.uriPrivs.find(p => p.name === priv.name);
+                    root._uriPrivileges.push(new cmp.Privilege(found, 'uri', this.ctxt));
+                    priv.depRoleBy.forEach(d => rem(priv.name, roles[d].depUriOn));
+                }
+                else if ( zero.kind === 'role' ) {
+                    const role  = zero.stuff;
+                    const found = cache.roles.find(r => r.name === role.name);
+                    root._roles.push(new cmp.Role(found, this.ctxt));
+                    role.depExecBy.forEach(d => rem(role.name, execs[d].depRoleOn));
+                    role.depUriBy .forEach(d => rem(role.name, uris[d] .depRoleOn));
+                    role.depRoleBy.forEach(d => rem(role.name, roles[d].depRoleOn));
+                }
+                else {
+                    throw new Error(`Internal, cannot happen, not exec|uri|role: ${zero.kind}!`);
+                }
             }
 
-            // check whether there are still roles in the map (thus, with unresolved deps)
-            const unresolved = Object.keys(map);
+            // check whether there are still privileges or roles with unresolved deps
+            const unresolved = [].concat(
+                Object.keys(execs),
+                Object.keys(uris),
+                Object.keys(roles));
             if ( unresolved.length ) {
-                throw new Error('Cannot resolve dependencies for all roles, these must have '
-                                + 'cyclic dependencies: ' + unresolved);
+                throw new Error('Cannot resolve dependencies for all privileges and roles, '
+                                + 'these must have cyclic dependencies: ' + unresolved);
             }
         }
 
@@ -988,7 +1111,8 @@
             });
         }
 
-        // recursive implementation of compile(), caching databases and servers
+        // recursive implementation of compile(), caching hosts, databases,
+        // servers, users, etc.
         compileImpl(cache)
         {
             // small helper to format info and error messages
@@ -996,7 +1120,7 @@
                 return 'id=' + (c.id || '') + '|name=' + (c.name || '');
             };
 
-            // the common implementation for databases and servers
+            // the common implementation for all components
             var impl = (comp, cache, ids, names, kind) => {
                 // at least one of ID and name mandatory
                 if ( ! comp.name && ! comp.id ) {
@@ -1083,6 +1207,18 @@
                 this.json['mime-types'].forEach(mime => {
                     impl(mime, cache.mimes, null, cache.mimeNames, cmp.MimeType);
                 });
+            }
+            // compile privileges
+            if ( this.json.privileges ) {
+                const each = (privs, cache, names) => {
+                    if ( privs ) {
+                        privs.forEach(priv => {
+                            impl(priv, cache, null, names, cmp.Privilege);
+                        });
+                    }
+                };
+                each(this.json.privileges.execute, cache.execPrivs, cache.execPrivNames);
+                each(this.json.privileges.uri,     cache.uriPrivs,  cache.uriPrivNames);
             }
             // compile roles
             if ( this.json.roles ) {

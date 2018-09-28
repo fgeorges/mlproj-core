@@ -103,6 +103,9 @@
                 else if ( 'user' === this.prop._type ) {
                     actions.add(new act.UserUpdate(comp, this.prop.name, val));
                 }
+                else if ( 'privilege' === this.prop._type ) {
+                    actions.add(new act.PrivilegeUpdate(comp, this.prop.name, val));
+                }
                 else if ( 'role' === this.prop._type ) {
                     actions.add(new act.RoleUpdate(comp, this.prop.name, val));
                 }
@@ -588,22 +591,21 @@
             if ( result[this.name] !== undefined ) {
                 throw new Error('Property already exists: ' + this.name);
             }
-            const nameProp   = new String('privilege-name');
-            const actionProp = new String('action');
-            const kindProp   = new String('kind');
+            const nameProp = new String('privilege-name');
+            const kindProp = new String('kind');
             const impl = (res, value, kind) => {
                 new StringList(null, null, /\s*,\s*/)
                     .value(value || [])
                     .forEach(val => {
-                        let action = Privileges.privilege(ctxt, val, kind);
-                        res.push({
+                        const priv = {
                             "privilege-name": new Result(nameProp, val),
-                            action: new Result(actionProp, action),
                             kind: new Result(kindProp, kind)
-                        });
+                        };
+                        res.push(priv);
+                        Privileges.cache(priv);
                     });
             };
-            let res = [];
+            const res = [];
             impl(res, value.execute, 'execute');
             impl(res, value.uri,     'uri');
             result[this.name] = new Result(this, res);
@@ -632,42 +634,41 @@
         }
     }
 
-    // return the action URI resolved from the name
-    Privileges.privilege = (ctxt, name, kind) => {
-        if ( ! Privileges.cache ) {
-            let resp = new act.PrivilegeList().retrieve(ctxt);
-            Privileges.cache = {
-                execute: {},
-                uri:     {}
-            };
-            resp['privilege-default-list']['list-items']['list-item'].forEach(item => {
-                let target;
-                if ( item.kind === 'execute' ) {
-                    target = Privileges.cache.execute;
-                }
-                else if ( item.kind === 'uri' ) {
-                    target = Privileges.cache.uri;
-                }
-                else {
-                    throw new Error('Unknown kind in privilege list: ' + item.kind);
-                }
-                target[item.nameref] = item.action;
-            });
-        }
-        let action;
-        if ( kind === 'execute' ) {
-            action = Privileges.cache.execute[name];
-        }
-        else if ( kind === 'uri' ) {
-            action = Privileges.cache.uri[name];
-        }
-        else {
-            throw new Error('Unknown privilege kind: ' + kind);
-        }
-        if ( ! action ) {
-            throw new Error('Unknown privilege: ' + name);
-        }
-        return action;
+    Privileges.cache = (priv) => {
+        Privileges._privRefs.push(priv);
+    };
+    Privileges._privRefs = [];
+
+    Privileges.register = (name, kind, action) => {
+        Privileges._allPrivs[kind][name] = action;
+    };
+    Privileges._allPrivs = {
+        execute: {},
+        uri:     {}
+    };
+
+    Privileges.resolve = (ctxt) => {
+        let resp = new act.PrivilegeList().retrieve(ctxt);
+        resp['privilege-default-list']['list-items']['list-item'].forEach(item => {
+            if ( item.kind !== 'execute' && item.kind !== 'uri' ) {
+                throw new Error('Unknown kind in privilege list: ' + item.kind);
+            }
+            const slot = Privileges._allPrivs[item.kind];
+            // do not override privileges already cached, because declared in the environ
+            if ( ! slot[item.nameref] ) {
+                slot[item.nameref] = item.action;
+            }
+        });
+        const actionProp = new String('action');
+        Privileges._privRefs.forEach(priv => {
+            const name = priv['privilege-name'].value;
+            const kind = priv['kind'].value;
+            if ( priv.action ) {
+                throw new Error(`Privilege reference already resolved: ${name}/${kind}`);
+            }
+            const action = Privileges._allPrivs[kind][name];
+            priv.action = new Result(actionProp, action);
+        });
     };
 
     /*~
@@ -821,13 +822,13 @@
             }
         }
 
-        // compare unordered
+        // compare unordered, undefined compares equal to the empty array
         compare(lhs, rhs) {
-            if ( lhs === undefined && rhs === undefined ) {
-                return true;
+            if ( lhs === undefined ) {
+                lhs = [];
             }
-            if ( lhs === undefined || rhs === undefined ) {
-                return false;
+            if ( rhs === undefined ) {
+                rhs = [];
             }
             if ( lhs.length !== rhs.length ) {
                 return false;
@@ -1011,9 +1012,25 @@
         .add('format',     true,  new       Enum('format',     'format',     ['binary', 'json', 'text', 'xml']).freeze());
 
     /*~
+     * The privilege properties and config format.
+     */
+    var privilege = new ConfigObject('privilege')
+        .add('compose',     false, new Ignore())
+        .add('comment',     false, new Ignore())
+        .add('name',        true,  new     String('privilege-name', 'privilege name'))
+        .add('action',      true,  new     String('action',         'action'))
+        .add('roles',       false, new StringList('role',           'roles', /\s*,\s*/));
+
+    privilege.register = (name, kind, action) => {
+        Privileges.register(name, kind, action);
+    };
+
+    privilege.resolve = (ctxt) => {
+        Privileges.resolve(ctxt);
+    };
+
+    /*~
      * The role properties and config format.
-     *
-     * TODO: Add privileges...
      */
     var role = new ConfigObject('role')
         .add('compose',     false, new Ignore())
@@ -1041,15 +1058,17 @@
         .add('permissions', false, new      Perms('permission',  'permissions'));
 
     module.exports = {
-        host     : host,
-        database : database,
-        forest   : forest,
-        server   : server,
-        source   : source,
-        mime     : mime,
-        user     : user,
-        role     : role,
-        Result   : Result
+        host      : host,
+        database  : database,
+        forest    : forest,
+        server    : server,
+        source    : source,
+        mime      : mime,
+        user      : user,
+        privilege : privilege,
+        role      : role,
+        Result    : Result,
+        String    : String
     }
 }
 )();

@@ -1531,6 +1531,71 @@
     };
 
     /*~
+     * A privilege.
+     */
+    class Privilege extends Component
+    {
+        constructor(json, kind, ctxt)
+        {
+            super();
+            this.kind = kind;
+            // extract the configured properties
+            this.props = props.privilege.parse(json, null, ctxt);
+            // add the kind to the properties (as it is not a property of the
+            // object itself in the environ)
+            this.props.kind = new props.Result(new props.String('kind'), kind);
+            // register this object, for later resolution of privilege references
+            const name = this.props['privilege-name'].value;
+            const act  = this.props['action'].value;
+            props.privilege.register(name, kind, act);
+        }
+
+        show(display)
+        {
+            display.privilege(this.props, this.kind);
+        }
+
+        setup(actions, display)
+        {
+            display.check(0, 'the privilege', this.props['privilege-name'].value);
+            const body = new act.PrivilegeProps(this).retrieve(actions.ctxt);
+            // if privilege does not exist yet
+            if ( ! body ) {
+                this.create(actions, display);
+            }
+            // if privilege already exists
+            else {
+                this.update(actions, display, body);
+            }
+        }
+
+        create(actions, display)
+        {
+            display.add(0, 'create', 'privilege', this.props['privilege-name'].value);
+            const obj = {};
+            Object.keys(this.props).forEach(p => {
+                this.props[p].create(obj);
+            });
+            actions.add(new act.PrivilegeCreate(this, obj));
+        }
+
+        update(actions, display, actual)
+        {
+            // check properties
+            display.check(1, 'properties');
+            Object.keys(this.props).forEach(p => {
+                this.props[p].update(actions, display, actual, this);
+            });
+        }
+    }
+
+    Privilege.kind = 'privilege';
+
+    Privilege.merge = (name, derived, base) => {
+        return derived;
+    };
+
+    /*~
      * A role.
      */
     class Role extends Component
@@ -1698,6 +1763,7 @@
         SourceDoc   : SourceDoc,
         Host        : Host,
         MimeType    : MimeType,
+        Privilege   : Privilege,
         Role        : Role,
         User        : User
     }
