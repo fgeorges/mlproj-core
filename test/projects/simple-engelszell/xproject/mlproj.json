@@ -1,0 +1,7 @@
+{ "mlproj": {
+    "config": {
+        "trace": {
+            "enabled": false,
+            "dir":     "logs"
+        }}}
+}

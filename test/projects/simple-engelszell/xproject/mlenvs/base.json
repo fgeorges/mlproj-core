@@ -1,0 +1,42 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "params": {
+            "port": "8070"
+        },
+        "databases": [{
+            "id": "content",
+            "name": "@{code}-content",
+            "indexes": {
+                "ranges": [{
+                    "type":      "string",
+                    "name":      "list-id",
+                    "positions": false,
+                    "invalid":   "ignore"
+                }, {
+                    "type":      "string",
+                    "name":      "address",
+                    "positions": false,
+                    "invalid":   "ignore"
+                }, {
+                    "type":      "string",
+                    "name":      "attr",
+                    "positions": false,
+                    "invalid":   "reject",
+                    "parent": {
+                        "name": "elem"
+                    }
+                }]
+            }
+        }],
+        "servers": [{
+            "id": "app",
+            "name": "@{code}",
+            "type": "http",
+            "port": "${port}",
+            "content": {
+                "idref": "content"
+            }
+        }]
+    }
+}

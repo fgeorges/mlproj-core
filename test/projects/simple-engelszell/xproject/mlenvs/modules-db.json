@@ -1,0 +1,13 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "import": "base.json",
+        "servers": [{
+            "id": "app",
+            "modules": {
+                "name": "@{code}-modules"
+            },
+            "root": "/"
+        }]
+    }
+}

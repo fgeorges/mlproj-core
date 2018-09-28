@@ -1,0 +1,11 @@
+{
+    "mlproj": {
+        "format": "0.1",
+        "import": "modules-db.json",
+        "connect": {
+            "host": "ml911",
+            "user": "admin",
+            "password": "admin"
+        }
+    }
+}
