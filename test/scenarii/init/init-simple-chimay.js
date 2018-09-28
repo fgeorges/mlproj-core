@@ -6,6 +6,7 @@
         const path = '../projects/simple-chimay/';
         return scenario.test(runner, path, 'jupiter', 'init', cmd.InitCommand, [
             scenario.forests('Get forest list', []),
+            scenario.privileges('Get privilege list', []),
             // init master
             scenario.init('Init master', 'jupiter'),
             scenario.instanceAdmin('Instance admin', 'jupiter'),

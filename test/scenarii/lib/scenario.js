@@ -46,6 +46,21 @@
         };
     }
 
+    function privileges(msg, list) {
+        return {
+            msg: msg,
+            verb: 'get',
+            params: {api: 'manage'},
+            url: '/privileges',
+            response: 'OK',
+            body: {
+                'privilege-default-list': {
+                    'list-items': {
+                        'list-item': list.map(f => ({ nameref: f }))
+                    }}}
+        };
+    }
+
     function forests(msg, list) {
         return {
             msg: msg,
@@ -56,11 +71,8 @@
             body: {
                 'forest-default-list': {
                     'list-items': {
-                        'list-item': list.map(f => {
-                            var res = { nameref: f };
-                            return res;
-                        })
-                    } } }
+                        'list-item': list.map(f => ({ nameref: f }))
+                    }}}
         };
     }
 
@@ -382,6 +394,7 @@
         ignore        : ignore,
         dbProps       : dbProps,
         asProps       : asProps,
+        privileges    : privileges,
         forests       : forests,
         forestProps   : forestProps,
         createDb      : createDb,

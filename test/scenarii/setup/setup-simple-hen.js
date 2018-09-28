@@ -69,6 +69,7 @@
                     'output-cdata-section-namespace-uri': 'http://example.org/ns',
                     'root': '/'
                 })
+            scenario.privileges('Get privilege list', []),
         ]);
     }
 

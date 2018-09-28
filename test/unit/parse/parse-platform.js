@@ -28,22 +28,32 @@
             super(true, true);
         }
 
-        // only called in case of GET /forests
+        // only called in case of GET /forests or GET /privileges
         get(params, path) {
             // is params = { api: 'manage' } ?
             if ( Object.keys(params).length !== 1 || params.api !== 'manage' ) {
                 throw new Error(`Expected {api:'manage'} but got ${JSON.stringify(params)}`);
             }
-            // is path = '/forest' ?
-            if ( path !== '/forests' ) {
-                throw new Error(`Expected {api:'manage'} but got ${JSON.stringify(params)}`);
+            // is path supported ?
+            if ( path === '/forests' ) {
+                return {
+                    status: 200,
+                    body: {
+                        'forest-default-list': { 'list-items': { 'list-item': [] } }
+                    }
+                };
             }
-            return {
-                status: 200,
-                body: {
-                    'forest-default-list': { 'list-items': { 'list-item': [] } }
-                }
-            };
+            else if ( path === '/privileges' ) {
+                return {
+                    status: 200,
+                    body: {
+                        'privilege-default-list': { 'list-items': { 'list-item': [] } }
+                    }
+                };
+            }
+            else {
+                throw new Error(`Expected '/forests' or '/privileges' but got '${path}'`);
+            }
         }
 
         info(msg) {

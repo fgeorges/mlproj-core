@@ -59,6 +59,7 @@
             scenario.ignore(
                 'Create AS',
                 'OK')
+            scenario.privileges('Get privilege list', []),
         ]);
     }
 
