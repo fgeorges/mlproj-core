@@ -95,6 +95,11 @@
 
     /*~
      * Initialize a new MarkLogic instance or cluster.
+     *
+     * TODO: Have an option to generate host names automatically, using animal
+     * names from A to Z?  And maybe using adjectives if more than 26?  As well
+     * as using host names in the forest and forest replica names, instead of
+     * another number in the forest name.
      */
     class InitCommand extends Command
     {
@@ -263,7 +268,13 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
                             srv = srvs[0];
                         }
                         else if ( isDeploy ) {
-                            throw new Error('Not exactly one server in the environ');
+                            const res = this.environ.databases().find(db => db.id === 'modules');
+                            if ( res ) {
+                                return res;
+                            }
+                            else {
+                                throw new Error('Not exactly one server in the environ, and no database with id modules');
+                            }
                         }
                         else {
                             var dbs = this.environ.databases();
@@ -271,7 +282,13 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
                                 return dbs[0];
                             }
                             else {
-                                throw new Error('Not exactly one server or database in the environ');
+                                const res = this.environ.databases().find(db => db.id === 'content');
+                                if ( res ) {
+                                    return res;
+                                }
+                                else {
+                                    throw new Error('Not exactly one server or database in the environ, and no database with id content');
+                                }
                             }
                         }
                     }
