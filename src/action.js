@@ -22,7 +22,7 @@
                     : status === 'todo'
                     ? platform.yellow('✗')     // not done
                     : platform.red('✗');       // error
-                platform.log(start + ' ' + this.msg);
+                platform.log(start + ' ' + this.msg[0], this.msg[1]);
             }
         }
 
@@ -47,7 +47,7 @@
         // dryable = true means the function must be called even in dry run, it
         // takes care of respecting the dry flag
         constructor(msg, fun, dryable) {
-            super(msg);
+            super([ msg ]);
             this.fun     = fun;
             this.dryable = dryable;
         }
@@ -119,13 +119,13 @@
         retrieve(ctxt) {
             if ( ctxt.verbose ) {
                 const tag = '[' + ctxt.platform.bold('verbose') + '] ';
-                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg[0], this.msg[1]);
             }
             return this.send(ctxt, this.api, this.url, this.getData(ctxt));
         }
 
         execute(ctxt) {
-            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+            ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg[0], this.msg[1]);
             if ( ctxt.verbose ) {
                 const tag = '[' + ctxt.platform.bold('verbose') + '] ';
                 ctxt.platform.warn(tag + this.verb + ' to ' + this.url);
@@ -255,7 +255,7 @@
             var name = srv && srv.name;
             super(null,
                   '/v1/config/properties',
-                  'Retrieve REST server props: \t' + name);
+                  ['Retrieve REST server props', name]);
             this.port = port;
         }
 
@@ -276,7 +276,7 @@
             super(null,
                   '/v1/config/properties',
                   body,
-                  'Update REST server props: \t' + name);
+                  ['Update REST server props', name]);
             this.port = port;
         }
 
@@ -296,7 +296,7 @@
             super(null,
                   '/v1/config/' + kind + '/' + name,
                   path,
-                  'Deploy REST ' + kind + ': \t' + name);
+                  ['Deploy REST ' + kind, name]);
             this.type = type;
             this.port = port;
         }
@@ -342,9 +342,7 @@
     {
         constructor(srv, body) {
             var name = srv && srv.name;
-            super('',
-                  body,
-                  'Create REST server: \t\t' + name);
+            super('', body, ['Create REST server', name]);
         }
     }
 
@@ -355,8 +353,7 @@
     {
         constructor(srv) {
             var name = srv && srv.name;
-            super('/' + name,
-                  'Retrieve REST config props: \t' + name);
+            super('/' + name, ['Retrieve REST config props', name]);
         }
 
         /*
@@ -460,7 +457,7 @@
         constructor(user, pwd, host) {
             super('/instance-admin',
                   { "admin-username": user, "admin-password": pwd },
-                  'Set admin username and password');
+                  ['Set admin username and password']);
             this.host = host;
         }
 
@@ -480,7 +477,7 @@
     {
         // `api`, if passed, must be an API JSON desc, for the Admin API
         constructor(host, api) {
-            super('/server-config', 'Get the server configuration');
+            super('/server-config', ['Get the server configuration']);
             this.host     = host;
             this.adminApi = api;
         }
@@ -515,7 +512,7 @@
             const grp = encodeURIComponent(group || 'Default');
             super('/cluster-config',
                   'group=' + grp + '&server-config=' + cfg,
-                  'Add a node to the cluster and get the cluster config');
+                  ['Add a node to the cluster and get the cluster config']);
         }
 
         connect(api) {
@@ -540,7 +537,7 @@
         constructor(zip, host, api) {
             super('/cluster-config',
                   zip,
-                  'Send the cluster config to a joining host');
+                  ['Send the cluster config to a joining host']);
             this.host     = host;
             this.adminApi = api;
         }
@@ -600,7 +597,7 @@
     class HostList extends ManageGet
     {
         constructor() {
-            super('/hosts', 'Retrieve hosts');
+            super('/hosts', ['Retrieve hosts']);
         }
     }
 
@@ -610,7 +607,7 @@
     class ForestList extends ManageGet
     {
         constructor() {
-            super('/forests', 'Retrieve forests');
+            super('/forests', ['Retrieve forests']);
         }
     }
 
@@ -625,7 +622,7 @@
                 name = forest.name;
             }
             super('/forests/' + name + '/properties',
-                  'Retrieve forest props: \t' + name);
+                  ['Retrieve forest props', name]);
         }
     }
 
@@ -636,9 +633,7 @@
     {
         constructor(forest, body) {
             let name = forest && forest.name;
-            super('/forests',
-                  body,
-                  'Create forest:  \t\t' + name);
+            super('/forests', body, ['Create forest', name]);
         }
     }
 
@@ -652,7 +647,7 @@
             var body  = name && { [name]: value };
             super('/forests/' + fname + '/properties',
                   body,
-                  'Update ' + name + ':  \t' + fname);
+                  ['Update ' + name, fname]);
         }
     }
 
@@ -666,7 +661,7 @@
             var db   = forest && forest.db && forest.db.name;
             super('/forests/' + name + '?state=attach&database=' + db,
                   null,
-                  'Attach forest:  \t\t' + name);
+                  ['Attach forest', name]);
         }
     }
 
@@ -679,7 +674,7 @@
             var name = forest && forest.name;
             super('/forests/' + name + '?state=detach',
                   null,
-                  'Detach forest:  \t\t' + name);
+                  ['Detach forest', name]);
         }
     }
 
@@ -691,7 +686,7 @@
         constructor(db) {
             var name = db && db.name;
             super('/databases/' + name + '/properties',
-                  'Retrieve database props: \t' + name);
+                  ['Retrieve database props', name]);
         }
     }
 
@@ -704,7 +699,7 @@
             var name = db && db.name;
             super('/databases',
                   body,
-                  'Create database: \t\t' + name);
+                  ['Create database', name]);
         }
     }
 
@@ -718,7 +713,7 @@
             var body   = name && { [name]: value };
             super('/databases/' + dbname + '/properties',
                   body,
-                  'Update ' + name + ':  \t' + dbname);
+                  ['Update ' + name, bname]);
         }
     }
 
@@ -731,7 +726,7 @@
             var group = srv && srv.group;
             var name  = srv && srv.name;
             super('/servers/' + name + '/properties?group-id=' + group,
-                  'Retrieve server props: \t' + name);
+                  ['Retrieve server props', name]);
         }
     }
 
@@ -745,7 +740,7 @@
             var name  = srv && srv.name;
             super('/servers?group-id=' + group,
                   body,
-                  'Create server: \t\t' + name);
+                  ['Create server', name]);
             this.name = name;
             this.port = body && body.port;
         }
@@ -784,7 +779,7 @@
             }
             super('/servers/' + srvname + '/properties?group-id=' + group,
                   body,
-                  'Update server ' + what + ':  \t' + srvname);
+                  ['Update server ' + what, srvname]);
             this.name = srvname;
             this.port = body && body.port;
         }
@@ -815,7 +810,7 @@
         constructor(mime) {
             var name = mime && mime.name;
             super('/mimetypes/' + name + '/properties',
-                  'Retrieve mime props: \t' + name);
+                  ['Retrieve mime props', name]);
         }
     }
 
@@ -826,9 +821,7 @@
     {
         constructor(mime, body) {
             var name = mime && mime.name;
-            super('/mimetypes',
-                  body,
-                  'Create mime: \t\t' + name);
+            super('/mimetypes', body, ['Create mime', name]);
         }
     }
 
@@ -838,8 +831,7 @@
     class PrivilegeList extends ManageGet
     {
         constructor() {
-            // super('/privileges');
-            super('/privileges', 'Retrieve privileges');
+            super('/privileges', ['Retrieve privileges']);
         }
     }
 
@@ -852,7 +844,7 @@
             var name = priv && priv.props['privilege-name'].value;
             var kind = priv && priv.props['kind'].value;
             super('/privileges/' + name + '/properties?kind=' + kind,
-                  'Retrieve privilege props: \t' + name);
+                  ['Retrieve privilege props', name]);
         }
     }
 
@@ -863,9 +855,7 @@
     {
         constructor(role, body) {
             var name = role && role.props['privilege-name'].value;
-            super('/privileges',
-                  body,
-                  'Create privilege: \t\t' + name);
+            super('/privileges', body, ['Create privilege', name]);
         }
     }
 
@@ -884,7 +874,7 @@
             }
             super('/privileges/' + privname + '/properties',
                   body,
-                  'Update privilege ' + what + ':  \t' + privname);
+                  ['Update privilege ' + what, privname]);
             this.name = privname;
         }
     }
@@ -897,7 +887,7 @@
         constructor(role) {
             var name = role && role.props['role-name'].value;
             super('/roles/' + name + '/properties',
-                  'Retrieve role props: \t\t' + name);
+                  ['Retrieve role props', name]);
         }
     }
 
@@ -908,9 +898,7 @@
     {
         constructor(role, body) {
             var name = role && role.props['role-name'].value;
-            super('/roles',
-                  body,
-                  'Create role: \t\t\t' + name);
+            super('/roles', body, ['Create role', name]);
         }
     }
 
@@ -929,7 +917,7 @@
             }
             super('/roles/' + rolename + '/properties',
                   body,
-                  'Update role ' + what + ':  \t' + rolename);
+                  ['Update role ' + what, rolename]);
             this.name = rolename;
         }
     }
@@ -942,7 +930,7 @@
         constructor(user) {
             var name = user && user.props['user-name'].value;
             super('/users/' + name + '/properties',
-                  'Retrieve user props: \t' + name);
+                  ['Retrieve user props', name]);
         }
     }
 
@@ -953,9 +941,7 @@
     {
         constructor(user, body) {
             var name = user && user.props['user-name'].value;
-            super('/users',
-                  body,
-                  'Create user: \t\t' + name);
+            super('/users', body, ['Create user', name]);
         }
     }
 
@@ -974,7 +960,7 @@
             }
             super('/users/' + username + '/properties',
                   body,
-                  'Update user ' + what + ':  \t' + username);
+                  ['Update user ' + what, username]);
             this.name = username;
         }
     }
@@ -1028,14 +1014,14 @@
             var copy = docs && docs.slice();
             super('/documents?database=' + name,
                   copy,
-                  'Insert documents: \t\t' + len + ' document' + (len === 1 ? '' : 's'));
+                  ['Insert documents', len + ' document' + (len === 1 ? '' : 's')]);
         }
 
         getData(ctxt) {
             this.boundary = ctxt.platform.boundary();
             this.type     = 'multipart/mixed; boundary=' + this.boundary;
             let res = ctxt.platform.multipart(this.boundary, this.data);
-            this.msg += ', for ' + (res.length / (1024*1024)).toFixed(3) + ' Mo';
+            this.msg[0] += ', for ' + (res.length / (1024*1024)).toFixed(3) + ' Mo';
             return res;
         }
     }
@@ -1049,7 +1035,7 @@
             var name = db && db.name;
             super('/eval?database=' + name,
                   { uri: uri, type: type, path: path },
-                  'Install TDE template: \t' + path);
+                  ['Install TDE template', path]);
         }
 
         connect(api) {
@@ -1108,7 +1094,7 @@
             // TODO: Add "format" parameter (xml, text, binary)
             super('/insert?uri=' + uri + '&dbname=' + name,
                   path,
-                  'Insert document: \t' + uri);
+                  ['Insert document', uri]);
             // TODO: Should we use something else?  XDBC/XCC is badly (is not!) documented...
             this.type = 'text/plain';
         }
