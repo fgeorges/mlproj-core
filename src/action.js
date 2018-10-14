@@ -713,7 +713,7 @@
             var body   = name && { [name]: value };
             super('/databases/' + dbname + '/properties',
                   body,
-                  ['Update ' + name, bname]);
+                  ['Update ' + name, dbname]);
         }
     }
 
