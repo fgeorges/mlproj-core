@@ -106,12 +106,9 @@
 
         eval(params, evalParams) {
             if ( ! params.path && ! params.url ) {
-                if ( evalParams.database ) {
-                    params.path = '/eval?database=' + evalParams.database;
-                }
-                else {
-                    params.path = '/eval';
-                }
+                params.path = evalParams.database
+                    ? '/eval?database=' + evalParams.database
+                    : '/eval';
             }
             if ( ! params.api ) {
                 params.api = 'rest';
@@ -119,13 +116,13 @@
             if ( ! params.type ) {
                 params.type = 'application/x-www-form-urlencoded';
             }
-            if ( ! evalParams.xquery && ! evalParams.javascript ) {
-                throw new Error('No code provided to evaluate');
-            }
-            if ( evalParams.xquery && evalParams.javascript ) {
-                throw new Error('Both XQuery and JavaScript code provided to evaluate');
-            }
             if ( ! params.body ) {
+                if ( ! evalParams.xquery && ! evalParams.javascript ) {
+                    throw new Error('No code provided to evaluate');
+                }
+                if ( evalParams.xquery && evalParams.javascript ) {
+                    throw new Error('Both XQuery and JavaScript code provided to evaluate');
+                }
                 params.body = evalParams.xquery
                     ? 'xquery='     + encodeURIComponent(evalParams.xquery)
                     : 'javascript=' + encodeURIComponent(evalParams.javascript);
