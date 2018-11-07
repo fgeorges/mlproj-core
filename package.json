@@ -7,6 +7,11 @@
   "scripts": {
     "test": "./test/run-tests.js"
   },
+  "keywords": [
+    "mlproj",
+    "marklogic",
+    "nosql"
+  ],
   "author": "Florent Georges",
   "license": "ISC",
   "devDependencies": {
