@@ -61,6 +61,47 @@
         return checkHttp(ctxt, resp);
     }
 
+    function doEval(params, evalParams) {
+        if ( ! params.path && ! params.url ) {
+            params.path = evalParams.database
+                ? '/eval?database=' + evalParams.database
+                : '/eval';
+        }
+        if ( ! params.api ) {
+            params.api = 'rest';
+        }
+        if ( ! params.type ) {
+            params.type = 'application/x-www-form-urlencoded';
+        }
+        if ( ! params.body ) {
+            if ( ! evalParams.xquery && ! evalParams.javascript ) {
+                throw new Error('No code provided to evaluate');
+            }
+            if ( evalParams.xquery && evalParams.javascript ) {
+                throw new Error('Both XQuery and JavaScript code provided to evaluate');
+            }
+            params.body = evalParams.xquery
+                ? 'xquery='     + encodeURIComponent(evalParams.xquery)
+                : 'javascript=' + encodeURIComponent(evalParams.javascript);
+            if ( evalParams.vars ) {
+                const values = Object.keys(evalParams.vars).map(name => {
+                    return `"${name}":${JSON.stringify(evalParams.vars[name])}`
+                });
+                params.body += '&vars=' + encodeURIComponent('{' + values.join(',') + '}');
+            }
+        }
+        const resp = this.post(params);
+        if ( resp.status !== 200 ) {
+            if ( this._command.ctxt.verbose ) {
+                console.log(`Error on the eval endpoint: ${resp.status}. Response body:`);
+                console.log(resp.body);
+            }
+            throw new Error(`Error on the eval endpoint: ${resp.status}`);
+        }
+        // TODO: Parse the multipart result as a sequence (so an array here...)
+        return resp.body.toString();
+    }
+
     /*~
      * APIs object for invoking user commands.
      *
@@ -105,44 +146,7 @@
         }
 
         eval(params, evalParams) {
-            if ( ! params.path && ! params.url ) {
-                params.path = evalParams.database
-                    ? '/eval?database=' + evalParams.database
-                    : '/eval';
-            }
-            if ( ! params.api ) {
-                params.api = 'rest';
-            }
-            if ( ! params.type ) {
-                params.type = 'application/x-www-form-urlencoded';
-            }
-            if ( ! params.body ) {
-                if ( ! evalParams.xquery && ! evalParams.javascript ) {
-                    throw new Error('No code provided to evaluate');
-                }
-                if ( evalParams.xquery && evalParams.javascript ) {
-                    throw new Error('Both XQuery and JavaScript code provided to evaluate');
-                }
-                params.body = evalParams.xquery
-                    ? 'xquery='     + encodeURIComponent(evalParams.xquery)
-                    : 'javascript=' + encodeURIComponent(evalParams.javascript);
-                if ( evalParams.vars ) {
-                    const values = Object.keys(evalParams.vars).map(name => {
-                        return `"${name}":${JSON.stringify(evalParams.vars[name])}`
-                    });
-                    params.body += '&vars=' + encodeURIComponent('{' + values.join(',') + '}');
-                }
-            }
-            const resp = this.post(params);
-            if ( resp.status !== 200 ) {
-                if ( this._command.ctxt.verbose ) {
-                    console.log(`Error on the eval endpoint: ${resp.status}. Response body:`);
-                    console.log(resp.body);
-                }
-                throw new Error(`Error on the eval endpoint: ${resp.status}`);
-            }
-            // TODO: Parse the multipart result as a sequence (so an array here...)
-            return resp.body.toString();
+            return doEval(params, evalParams);
         }
     }
 
@@ -279,6 +283,13 @@
         put(params, data, type) {
             this._adaptParams(params);
             return httpPut(this, params, null, data, type);
+        }
+
+        eval(params, evalParams) {
+            if ( ! evalParams.database ) {
+                evalParams.database = this._name;
+            }
+            return doEval(params, evalParams);
         }
 
         remove(arg) {
@@ -460,6 +471,15 @@
             this._adaptParams(params);
             return httpPut(this, params, null, data, type);
         }
+
+        // TODO: On a server, eval would act on its content database by default...
+        //
+        // eval(params, evalParams) {
+        //     if ( ! evalParams.database ) {
+        //         evalParams.database = this._content._name;
+        //     }
+        //     return doEval(params, evalParams);
+        // }
 
         remove(arg) {
             const resp = httpDelete(this, this._adaptParams({}));
