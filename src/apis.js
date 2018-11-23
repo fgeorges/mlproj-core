@@ -7,14 +7,12 @@
     //
     // const err = require('./error');
 
-    function logHttp(self, verb, params, path) {
-        const ctxt = self._command.ctxt;
+    function logHttp(ctxt, verb, params, path) {
         if ( ctxt.verbose ) {
             const tag = '[' + ctxt.platform.bold('verbose') + ']';
             const url = path || params.url || params.path;
             ctxt.platform.warn(tag + ' ' + verb + ' to ' + url);
         }
-        return ctxt;
     }
 
     function checkHttp(ctxt, resp) {
@@ -37,31 +35,31 @@
         return resp;
     }
 
-    function httpGet(self, params, url) {
-        const ctxt = logHttp(self, 'GET', params, url);
+    function httpGet(ctxt, params, url) {
+        logHttp(ctxt, 'GET', params, url);
         const resp = ctxt.platform.get(params, url);
         return checkHttp(ctxt, resp);
     }
 
-    function httpDelete(self, params, url) {
-        const ctxt = logHttp(self, 'DELETE', params, url);
+    function httpDelete(ctxt, params, url) {
+        logHttp(ctxt, 'DELETE', params, url);
         const resp = ctxt.platform.delete(params, url);
         return checkHttp(ctxt, resp);
     }
 
-    function httpPost(self, params, url, data, type) {
-        const ctxt = logHttp(self, 'POST', params, url);
+    function httpPost(ctxt, params, url, data, type) {
+        logHttp(ctxt, 'POST', params, url);
         const resp = ctxt.platform.post(params, url, data, type);
         return checkHttp(ctxt, resp);
     }
 
-    function httpPut(self, params, url, data, type) {
-        const ctxt = logHttp(self, 'PUT', params, url);
+    function httpPut(ctxt, params, url, data, type) {
+        logHttp(ctxt, 'PUT', params, url);
         const resp = ctxt.platform.post(params, url, data, type);
         return checkHttp(ctxt, resp);
     }
 
-    function doEval(params, evalParams) {
+    function doEval(ctxt, params, evalParams) {
         if ( ! params.path && ! params.url ) {
             params.path = evalParams.database
                 ? '/eval?database=' + evalParams.database
@@ -90,9 +88,9 @@
                 params.body += '&vars=' + encodeURIComponent('{' + values.join(',') + '}');
             }
         }
-        const resp = this.post(params);
+        const resp = httpPost(ctxt, params);
         if ( resp.status !== 200 ) {
-            if ( this._command.ctxt.verbose ) {
+            if ( ctxt.verbose ) {
                 console.log(`Error on the eval endpoint: ${resp.status}. Response body:`);
                 console.log(resp.body);
             }
@@ -126,19 +124,19 @@
         }
 
         get(params, url) {
-            return httpGet(this, params, url);
+            return httpGet(this._command.ctxt, params, url);
         }
 
         delete(params, url) {
-            return httpDelete(this, params, url);
+            return httpDelete(this._command.ctxt, params, url);
         }
 
         post(params, url, data, type) {
-            return httpPost(this, params, url, data, type);
+            return httpPost(this._command.ctxt, params, url, data, type);
         }
 
         put(params, url, data, type) {
-            return httpPut(this, params, url, data, type);
+            return httpPut(this._command.ctxt, params, url, data, type);
         }
 
         manage() {
@@ -146,7 +144,7 @@
         }
 
         eval(params, evalParams) {
-            return doEval(params, evalParams);
+            return doEval(this._command.ctxt, params, evalParams);
         }
     }
 
@@ -179,22 +177,22 @@
 
         get(params) {
             this._adaptParams(params);
-            return httpGet(this, params);
+            return httpGet(this._command.ctxt, params);
         }
 
         delete(params) {
             this._adaptParams(params);
-            return httpDelete(this, params);
+            return httpDelete(this._command.ctxt, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return httpPost(this, params, null, data, type);
+            return httpPost(this._command.ctxt, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return httpPut(this, params, null, data, type);
+            return httpPut(this._command.ctxt, params, null, data, type);
         }
 
         databases() {
@@ -272,24 +270,24 @@
 
         get(params) {
             this._adaptParams(params);
-            return httpGet(this, params);
+            return httpGet(this._command.ctxt, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return httpPost(this, params, null, data, type);
+            return httpPost(this._command.ctxt, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return httpPut(this, params, null, data, type);
+            return httpPut(this._command.ctxt, params, null, data, type);
         }
 
         eval(params, evalParams) {
             if ( ! evalParams.database ) {
                 evalParams.database = this._name;
             }
-            return doEval(params, evalParams);
+            return doEval(this._command.ctxt, params, evalParams);
         }
 
         remove(arg) {
@@ -306,7 +304,7 @@
             else {
                 throw new Error(`Unknown argument to remove() for database ${this._name}: ${arg}`);
             }
-            const resp = httpDelete(this, this._adaptParams(params));
+            const resp = httpDelete(this._command.ctxt, this._adaptParams(params));
             if ( resp.status !== 204 ) {
                 throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
             }
@@ -352,22 +350,22 @@
 
         get(params) {
             this._adaptParams(params);
-            return httpGet(this, params);
+            return httpGet(this._command.ctxt, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return httpPost(this, params, null, data, type);
+            return httpPost(this._command.ctxt, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return httpPut(this, params, null, data, type);
+            return httpPut(this._command.ctxt, params, null, data, type);
         }
 
         remove() {
             const params = { path: '?level=full' };
-            const resp   = httpDelete(this, this._adaptParams(params));
+            const resp   = httpDelete(this._command.ctxt, this._adaptParams(params));
             if ( resp.status !== 204 ) {
                 throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
             }
@@ -459,17 +457,17 @@
 
         get(params) {
             this._adaptParams(params);
-            return httpGet(this, params);
+            return httpGet(this._command.ctxt, params);
         }
 
         post(params, data, type) {
             this._adaptParams(params);
-            return httpPost(this, params, null, data, type);
+            return httpPost(this._command.ctxt, params, null, data, type);
         }
 
         put(params, data, type) {
             this._adaptParams(params);
-            return httpPut(this, params, null, data, type);
+            return httpPut(this._command.ctxt, params, null, data, type);
         }
 
         // TODO: On a server, eval would act on its content database by default...
@@ -478,11 +476,11 @@
         //     if ( ! evalParams.database ) {
         //         evalParams.database = this._content._name;
         //     }
-        //     return doEval(params, evalParams);
+        //     return doEval(this._command.ctxt, params, evalParams);
         // }
 
         remove(arg) {
-            const resp = httpDelete(this, this._adaptParams({}));
+            const resp = httpDelete(this._command.ctxt, this._adaptParams({}));
             if ( resp.status !== 202 && resp.status !== 204 ) {
                 throw new Error(`Error deleting the forest: ${this._name} - ${resp.status}`);
             }
