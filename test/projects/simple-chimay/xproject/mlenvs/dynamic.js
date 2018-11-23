@@ -2,7 +2,7 @@ module.exports = () => {
     return {
         mlproj: {
             format   : '0.1',
-            "import" : 'base.json',
+            "import" : 'base.js',
             connect  : {
                 host: 'ml911',
                 user: 'admin',
