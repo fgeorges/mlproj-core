@@ -6,6 +6,7 @@
     // at some point.
     //
     // const err = require('./error');
+    const mime = require('mimemessage');
 
     function logHttp(ctxt, verb, params, path) {
         if ( ctxt.verbose ) {
@@ -96,8 +97,42 @@
             }
             throw new Error(`Error on the eval endpoint: ${resp.status}`);
         }
-        // TODO: Parse the multipart result as a sequence (so an array here...)
-        return resp.body.toString();
+        return parseMultipart(resp);
+    }
+
+    function parseMultipart(resp) {
+        const parts  = [];
+        const ctype  = resp.headers['content-type'];
+        const body   = resp.body.toString();
+        const entity = mime.parse('Content-Type: ' + ctype + '\r\n\r\n' + body);
+        if ( ! entity ) {
+            const msg = `Eval endpoint multipart response invalid`;
+            console.log(msg);
+            console.log('The response content:');
+            console.dir(body);
+            throw new Error(msg);
+        }
+        for ( const part of entity.body ) {
+            const type = part.header('X-Primitive');
+            // TODO: Add more types (find an comprehensive list, most likely all XS types,
+            // and a few SJS types.)
+            switch ( type ) {
+            case 'anyURI':
+            case 'string':
+                parts.push(part.body);
+                break;
+            case 'array':
+            case 'map':
+                parts.push(JSON.parse(part.body));
+                break;
+            case 'integer':
+                parts.push(Number(part.body));
+                break;
+            default:
+                throw new Error(`Unexpected item type in multipart: ${type}`);
+            }
+        }
+        return parts;
     }
 
     /*~
