@@ -156,7 +156,13 @@
             for ( let i = 0; i < keys.length; ++i ) {
                 let n = keys[i];
                 this._same(msg + ': ' + n + ' prop', actual[n].value, expected[n], (m, a, e) => {
-                    if ( typeof e === 'object' ) {
+                    if ( n === 'root' && ! expected[n] ) { // special case
+                        const dir = expected['rootDir'];
+                        if ( ! a.endsWith(dir) ) {
+                            this.fail(m + ': does not end with ' + e + ': ' + a);
+                        }
+                    }
+                    else if ( typeof e === 'object' ) {
                         this.props(m, a, e);
                     }
                     else {

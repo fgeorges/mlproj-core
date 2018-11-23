@@ -60,7 +60,7 @@ t.test('Parsing ape (dev module) - overriding and inheritence', ass => {
                'simple-ape-content', null, {
                    "server-type": 'http',
                    port:          7010,
-                   root:          '/home/fgeorges/projects/ml/mlproj/mlproj-core/test/unit/src/'
+                   rootDir:       '/test/unit/src/'
                });
 });
 
@@ -123,6 +123,6 @@ t.test('Parsing ape (dev) - overriding and inheritence', ass => {
                'simple-ape-content', null, {
                    "server-type": 'http',
                    port:          7010,
-                   root:          '/home/fgeorges/projects/ml/mlproj/mlproj-core/test/unit/src/'
+                   rootDir:       '/test/unit/src/'
                });
 });
