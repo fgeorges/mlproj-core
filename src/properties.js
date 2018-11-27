@@ -661,12 +661,15 @@
         });
         const actionProp = new String('action');
         Privileges._privRefs.forEach(priv => {
-            const name = priv['privilege-name'].value;
-            const kind = priv['kind'].value;
+            const name   = priv['privilege-name'].value;
+            const kind   = priv['kind'].value;
+            const action = Privileges._allPrivs[kind][name];
             if ( priv.action ) {
                 throw new Error(`Privilege reference already resolved: ${name}/${kind}`);
             }
-            const action = Privileges._allPrivs[kind][name];
+            if ( ! action ) {
+                throw new Error(`Privilege reference not resolved: ${name}/${kind}`);
+            }
             priv.action = new Result(actionProp, action);
         });
     };

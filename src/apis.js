@@ -115,7 +115,7 @@
         for ( const part of entity.body ) {
             const type = part.header('X-Primitive');
             // TODO: Add more types (find an comprehensive list, most likely all XS types,
-            // and a few SJS types.)
+            // and a few SJS types.)  And XML nodes?
             switch ( type ) {
             case 'anyURI':
             case 'string':
