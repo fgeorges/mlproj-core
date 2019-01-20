@@ -872,7 +872,7 @@
                 body = name && { [name]: value };
                 what = name;
             }
-            super('/privileges/' + privname + '/properties',
+            super(`/privileges/${privname}/properties?kind=${priv.kind}`,
                   body,
                   ['Update privilege ' + what, privname]);
             this.name = privname;
