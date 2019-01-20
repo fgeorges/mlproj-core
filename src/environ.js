@@ -7,6 +7,45 @@
 //    const err   = require('./error');
     const props = require('./properties');
 
+    class PlatformImporter
+    {
+        constructor(ctxt) {
+            this.ctxt = ctxt;
+        }
+
+        resolve(href, path) {
+            const base     = this.ctxt.platform.dirname(path);
+            const absolute = this.ctxt.platform.resolve(href, base);
+            // TODO: Catch errors from require() and json() to display a
+            // proper message (esp. with the correct path to the file...)
+            const json = absolute.endsWith('.js')
+                ? require(absolute)()
+                : this.ctxt.platform.json(absolute);
+            const  module = new Module(this.ctxt, json, absolute, this);
+	    module.href = href;
+            return module;
+        }
+    }
+
+    class DumpImporter
+    {
+        // dumps = mlproj.environs from the "top-level dump"
+        constructor(ctxt, dumps) {
+            this.ctxt  = ctxt;
+            this.dumps = dumps;
+        }
+
+        resolve(href) {
+            const dump = this.dumps.find(env => env.href === href);
+            if ( ! dump ) {
+                throw new Error(`There is no module ${href} in the dump`);
+            }
+            const module = new Module(this.ctxt, dump.json, dump.path, this);
+	    module.href = href;
+            return module;
+        }
+    }
+
     /*~
      * A fake environment, with only values from the command line.
      */
@@ -50,8 +89,11 @@
             this._params = {};
             this.ctxt    = ctxt;
             this.proj    = proj;
-            this.module  = new Module(ctxt, json, path);
-            this.module.loadImports(ctxt);
+            if ( json.mlproj && json.mlproj.name ) {
+                this.name = json.mlproj.name;
+            }
+            this.module  = new Module(ctxt, json, path, new PlatformImporter(ctxt));
+            this.module.loadImports();
             // needed for connect infos, find a nicer way to pass them
             if ( ctxt.platform.environ ) {
                 throw new Error('Environ already set on the context');
@@ -320,32 +362,42 @@
      */
     class Module
     {
-        constructor(ctxt, json, path) {
-            this.ctxt = ctxt;
-            // TODO: Resolve...?
-            this.path = path;
+        constructor(ctxt, json, path, importer) {
+            this.ctxt     = ctxt;
+            this.path     = path;
+            this.importer = importer;
+
+            // check a few things
             if ( Object.keys(json).length !== 1 ) {
-                // TODO: Use proper e.* errors...
-                throw new Error('Invalid file, must have exactly one root');
+                throw new Error(`Invalid file, must have exactly one root: ${Object.keys(json)}`);
             }
             this.json = json.mlproj;
             if ( ! this.json ) {
-                throw new Error('Invalid file, must have the root `mlproj`');
+                throw new Error(`Invalid file, must have the root 'mlproj'`);
             }
             if ( ! this.json.format ) {
-                throw new Error('Invalid file, must have the property `format`');
+                throw new Error(`Invalid file, must have the property 'format'`);
             }
-            if ( this.json.format !== '0.1' ) {
-                throw new Error('Invalid file, `format` not 0.1: ' + this.json.format);
+
+            // check the format
+            const format = this.json.format;
+            if ( format === '0.1' ) {
+            }
+            else if ( format === 'dump/0.1' ) {
+                this.importer = new DumpImporter(this.ctxt, this.json.environs);
+                this.json = this.json.environs[0].json.mlproj;
+            }
+            else {
+                throw new Error(`Invalid environ, 'format' neither 0.1 or dump/0.1: ${format}`);
             }
 
             // the params and commands hashes, empty by default
             this._params   = this.json.params   || {};
             this._commands = this.json.commands || {};
             // extract defined values from `obj` and put them in `this._params`
-            var extract = (obj, props) => {
+            const extract = (obj, props) => {
                 props.forEach(p => {
-                    var v = obj[p];
+                    const v = obj[p];
                     if ( v !== undefined ) {
                         this.param('@' + p,  v);
                     }
@@ -365,16 +417,9 @@
                     imports = [ imports ];
                 }
                 imports.forEach(i => {
-                    let b = this.ctxt.platform.dirname(this.path);
-                    let p = this.ctxt.platform.resolve(i, b);
-                    // TODO: Catch errors from require() and json() to display a
-                    // proper message (esp. with the correct path to the file...)
-                    let j = p.endsWith('.js')
-                        ? require(p)()
-                        : this.ctxt.platform.json(p);
-                    let m = new Module(this.ctxt, j, p);
-                    this.imports.push(m);
-                    m.loadImports(this.ctxt);
+                    const module = this.importer.resolve(i, this.path);
+                    this.imports.push(module);
+                    module.loadImports();
                 });
             }
         }

@@ -69,26 +69,51 @@
     class ShowCommand extends Command
     {
         prepare() {
-            var actions = new act.ActionList(this.ctxt);
-            actions.add(new act.FunAction('Display the environ details', ctxt => {
-                var components = comps => {
-                    comps.forEach(c => {
-                        c.show(ctxt.display);
-                    });
-                };
-                if ( this.environ.proj ) {
-                    this.environ.proj.show();
-                }
-                this.environ.show();
-                components(this.environ.databases());
-                components(this.environ.servers());
-                components(this.environ.sources());
-                components(this.environ.mimetypes());
-                components(this.environ.execPrivileges());
-                components(this.environ.uriPrivileges());
-                components(this.environ.roles());
-                components(this.environ.users());
-            }));
+            const actions = new act.ActionList(this.ctxt);
+	    if ( this.args.json ) {
+                actions.add(new act.FunAction('Dump the environ as JSON', ctxt => {
+		    // the name is in , e.g. to save into mlenvs/dumps/{name}.json
+		    const res = {
+                        mlproj: {
+                            format:   'dump/0.1',
+			    name:     this.environ.name,
+			    when:     new Date().toISOString(),
+			    environs: []
+                        }
+		    };
+		    const dump = (mod) => {
+			res.mlproj.environs.push({
+			    path: mod.path,
+			    href: mod.href,
+			    json: { mlproj: mod.json }
+			});
+			mod.imports.forEach(i => dump(i));
+		    };
+		    dump(this.environ.module);
+		    ctxt.platform.log(JSON.stringify(res, null, 3));
+		}));
+            }
+	    else {
+                actions.add(new act.FunAction('Display the environ details', ctxt => {
+                    const components = comps => {
+			comps.forEach(c => {
+                            c.show(ctxt.display);
+			});
+                    };
+                    if ( this.environ.proj ) {
+			this.environ.proj.show();
+                    }
+                    this.environ.show();
+                    components(this.environ.databases());
+                    components(this.environ.servers());
+                    components(this.environ.sources());
+                    components(this.environ.mimetypes());
+                    components(this.environ.execPrivileges());
+                    components(this.environ.uriPrivileges());
+                    components(this.environ.roles());
+                    components(this.environ.users());
+		}));
+	    }
             return actions;
         }
     }

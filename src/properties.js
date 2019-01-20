@@ -651,7 +651,7 @@
         let resp = new act.PrivilegeList().retrieve(ctxt);
         resp['privilege-default-list']['list-items']['list-item'].forEach(item => {
             if ( item.kind !== 'execute' && item.kind !== 'uri' ) {
-                throw new Error('Unknown kind in privilege list: ' + item.kind);
+                throw new Error(`Unknown kind in privilege list: ${item.kind}`);
             }
             const slot = Privileges._allPrivs[item.kind];
             // do not override privileges already cached, because declared in the environ

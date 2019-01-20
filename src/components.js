@@ -1002,6 +1002,7 @@
                 return v.value;
             }
             if ( name === 'garbage' ) {
+                // .gitignore/, .idea/, #*, etc.
                 return [ 'TODO: Set the default default garbage value...', '*~' ];
             }
         }
@@ -1583,8 +1584,8 @@
         {
             // check properties
             display.check(1, 'properties');
-            Object.keys(this.props).forEach(p => {
-                this.props[p].update(actions, display, actual, this);
+            Object.keys(this.props).forEach(n => {
+                this.props[n].update(actions, display, actual, this);
             });
         }
     }
