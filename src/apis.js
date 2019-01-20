@@ -100,6 +100,134 @@
         return parseMultipart(resp);
     }
 
+    class Part
+    {
+        constructor(kind, type, raw) {
+            this.kind = kind;
+            this.type = type;
+            this.raw  = raw;
+        }
+
+        parse() {
+            if ( this.parsed === undefined ) {
+                this.parsed = this.doParse();
+            }
+            return this.parsed;
+        }
+    }
+
+    class BinaryPart extends Part
+    {
+        constructor(type, raw) {
+            super('binary', type, raw);
+        }
+
+        doParse() {
+            throw new Error(`Parsing binaries not supported (type ${this.type}), use this.raw instead`);
+        }
+    }
+
+    class BooleanPart extends Part
+    {
+        constructor(type, raw) {
+            super('boolean', type, raw);
+        }
+
+        doParse() {
+            return this.raw === 'true' || this.raw === '1' || false;
+        }
+    }
+
+    class DateTimePart extends Part
+    {
+        constructor(type, raw) {
+            super('datetime', type, raw);
+        }
+
+        doParse() {
+            switch ( this.type ) {
+            case 'date':
+            case 'dateTime':
+                return new Date(this.raw);
+            case 'time':
+                return new Date('1970-01-01T' + this.raw);
+            case 'dayTimeDuration':
+            case 'duration':
+            case 'yearMonthDuration':
+                return this.doDuration();
+            default:
+                throw new Error(`Unknown date time type: ${this.type}`);
+            }
+        }
+
+        doDuration() {
+            const toks  = DateTimePart.durationRe.exec(this.raw);
+            const value = str => str ? Number(str) : 0;
+            return {
+                isDuration: true,
+                negative:   toks[1] === '-',
+                years:      value(toks[2]),
+                months:     value(toks[3]),
+                weeks:      value(toks[4]),
+                days:       value(toks[5]),
+                hours:      value(toks[6]),
+                minutes:    value(toks[7]),
+                seconds:    value(toks[8])
+            };
+        }
+    }
+
+    // shamelessly stolen from https://github.com/moment/moment/blame/develop/src/lib/duration/create.js#L13
+    DateTimePart.durationRe = /^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;
+
+    class JsonPart extends Part
+    {
+        constructor(type, raw) {
+            super('json', type, raw);
+        }
+
+        doParse() {
+            return JSON.parse(this.raw);
+        }
+    }
+
+    class NumberPart extends Part
+    {
+        constructor(type, raw) {
+            super('number', type, raw);
+        }
+
+        doParse() {
+            return Number(this.raw);
+        }
+    }
+
+    class StringPart extends Part
+    {
+        constructor(type, raw) {
+            super('string', type, raw);
+        }
+
+        doParse() {
+            return this.raw;
+        }
+    }
+
+    class XmlPart extends Part
+    {
+        constructor(type, raw, path, attr) {
+            super('xml', type, raw);
+            this.path = path;
+            if ( attr ) {
+                this.attr = attr;
+            }
+        }
+
+        doParse() {
+            return this.raw;
+        }
+    }
+
     function parseMultipart(resp) {
         const parts  = [];
         const ctype  = resp.headers['content-type'];
@@ -114,19 +242,61 @@
         }
         for ( const part of entity.body ) {
             const type = part.header('X-Primitive');
-            // TODO: Add more types (find an comprehensive list, most likely all XS types,
-            // and a few SJS types.)  And XML nodes?
             switch ( type ) {
+            // strings
+            case 'QName':
             case 'anyURI':
+            case 'comment()':
+            case 'gDay':
+            case 'gMonth':
+            case 'gMonthDay':
+            case 'gYear':
+            case 'gYearMonth':
             case 'string':
-                parts.push(part.body);
+            case 'text()':
+            case 'untypedAtomic':
+                parts.push(new StringPart(type, part.body));
                 break;
-            case 'array':
-            case 'map':
-                parts.push(JSON.parse(part.body));
-                break;
+            // numbers
+            case 'decimal':
+            case 'double':
+            case 'float':
             case 'integer':
-                parts.push(Number(part.body));
+            case 'number-node()':
+                parts.push(new NumberPart(type, part.body));
+                break;
+            // dates, times and durations
+            case 'date':
+            case 'dateTime':
+            case 'dayTimeDuration':
+            case 'duration':
+            case 'time':
+            case 'yearMonthDuration':
+                parts.push(new DateTimePart(type, part.body));
+                break;
+            // booleans
+            case 'boolean':
+            case 'boolean-node()':
+                parts.push(new BooleanPart(type, part.body));
+                break;
+            // binaries
+            case 'base64Binary':
+            case 'binary()':
+            case 'hexBinary':
+                parts.push(new BinaryPart(type, part.body));
+                break;
+            // JSON
+            case 'array-node()':
+            case 'map':
+            case 'null-node()':
+            case 'object-node()':
+                parts.push(new JsonPart(type, part.body));
+                break;
+            // XML
+            case 'attribute()':
+            case 'element()':
+            case 'processing-instruction()':
+                parts.push(new XmlPart(type, part.body, part.header('X-Path'), part.header('X-Attr')));
                 break;
             default:
                 throw new Error(`Unexpected item type in multipart: ${type}`);
