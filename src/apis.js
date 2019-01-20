@@ -56,7 +56,7 @@
 
     function httpPut(ctxt, params, url, data, type) {
         logHttp(ctxt, 'PUT', params, url);
-        const resp = ctxt.platform.post(params, url, data, type);
+        const resp = ctxt.platform.put(params, url, data, type);
         return checkHttp(ctxt, resp);
     }
 
