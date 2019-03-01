@@ -949,25 +949,33 @@
             // extract the configured properties
             this.props  = json ? props.source.parse(json) : {};
             this.type   = this.props.type && this.props.type.value;
-            // resolve targets (dbs and srvs)
-            // TODO: Provide the other way around, `source` on dbs and srvs?
-            this.targets = [];
             this.environ = environ;
-            if ( this.props.target ) {
-                if ( ! environ ) {
-                    const msg = 'Source set has target(s) but no environ provided for resolving: ';
-                    throw new Error(msg + this.name);
+        }
+
+        targets()
+        {
+            // resolution cannot be done in ctor, as environ is still being constructed then
+            if ( ! this._targets ) {
+                this._targets = [];
+                // resolve targets (dbs and srvs)
+                // TODO: Provide the other way around, `source` on dbs and srvs?
+                if ( this.props.target ) {
+                    if ( ! environ ) {
+                        const msg = 'Source set has target(s) but no environ provided for resolving: ';
+                        throw new Error(msg + this.name);
+                    }
+                    this.props.target.value.forEach(t => {
+                        this.targets.push(environ.database(t) || environ.server(t));
+                    });
                 }
-                this.props.target.value.forEach(t => {
-                    this.targets.push(environ.database(t) || environ.server(t));
-                });
             }
+            return this._targets;
         }
 
         restTarget()
         {
             if ( this.type === 'rest-src' ) {
-                let rests = this.targets.filter(t => {
+                let rests = this.targets().filter(t => {
                     return t instanceof Server && t.type === 'rest';
                 });
                 if ( ! rests.length ) {
