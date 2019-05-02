@@ -416,7 +416,7 @@
                 if ( ! Array.isArray(imports) ) {
                     imports = [ imports ];
                 }
-                imports.forEach(i => {
+                imports.concat().reverse().forEach(i => {
                     const module = this.importer.resolve(i, this.path);
                     this.imports.push(module);
                     module.loadImports();
@@ -440,7 +440,7 @@
 
         configs() {
             let names = this.json.config ? Object.keys(this.json.config) : [];
-            for ( let i = this.imports.length - 1; i >= 0; --i ) {
+            for ( let i = 0; i < this.imports.length; ++i ) {
                 this.imports[i].configs()
                     .filter(n => ! names.includes(n))
                     .forEach(n => names.push(n));
@@ -450,7 +450,7 @@
 
         config(name) {
             let v = this.json.config && this.json.config[name];
-            for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
+            for ( let i = 0; v === undefined && i < this.imports.length; ++i ) {
                 v = this.imports[i].config(name);
             }
             return v;
@@ -470,7 +470,7 @@
             if ( value === undefined ) {
                 var v = this._params[name];
                 if ( name !== '@title' && name !== '@desc' ) {
-                    for ( let i = this.imports.length - 1; v === undefined && i >= 0; --i ) {
+                    for ( let i = 0; v === undefined && i < this.imports.length; ++i ) {
                         v = this.imports[i].param(name);
                     }
                 }
@@ -493,7 +493,7 @@
 
         command(name) {
             var cmd = this._commands[name];
-            for ( let i = this.imports.length - 1; cmd === undefined && i >= 0; --i ) {
+            for ( let i = 0; cmd === undefined && i < this.imports.length; ++i ) {
                 cmd = this.imports[i].command(name);
             }
             return cmd;
@@ -726,7 +726,7 @@
                 root._overridenApis[name] = {};
                 root._apis[name]          = {};
                 // walk the flatten import graph
-                for ( let i = imports.length - 1; i >= 0; --i ) {
+                for ( let i = 0; i < imports.length; ++i ) {
                     let apis = imports[i].json.apis;
                     collapse(root._overridenApis[name], apis && apis[name]);
                 }
