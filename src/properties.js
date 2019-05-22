@@ -1054,7 +1054,7 @@
         .add('compose',     false, new Ignore())
         .add('comment',     false, new Ignore())
         .add('name',        true,  new     String('user-name',   'user name'))
-        .add('password',    true,  new     String('password',    'password'))
+        .add('password',    false, new     String('password',    'password'))
         .add('desc',        false, new     String('description', 'description'))
         .add('roles',       false, new StringList('role',        'roles',       /\s*,\s*/))
         .add('collections', false, new StringList('collection',  'collections', /\s*,\s*/))

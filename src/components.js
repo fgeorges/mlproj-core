@@ -1727,12 +1727,26 @@
 
         create(actions, display)
         {
-            display.add(0, 'create', 'user', this.props['user-name'].value);
-            const obj = {};
-            Object.keys(this.props).forEach(p => {
-                this.props[p].create(obj);
-            });
-            actions.add(new act.UserCreate(this, obj));
+            const name = this.props['user-name'].value;
+            if ( ! this.props['password'] || ! this.props['password'].value ) {
+                actions.add(new act.FunAction(
+                    ['Create user', name],
+                    ctxt => {
+                        const text = 'Set password, or create user manually, and relaunch setup.';
+                        const pf   = actions.ctxt.platform;
+                        pf.warn(pf.red('✗') + ' Password not set', 'User not created. ${text}');
+                        throw new Error(`User ${name} not created. ${text}`);
+                    },
+                    true));
+            }
+            else {
+                display.add(0, 'create', 'user', name);
+                const obj = {};
+                Object.keys(this.props).forEach(p => {
+                    this.props[p].create(obj);
+                });
+                actions.add(new act.UserCreate(this, obj));
+            }
         }
 
         update(actions, display, actual)

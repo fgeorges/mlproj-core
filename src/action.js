@@ -12,7 +12,9 @@
     class Action
     {
         constructor(msg) {
-            this.msg = msg;
+            this.msg = Array.isArray(msg)
+                ? msg
+                : [ msg ];
         }
 
         display(platform, status) {
@@ -47,14 +49,14 @@
         // dryable = true means the function must be called even in dry run, it
         // takes care of respecting the dry flag
         constructor(msg, fun, dryable) {
-            super([ msg ]);
+            super(msg);
             this.fun     = fun;
             this.dryable = dryable;
         }
 
         execute(ctxt) {
             if ( this.msg ) {
-                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg);
+                ctxt.platform.warn(ctxt.platform.yellow('→') + ' ' + this.msg[0], this.msg[1]);
             }
             if ( this.dryable || ! ctxt.dry ) {
                 return this.fun(ctxt);
