@@ -12,7 +12,9 @@
     class Action
     {
         constructor(msg) {
-            this.msg = Array.isArray(msg)
+            this.msg = ! msg
+                ? null
+                : Array.isArray(msg)
                 ? msg
                 : [ msg ];
         }

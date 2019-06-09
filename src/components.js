@@ -1734,7 +1734,7 @@
                     ctxt => {
                         const text = 'Set password, or create user manually, and relaunch setup.';
                         const pf   = actions.ctxt.platform;
-                        pf.warn(pf.red('✗') + ' Password not set', 'User not created. ${text}');
+                        pf.warn(pf.red('✗') + ' Password not set', 'User not created.');
                         throw new Error(`User ${name} not created. ${text}`);
                     },
                     true));
