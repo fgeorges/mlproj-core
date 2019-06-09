@@ -640,6 +640,9 @@
     Privileges._privRefs = [];
 
     Privileges.register = (name, kind, action) => {
+        if ( kind === 'uri' && ! action.endsWith('/') ) {
+            throw new Error(`URI privilege action must ends with a slash: ${action}`);
+        }
         Privileges._allPrivs[kind][name] = action;
     };
     Privileges._allPrivs = {
