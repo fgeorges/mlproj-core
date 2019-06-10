@@ -612,10 +612,11 @@
         }
 
         compare(lhs, rhs) {
-            if ( lhs === undefined && rhs === undefined ) {
+            const empty = a => a === undefined || ! a.length;
+            if ( empty(lhs) && empty(rhs) ) {
                 return true;
             }
-            if ( lhs === undefined || rhs === undefined ) {
+            if ( empty(lhs) || empty(rhs) ) {
                 return false;
             }
             if ( lhs.length !== rhs.length ) {
