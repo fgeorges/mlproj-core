@@ -274,17 +274,26 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
                 // if no explicit target, try...
                 if ( ! as && ! db && ! system ) {
                     // ...source target(s)
-                    if ( src.targets.length > 1 ) {
-                        throw new Error('Several targets attached to the source set: ' + src.name);
+                    if ( src.targets().length > 1 ) {
+                        const targets = src.targets().map(c => `id:${c.id}|name:${c.name}`);
+                        throw new Error(`Several targets attached to the source set ${src.name}: ${targets}`);
                     }
-                    else if ( src.targets.length === 1 ) {
-                        if ( src.targets[0] instanceof cmp.Database ) {
-                            return src.targets[0];
+                    else if ( src.targets().length === 1 ) {
+                        if ( src.targets()[0] instanceof cmp.Database ) {
+                            return src.targets()[0];
                         }
                         else {
-                            srv = src.targets[0];
+                            srv = src.targets()[0];
                             return isDeploy ? srv.modules : srv.content;
                         }
+                    }
+                    // ...or db/srv sources
+                    else if ( src.sourcesOf().length > 1 ) {
+                        const dbs = src.sourcesOf().map(db => `id:${db.id}|name:${db.name}`);
+                        throw new Error(`Several the source set ${src.name} is attached to several databases: ${dbs}`);
+                    }
+                    else if ( src.sourcesOf().length === 1 ) {
+                        return src.sourcesOf()[0];
                     }
                     // ...or defaults
                     else {
@@ -379,10 +388,10 @@ throw new Error(`TODO: Make sure to implement the new kind of init: ${kind}`);
                 if ( (src && dir) || (src && doc) || (dir && doc) ) {
                     throw new Error('Content options --src, --dir and --doc are mutually exclusive');
                 }
-                if ( args.sourceset ) {
-                    const res = this.environ.source(args.sourceset);
+                if ( src ) {
+                    const res = this.environ.source(src);
                     if ( ! res ) {
-                        throw new Error('No such source set with name: ' + args.sourceset);
+                        throw new Error(`No such source set with name: ${src}`);
                     }
                     return res;
                 }

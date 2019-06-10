@@ -952,20 +952,38 @@
             this.environ = environ;
         }
 
+        // Return the dbs this source set is a source set of.  This cannot be applied to servers,
+        // as it does not make sense to have sources of a srv, without saying explicitely whether
+        // it is the sources of its content, or modules, or schemas database.
+        //
+        // Maybe these mappings (both `sourcesOf` and `targets`) should be provided by the environ
+        // object, so they can be accessed from the outside of `SourceSet` (e.g. if the entry point
+        // is rather a db.)
+        sourcesOf()
+        {
+            // resolution cannot be done in ctor, as environ is still being constructed then
+            if ( ! this._sourcesof ) {
+                this._sourcesof = [];
+                this.environ.databases()
+                    .filter(db => db.props.sources && db.props.sources.value === this.name)
+                    .forEach(db => this._sourcesof.push(db));
+            }
+            return this._sourcesof;
+        }
+
         targets()
         {
             // resolution cannot be done in ctor, as environ is still being constructed then
             if ( ! this._targets ) {
                 this._targets = [];
                 // resolve targets (dbs and srvs)
-                // TODO: Provide the other way around, `source` on dbs and srvs?
                 if ( this.props.target ) {
-                    if ( ! environ ) {
+                    if ( ! this.environ ) {
                         const msg = 'Source set has target(s) but no environ provided for resolving: ';
                         throw new Error(msg + this.name);
                     }
                     this.props.target.value.forEach(t => {
-                        this.targets.push(environ.database(t) || environ.server(t));
+                        this._targets.push(this.environ.database(t) || this.environ.server(t));
                     });
                 }
             }

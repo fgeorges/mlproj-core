@@ -890,6 +890,7 @@
         .add('schema',   false, new Ignore())
         .add('security', false, new Ignore())
         .add('triggers', false, new Ignore())
+        .add('sources',  false, new String('sources', 'the default source set'))
         .add('indexes',  false, new ConfigObject(/*'db.indexes'*/)
             .add('namespaces', false, new CouplesAsMap('path-namespace', 'path namespaces', 'prefix', 'namespace-uri'))
             .add('ranges', false, new MultiArray()
@@ -1076,5 +1077,4 @@
         Result    : Result,
         String    : String
     }
-}
-)();
+})();
