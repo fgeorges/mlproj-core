@@ -116,10 +116,11 @@
             this.id         = json.id;
             this.name       = json.name;
             this.properties = json.properties;
+            this.forests    = {};
             this.schema     = schema   === 'self' ? this : schema;
             this.security   = security === 'self' ? this : security;
             this.triggers   = triggers === 'self' ? this : triggers;
-            this.forests    = {};
+            this.sources    = json.sources;
             // extract the configured properties
             this.props      = props.database.parse(json);
 
@@ -965,7 +966,7 @@
             if ( ! this._sourcesof ) {
                 this._sourcesof = [];
                 this.environ.databases()
-                    .filter(db => db.props.sources && db.props.sources.value === this.name)
+                    .filter(db => db.sources === this.name)
                     .forEach(db => this._sourcesof.push(db));
             }
             return this._sourcesof;
