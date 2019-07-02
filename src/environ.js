@@ -105,7 +105,7 @@
             let json;
             let path;
             if ( name.includes('/') ) {
-                path = ctxt.platform.resolve('xproject/mlenvs/@' + name.replace('/', '+'), base);
+                path = ctxt.platform.resolve('xproject/mlenvs/@' + name.replace(/\//g, '+'), base);
                 json = { "mlproj": {
                     "format": '0.1',
                     "import": name.split('/').map(n => {
