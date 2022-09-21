@@ -65,6 +65,10 @@
 
     /*~
      * Display the resolved environ.
+     *
+     * TODO: Allow different flags to show different components (--databases, --servers,
+     * etc.)  And their negative flags (--no-database, --no-server, etc.), as well as
+     * composite flags (e.g. --security and --no-security for roles and permissions.)
      */
     class ShowCommand extends Command
     {
